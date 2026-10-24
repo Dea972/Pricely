@@ -5,18 +5,17 @@
 
     <ItemGroup>
         <!-- Aspire & Container Tools -->
-        <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.1.0" />
-        <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.1.0" />
-        <PackageVersion Include="Aspire.Hosting.PostgreSql" Version="13.1.0" />
+        <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.6.1" />
+        <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.1" />
         <!-- Resilience & Service Discovery -->
         <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.2.0" />
         <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.2.0" />
         <!-- Observability (OpenTelemetry) -->
-        <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.14.0" />
-        <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.14.0" />
-        <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.14.0" />
-        <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.14.0" />
-        <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.14.0" />
+        <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.20.1" />
+        <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.20.1" />
+        <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.20.1" />
+        <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.20.1" />
+        <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.20.1" />
         <!-- Logging -->
         <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
         <PackageVersion Include="Serilog" Version="4.3.0" />
