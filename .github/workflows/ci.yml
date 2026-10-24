@@ -11,15 +11,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+
       - name: Restore
-        run: dotnet restore Pricely.slnx
+        run: dotnet restore Pricely.slnx 2>&1 | tee restore.log; exit ${PIPESTATUS[0]}
+
       - name: Build
-        run: dotnet build Pricely.slnx --no-restore -c Release
+        run: dotnet build Pricely.slnx --no-restore -c Release 2>&1 | tee build.log; exit ${PIPESTATUS[0]}
+
       - name: Unit and architecture tests
-        run: >
+        run: |
+          set -o pipefail
+          status=0
           for p in $(find . -name '*.UnitTests.csproj' -o -name '*.ArchitectureTests.csproj'); do
-            dotnet test "$p" --no-build -c Release || exit 1;
+            dotnet test "$p" --no-build -c Release 2>&1 | tee -a test.log || status=1
           done
+          exit $status
+
+      - name: Report errors as annotation
+        if: failure()
+        run: |
+          cat restore.log build.log test.log 2>/dev/null \
+            | grep -E "error |Failed |\[FAIL\]|Assert|Expected" \
+            | sed -E 's#/home/runner/work/[^/]+/[^/]+/##g; s/ \[[^]]*\.csproj[^]]*\]$//' \
+            | sort -u | head -150 > errors.txt || true
+          echo "::error title=Build errors::$(sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g' errors.txt)"
