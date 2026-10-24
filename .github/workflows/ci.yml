@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'feat/**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore Pricely.slnx
+      - name: Build
+        run: dotnet build Pricely.slnx --no-restore -c Release
+      - name: Unit and architecture tests
+        run: >
+          for p in $(find . -name '*.UnitTests.csproj' -o -name '*.ArchitectureTests.csproj'); do
+            dotnet test "$p" --no-build -c Release || exit 1;
+          done
