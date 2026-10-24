@@ -9,9 +9,4 @@
     <ProjectReference Include="..\..\Adapters\Pricely.Sdk\Pricely.Sdk.csproj" />
   </ItemGroup>
 
-  <!-- Security: patched version of a Microsoft.AspNetCore.OpenApi dependency -->
-  <ItemGroup>
-    <PackageReference Include="Microsoft.OpenApi" />
-  </ItemGroup>
-
 </Project>

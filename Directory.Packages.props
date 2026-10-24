@@ -72,8 +72,8 @@
         <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
         <!-- GHSA-qhrr-8q5h-9q3h: via StreamJsonRpc (Aspire.Hosting) -->
         <PackageVersion Include="MessagePack" Version="2.5.307" />
-        <!-- GHSA-v5pm-xwqc-g5wc: via Microsoft.AspNetCore.OpenApi and Swashbuckle -->
-        <PackageVersion Include="Microsoft.OpenApi" Version="2.7.6" />
+        <!-- GHSA-v5pm-xwqc-g5wc: via Swashbuckle (Microsoft.AspNetCore.OpenApi 10.0.13 already requires >= 2.12.2) -->
+        <PackageVersion Include="Microsoft.OpenApi" Version="2.12.2" />
         <!-- Authentication & Authorization -->
         <PackageVersion Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.2" />
         <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.2" />
