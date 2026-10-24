@@ -37,5 +37,5 @@ jobs:
           cat restore.log build.log test.log 2>/dev/null \
             | grep -E "error |Failed |\[FAIL\]|Assert|Expected" \
             | sed -E 's#/home/runner/work/[^/]+/[^/]+/##g; s/ \[[^]]*\.csproj[^]]*\]$//' \
-            | sort -u | head -150 > errors.txt || true
+            | grep -vE "NU190[1-4]|Failed to restore" | sort -u | head -150 > errors.txt || true
           echo "::error title=Build errors::$(sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g' errors.txt)"
