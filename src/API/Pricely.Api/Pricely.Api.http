@@ -1,0 +1,6 @@
+@Pricely.Api_HostAddress = http://localhost:5136
+
+GET {{Pricely.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

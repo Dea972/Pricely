@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Common\Pricely.Common.Infrastructure\Pricely.Common.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\Common\Pricely.Common.Presentation\Pricely.Common.Presentation.csproj" />
+    <ProjectReference Include="..\Pricely.Modules.Users.Application\Pricely.Modules.Users.Application.csproj" />
+  </ItemGroup>
+
+</Project>

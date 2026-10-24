@@ -1,0 +1,10 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pricely.Modules.Users.Domain\Pricely.Modules.Users.Domain.csproj" />
+    <ProjectReference Include="..\..\..\Common\Pricely.Common.Application\Pricely.Common.Application.csproj" />
+    <ProjectReference Include="..\Pricely.Modules.Users.IntegrationEvents\Pricely.Modules.Users.IntegrationEvents.csproj" />
+  </ItemGroup>
+	
+</Project>

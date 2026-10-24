@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<Sdk Name="Aspire.AppHost.Sdk" Version="9.5.0" />
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<UserSecretsId>7ae2e67e-2f8d-4b31-aea7-fa5421759b23</UserSecretsId>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Aspire.Hosting.AppHost" />
+		<PackageReference Include="Aspire.Hosting.PostgreSql" />
+		<PackageReference Include="Aspire.Hosting.SqlServer" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference
+			Include="..\..\src\API\Pricely.Api\Pricely.Api.csproj" />
+	</ItemGroup>
+
+</Project>
