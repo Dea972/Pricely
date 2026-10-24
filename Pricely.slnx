@@ -33,6 +33,40 @@
 			Id="10389c52-f0f3-44e1-abff-bb8c952dd334" />
 	</Folder>
 	<Folder Name="/src/Modules/" />
+	<Folder Name="/src/Modules/Catalog/">
+		<Project
+			Path="src/Modules/Catalog/Pricely.Modules.Catalog.Domain/Pricely.Modules.Catalog.Domain.csproj" />
+		<Project
+			Path="src/Modules/Catalog/Pricely.Modules.Catalog.Application/Pricely.Modules.Catalog.Application.csproj" />
+		<Project
+			Path="src/Modules/Catalog/Pricely.Modules.Catalog.Infrastructure/Pricely.Modules.Catalog.Infrastructure.csproj" />
+		<Project
+			Path="src/Modules/Catalog/Pricely.Modules.Catalog.Presentation/Pricely.Modules.Catalog.Presentation.csproj" />
+		<Project
+			Path="src/Modules/Catalog/Pricely.Modules.Catalog.IntegrationEvents/Pricely.Modules.Catalog.IntegrationEvents.csproj" />
+	</Folder>
+	<Folder Name="/src/Modules/Catalog/test/">
+		<Project
+			Path="src/Modules/Catalog/test/Pricely.Modules.Catalog.ArchitectureTests/Pricely.Modules.Catalog.ArchitectureTests.csproj" />
+		<Project
+			Path="src/Modules/Catalog/test/Pricely.Modules.Catalog.UnitTests/Pricely.Modules.Catalog.UnitTests.csproj" />
+	</Folder>
+	<Folder Name="/src/Modules/Pricing/">
+		<Project
+			Path="src/Modules/Pricing/Pricely.Modules.Pricing.Domain/Pricely.Modules.Pricing.Domain.csproj" />
+		<Project
+			Path="src/Modules/Pricing/Pricely.Modules.Pricing.Application/Pricely.Modules.Pricing.Application.csproj" />
+		<Project
+			Path="src/Modules/Pricing/Pricely.Modules.Pricing.Infrastructure/Pricely.Modules.Pricing.Infrastructure.csproj" />
+		<Project
+			Path="src/Modules/Pricing/Pricely.Modules.Pricing.Presentation/Pricely.Modules.Pricing.Presentation.csproj" />
+	</Folder>
+	<Folder Name="/src/Modules/Pricing/test/">
+		<Project
+			Path="src/Modules/Pricing/test/Pricely.Modules.Pricing.ArchitectureTests/Pricely.Modules.Pricing.ArchitectureTests.csproj" />
+		<Project
+			Path="src/Modules/Pricing/test/Pricely.Modules.Pricing.UnitTests/Pricely.Modules.Pricing.UnitTests.csproj" />
+	</Folder>
 	<Folder Name="/src/Modules/Users/">
 		<Project
 			Path="src/Modules/Users/Pricely.Modules.Users.Application/Pricely.Modules.Users.Application.csproj" />

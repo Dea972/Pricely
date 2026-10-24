@@ -1,0 +1,65 @@
+﻿using System.Data.Common;
+using Pricely.Common.Application.Data;
+using Pricely.Common.Application.Messaging;
+using Pricely.Common.Domain;
+using Pricely.Common.Infrastructure.Outbox;
+using Pricely.Modules.Catalog.Infrastructure.Database;
+using Dapper;
+
+namespace Pricely.Modules.Catalog.Infrastructure.Outbox;
+
+
+internal sealed class IdempotentDomainEventHandler<TDomainEvent>(
+    IDomainEventHandler<TDomainEvent> decorated,
+    IDbConnectionFactory dbConnectionFactory)
+    : DomainEventHandler<TDomainEvent>
+    where TDomainEvent : IDomainEvent
+{
+    public override async Task Handle(TDomainEvent domainEvent, CancellationToken cancellationToken = default)
+    {
+        await using DbConnection connection = await dbConnectionFactory.OpenConnectionAsync();
+
+        var outboxMessageConsumer = new OutboxMessageConsumer(domainEvent.Id, decorated.GetType().Name);
+
+        if (await OutboxConsumerExistsAsync(connection, outboxMessageConsumer))
+        {
+            return;
+        }
+
+        await decorated.Handle(domainEvent, cancellationToken);
+
+        await InsertOutboxConsumerAsync(connection, outboxMessageConsumer);
+    }
+
+    private static async Task<bool> OutboxConsumerExistsAsync(
+        DbConnection dbConnection,
+        OutboxMessageConsumer outboxMessageConsumer)
+    {
+        string sql;
+        // SQL Server syntax
+        sql =
+            $"""
+                SELECT CASE WHEN EXISTS (
+                    SELECT 1
+                    FROM {Schemas.Catalog}.outbox_message_consumers
+                    WHERE outbox_message_id = @OutboxMessageId AND
+                          name = @Name
+                ) THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END
+                """;
+
+        return await dbConnection.ExecuteScalarAsync<bool>(sql, outboxMessageConsumer);
+    }
+
+    private static async Task InsertOutboxConsumerAsync(
+        DbConnection dbConnection,
+        OutboxMessageConsumer outboxMessageConsumer)
+    {
+        const string sql =
+            $"""
+            INSERT INTO {Schemas.Catalog}.outbox_message_consumers(outbox_message_id, name)
+            VALUES (@OutboxMessageId, @Name)
+            """;
+
+        await dbConnection.ExecuteAsync(sql, outboxMessageConsumer);
+    }
+}
