@@ -49,9 +49,11 @@ jobs:
           dotnet restore Pricely.slnx -p:TreatWarningsAsErrors=false > /dev/null 2>&1 || true
           dotnet list Pricely.slnx package --vulnerable --include-transitive 2>&1 \
             | grep -E "Project|^\s+>" | sed -E 's/\s+/ /g' | sort -u > vulnerable.txt || true
-          dotnet nuget why Pricely.slnx MessagePack 2>&1 | grep -E "Project|──|- " | sed -E 's/\s+/ /g' | head -40 > why.txt || true
-          dotnet nuget why Pricely.slnx System.Security.Cryptography.Pkcs 2>&1 | grep -E "Project|──|- " | sed -E 's/\s+/ /g' | head -40 >> why.txt || true
-          echo "::error title=Vulnerable packages::$(cat vulnerable.txt why.txt | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')"
+          for id in $(grep -ohE "GHSA-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}" restore.log | sort -u); do
+            curl -s -H "Authorization: Bearer ${{ github.token }}" "https://api.github.com/advisories/$id" \
+              | jq -r --arg id "$id" '.vulnerabilities[] | "\($id) \(.package.name) \(.vulnerable_version_range) -> patched \(.first_patched_version // "none")"' >> patched.txt || true
+          done
+          echo "::error title=Vulnerable packages::$(cat patched.txt vulnerable.txt | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')"
 
       - name: Report test summary
         if: always()
