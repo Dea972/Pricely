@@ -13,7 +13,7 @@ public sealed class CollectionProfileResolverTests
     [Fact]
     public void Resolve_ShouldUseOwnPreferredMerchants_WhenDefined()
     {
-        Guid leafMerchant = Guid.NewGuid();
+        var leafMerchant = Guid.NewGuid();
         CollectionProfile[] profiles =
         [
             Profile(Root, [Guid.NewGuid()], null),
@@ -29,7 +29,7 @@ public sealed class CollectionProfileResolverTests
     [Fact]
     public void Resolve_ShouldInheritPreferredMerchantsFromNearestAncestor()
     {
-        Guid parentMerchant = Guid.NewGuid();
+        var parentMerchant = Guid.NewGuid();
         CollectionProfile[] profiles =
         [
             Profile(Root, [Guid.NewGuid()], null),

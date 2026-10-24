@@ -17,7 +17,7 @@ public static class CollectionProfileResolver
         IReadOnlyList<Guid> categoryLineage,
         IReadOnlyCollection<CollectionProfile> profiles)
     {
-        Dictionary<Guid, CollectionProfile> profilesByCategory = profiles.ToDictionary(p => p.ProductCategoryId);
+        var profilesByCategory = profiles.ToDictionary(p => p.ProductCategoryId);
 
         IReadOnlyList<Guid> preferredMerchantIds = [];
         Guid? sourceCategoryId = null;

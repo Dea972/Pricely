@@ -12,7 +12,7 @@ public sealed class ProductTests : BaseTest
     [Fact]
     public void Register_ShouldCreateProduct_AndRaiseDomainEvent()
     {
-        Guid categoryId = Guid.NewGuid();
+        var categoryId = Guid.NewGuid();
 
         Result<Product> result = Product.Register(
             new ProductDescription(" Ciment CEM II 35 kg ", "Vicat", SampleGtin, "CEM2-35"),
@@ -52,7 +52,7 @@ public sealed class ProductTests : BaseTest
             new ProductDescription("Laine de verre 100 mm", "Isover", null, null),
             Guid.NewGuid()).Value;
         product.ClearDomainEvents();
-        Guid newCategoryId = Guid.NewGuid();
+        var newCategoryId = Guid.NewGuid();
 
         Result result = product.Update(
             new ProductDescription("Laine de verre 120 mm", "Isover", SampleGtin, null),

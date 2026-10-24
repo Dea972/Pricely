@@ -9,8 +9,8 @@ public sealed class CollectionProfileTests
     [Fact]
     public void Define_ShouldAssignPrioritiesFromListOrder()
     {
-        Guid first = Guid.NewGuid();
-        Guid second = Guid.NewGuid();
+        var first = Guid.NewGuid();
+        var second = Guid.NewGuid();
 
         Result<CollectionProfile> result = CollectionProfile.Define(Guid.NewGuid(), [first, second], "  Compare unit prices  ");
 
@@ -23,7 +23,7 @@ public sealed class CollectionProfileTests
     [Fact]
     public void Define_ShouldFail_WhenAMerchantIsListedTwice()
     {
-        Guid merchantId = Guid.NewGuid();
+        var merchantId = Guid.NewGuid();
 
         Result<CollectionProfile> result = CollectionProfile.Define(Guid.NewGuid(), [merchantId, merchantId], null);
 
@@ -43,9 +43,9 @@ public sealed class CollectionProfileTests
     [Fact]
     public void Update_ShouldReorderKeepAndRemoveMerchants()
     {
-        Guid kept = Guid.NewGuid();
-        Guid removed = Guid.NewGuid();
-        Guid added = Guid.NewGuid();
+        var kept = Guid.NewGuid();
+        var removed = Guid.NewGuid();
+        var added = Guid.NewGuid();
         CollectionProfile profile = CollectionProfile.Define(Guid.NewGuid(), [kept, removed], null).Value;
 
         Result result = profile.Update([added, kept], "   ");

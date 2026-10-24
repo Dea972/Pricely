@@ -66,7 +66,7 @@ public sealed class OfferCollectionPlanner(
 
         IReadOnlyCollection<Merchant> merchants =
             await merchantRepository.GetManyAsync(profile.PreferredMerchantIds, cancellationToken);
-        Dictionary<Guid, Merchant> activeMerchants = merchants.Where(m => m.IsActive).ToDictionary(m => m.Id);
+        var activeMerchants = merchants.Where(m => m.IsActive).ToDictionary(m => m.Id);
 
         return profile.PreferredMerchantIds
             .Where(activeMerchants.ContainsKey)
