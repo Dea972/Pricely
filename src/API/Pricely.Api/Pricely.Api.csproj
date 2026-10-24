@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
@@ -7,6 +7,11 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\aspire\Pricely.ServiceDefaults\Pricely.ServiceDefaults.csproj" />
     <ProjectReference Include="..\..\Adapters\Pricely.Sdk\Pricely.Sdk.csproj" />
+  </ItemGroup>
+
+  <!-- Security: patched version of a Microsoft.AspNetCore.OpenApi dependency -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.OpenApi" />
   </ItemGroup>
 
 </Project>
