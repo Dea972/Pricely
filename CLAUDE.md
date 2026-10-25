@@ -90,7 +90,15 @@ Le build échoue sur le moindre avertissement (`TreatWarningsAsErrors`, `Analysi
 - **Profil de collecte** par typologie : enseignes favorites → la typologie la plus proche qui en définit l'emporte (remplacement) ; instructions → concaténées de la racine vers la feuille. Voir `CollectionProfileResolver`.
 - **Garde-fou prix** : une observation qui s'écarte de plus de 40 % de la médiane des dernières observations des autres offres confirmées (même devise) est signalée (`PriceAnomalyPolicy`).
 - **Collecte** : `CollectProductOffersCommand` → `OfferCollectionPlanner` (produit, profil résolu, enseignes actives) → `IOfferCollector` (port) → `CollectedOfferRecorder` (une sauvegarde par offre collectée). Les offres d'enseignes non demandées sont ignorées. `CollectOffersJob` (Quartz) est désactivé par défaut (`Pricing:Collection:Enabled`).
-- L'implémentation actuelle de `IOfferCollector` est `NotConfiguredOfferCollector`, qui échoue explicitement. La cible est un agent IA (runtime `Dea972/Agent`) guidé par les instructions de la typologie ; scrapers dédiés et flux partenaires en complément.
+- L'implémentation actuelle de `IOfferCollector` est `NotConfiguredOfferCollector`, qui échoue explicitement. La cible est l'agent IA de Pricely (ADR-008), qui passe par la passerelle LLM (ADR-007) et les tools de collecte (ADR-009) ; scrapers dédiés et flux partenaires en complément. On n'utilise pas le runtime générique `Dea972/Agent`.
+
+## IA, agent et MCP (cible, voir ADR-007 à 009)
+
+- **Tout appel LLM** passe par `ILlmGateway.ForFeatureAsync(feature)` (Common). Un module déclare ses `AiFeature` (code `"<module>.<usage>"`) et n'injecte jamais un fournisseur.
+- Le module **AiEngine** choisit la cible par fonctionnalité (modèle ou agent), tient le catalogue des modèles et tarifs et journalise chaque appel (`LlmCalledIntegrationEvent` → `LlmCall`, coût figé).
+- **Agent** : boucle d'outils dans Pricely (`IChatClient` + `FunctionInvokingChatClient`), conversations persistées, tools d'écriture soumis à approbation, résultats typés rendus par le front Blazor.
+- **Tools** : déclarés dans la `Presentation` de chaque module, fins, via `ISender` ; exposés à l'agent interne et au **MCP HTTP** (`/mcp`). Jamais de logique métier dans un tool.
+- Référence d'implémentation : AiEngine et Common AI de ChaussonStore (patterns uniquement, pas de code métier Chausson).
 
 ## Commandes
 
