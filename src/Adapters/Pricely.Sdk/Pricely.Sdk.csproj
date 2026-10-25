@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <ProjectReference Include="..\..\Common\Pricely.Common.Application\Pricely.Common.Application.csproj" />
     <ProjectReference Include="..\..\Common\Pricely.Common.Infrastructure\Pricely.Common.Infrastructure.csproj" />
@@ -7,5 +7,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Modules\Users\Pricely.Modules.Users.Infrastructure\Pricely.Modules.Users.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Catalog\Pricely.Modules.Catalog.Infrastructure\Pricely.Modules.Catalog.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Pricing\Pricely.Modules.Pricing.Infrastructure\Pricely.Modules.Pricing.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

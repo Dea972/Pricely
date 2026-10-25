@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<ItemGroup>
 	  <PackageReference Include="Azure.Identity" />
@@ -27,4 +27,10 @@
 	<ItemGroup>
 		<InternalsVisibleTo Include="Pricely.Sdk" />
 	</ItemGroup>
+
+  <!-- Security: patched version of a Microsoft.Data.SqlClient dependency -->
+  <ItemGroup>
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
+  </ItemGroup>
+
 </Project>

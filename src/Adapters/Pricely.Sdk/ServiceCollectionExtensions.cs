@@ -1,10 +1,12 @@
-﻿using Pricely.Common.Application;
+using Pricely.Common.Application;
 using Pricely.Common.Infrastructure;
 using Pricely.Common.Infrastructure.Authentication;
 using Pricely.Common.Infrastructure.Authorization;
 using Pricely.Common.Infrastructure.Configuration;
 using Pricely.Common.Presentation.Endpoints;
 using Pricely.Common.Presentation.Tools;
+using Pricely.Modules.Catalog.Infrastructure;
+using Pricely.Modules.Pricing.Infrastructure;
 using Pricely.Modules.Users.Infrastructure;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -37,10 +39,10 @@ public static class ServiceCollectionExtensions
         IConfiguration configuration)
     {
         // Register application layer services (CQRS handlers, mediators, validators, etc.).
-        services.AddApplication([]);
+        services.AddApplication([.. CatalogModule.HandlerAssemblies, .. PricingModule.HandlerAssemblies]);
 
         // Register infrastructure concerns (DbContext, repositories, outbox, message bus, etc.).
-        services.AddInfrastructure(connectionString, []);
+        services.AddInfrastructure(connectionString, [PricingModule.ConfigureConsumers]);
 
         // Register authentication (JWT Bearer) and authorization (permission-based policies).
         await services.AddAuthenticationInternalAsync(configuration);
@@ -49,10 +51,12 @@ public static class ServiceCollectionExtensions
         // Register Users module (authentication, authorization, user management).
         await services.AddUsersModuleAsync(configuration);
 
-        // Add module registrations here (domain-specific modules: Conversation, AI Engine, etc.).
-        // Example:
-        // services.AddConversationModule(configuration);
-        // services.AddAiEngineModule(configuration);
+        // Catalog module: reference products and product typologies.
+        services.AddCatalogModule(configuration, connectionString);
+
+        // Pricing module: merchants, collection profiles, offers and price observations.
+        services.AddPricingModule(configuration, connectionString);
+
         // Keep this section as the single place to aggregate module additions.
 
 

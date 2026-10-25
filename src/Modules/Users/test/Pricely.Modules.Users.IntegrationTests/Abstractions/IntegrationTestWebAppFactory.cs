@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Testcontainers.MsSql;
 
@@ -15,10 +15,7 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
         builder.UseEnvironment("Test");
 
         Environment.SetEnvironmentVariable("ConnectionStrings:Database", _dbContainer.GetConnectionString());
-
-        Environment.SetEnvironmentVariable("AZURE_TENANT_ID", "4df76c95-f617-4e27-94c4-04577ba022df");
-        Environment.SetEnvironmentVariable("AZURE_CLIENT_ID", "4d107ffa-aee0-4b22-9dff-edcd6d5f44ae");
-        Environment.SetEnvironmentVariable("AZURE_CLIENT_SECRET", "qgD8Q~Gi2SX_5IpUGldRR.ews5cm~erCBfO6Vaeq");
+        // Azure credentials (AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET) must come from the environment, never from source.
 
     }
 
