@@ -1,17 +1,17 @@
-﻿using System.Reflection;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Pricely.Common.Application.Authorization;
 using Pricely.Common.Application.EventBus;
 using Pricely.Common.Application.Messaging;
-using Pricely.Common.Infrastructure.Configuration;
+using Pricely.Common.Infrastructure.Outbox;
 using Pricely.Common.Presentation.Endpoints;
 using Pricely.Modules.Users.Application.Abstractions.Data;
 using Pricely.Modules.Users.Domain.Users;
 using Pricely.Modules.Users.Infrastructure.Authorization;
 using Pricely.Modules.Users.Infrastructure.Database;
-using Pricely.Modules.Users.Infrastructure.Identity;
 using Pricely.Modules.Users.Infrastructure.Inbox;
 using Pricely.Modules.Users.Infrastructure.Outbox;
 using Pricely.Modules.Users.Infrastructure.Users;
@@ -20,48 +20,53 @@ namespace Pricely.Modules.Users.Infrastructure;
 
 public static class UsersModule
 {
-    public static async Task<IServiceCollection> AddUsersModuleAsync(
-        this IServiceCollection services,
-        IConfiguration configuration)
-        //,string connectionString)
-    {
-        services.AddMediatR(config => config.RegisterServicesFromAssembly(Assembly.GetAssembly(typeof(UsersModule))!));
+    /// <summary>
+    /// Assemblies containing the module's MediatR handlers and validators
+    /// (command handlers in Application, query handlers in Infrastructure).
+    /// </summary>
+    public static readonly System.Reflection.Assembly[] HandlerAssemblies =
+    [
+        Application.AssemblyReference.Assembly,
+        typeof(UsersModule).Assembly
+    ];
 
+    public static IServiceCollection AddUsersModule(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        string connectionString)
+    {
         services.AddDomainEventHandlers();
 
         services.AddIntegrationEventHandlers();
 
-        services.AddInfrastructure(/*connectionString*/);
+        services.AddInfrastructure(connectionString);
 
         services.AddEndpoints(Presentation.AssemblyReference.Assembly);
 
-        await services.ConfigureAsync(configuration);
+        services.Configure<OutboxOptions>(configuration.GetSection("Users:Outbox"));
+
+        services.ConfigureOptions<ConfigureProcessOutboxJob>();
 
         return services;
     }
 
-    private static void AddInfrastructure(
-        this IServiceCollection services)
-        //, string connectionString)
+    private static void AddInfrastructure(this IServiceCollection services, string connectionString)
     {
-
-        //services.AddDbContext<UsersDbContext>((sp, options) =>
-        //    options
-        //        .Use(
-        //            connectionString,
-        //            npgsqlOptions => npgsqlOptions
-        //                .MigrationsHistoryTable(HistoryRepository.DefaultTableName, Schemas.Users))
-        //        .UseSnakeCaseNamingConvention()
-        //        .AddInterceptors(sp.GetRequiredService<InsertOutboxMessagesInterceptor>()));
+        services.AddDbContext<UsersDbContext>((serviceProvider, options) =>
+            options
+                .UseSqlServer(
+                    connectionString,
+                    sqlServerOptions => sqlServerOptions.MigrationsHistoryTable(
+                        HistoryRepository.DefaultTableName,
+                        Schemas.Users))
+                .UseSnakeCaseNamingConvention()
+                .AddInterceptors(serviceProvider.GetRequiredService<InsertOutboxMessagesInterceptor>()));
 
         services.AddScoped<IUserRepository, UserRepository>();
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<UsersDbContext>());
-        // Services d'identité
-        services.AddScoped<IJwtTokenService, JwtTokenService>();
+
         services.AddScoped<IPermissionService, PermissionService>();
-
-
     }
 
     private static void AddDomainEventHandlers(this IServiceCollection services)
@@ -109,16 +114,5 @@ public static class UsersModule
 
             services.Decorate(integrationEventHandler, closedIdempotentHandler);
         }
-    }
-
-    private static async Task ConfigureAsync(this IServiceCollection services, IConfiguration configuration)
-    {
-
-        services.Configure<OutboxOptions>(configuration.GetSection("Users:Outbox"));
-
-        services.ConfigureOptions<ConfigureProcessOutboxJob>();
-        
-        await services.ConfigureWithSecretsAsync<JwtOptions>(configuration, "Jwt");
-
     }
 }

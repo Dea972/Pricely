@@ -1,5 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Pricely.Modules.Users.Application\Pricely.Modules.Users.Application.csproj" />

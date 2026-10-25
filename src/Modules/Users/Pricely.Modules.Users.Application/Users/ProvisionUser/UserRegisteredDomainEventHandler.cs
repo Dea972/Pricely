@@ -10,7 +10,7 @@ using Pricely.Modules.Users.Domain.Users;
 using Pricely.Modules.Users.IntegrationEvents;
 using MediatR;
 
-namespace Pricely.Modules.Users.Application.Users.RegisterUser;
+namespace Pricely.Modules.Users.Application.Users.ProvisionUser;
 
 internal sealed class UserRegisteredDomainEventHandler(ISender sender, IEventBus bus)
     : DomainEventHandler<UserRegisteredDomainEvent>

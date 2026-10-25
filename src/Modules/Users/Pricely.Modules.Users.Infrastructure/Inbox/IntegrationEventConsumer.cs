@@ -31,7 +31,7 @@ internal sealed class IntegrationEventConsumer<TIntegrationEvent>(IDbConnectionF
         const string sql =
             $"""
             INSERT INTO {Schemas.Users}.inbox_messages(id, type, content, occurred_on_utc)
-            VALUES (@Id, @Type, @Content::json, @OccurredOnUtc)
+            VALUES (@Id, @Type, @Content, @OccurredOnUtc)
             """;
 
         await connection.ExecuteAsync(sql, inboxMessage);
