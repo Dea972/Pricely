@@ -48,9 +48,50 @@ Garde-fou : relevé à plus de 40 % de la médiane des autres offres confirmées
 
 L'audit NuGet (transitif compris) reste bloquant. Correction par montée de version du package direct ; à défaut, référence directe à la version corrigée dans le projet le plus proche de la source, commentée avec l'avis GHSA, à retirer quand le parent est à jour. `CentralPackageTransitivePinningEnabled` est écarté : il impose toutes les versions centrales au graphe transitif et provoque des rétrogradations en cascade.
 
+## ADR-007 — Appels LLM centralisés dans Common, piloté par le module AiEngine
+
+**Statut** : acceptée (2026-10-25)
+
+Repris de ChaussonStore. Les appels LLM passent tous par un port de `Common.Application.AI` :
+- `AiFeature` : fonctionnalité IA déclarée par un module (code `"<module>.<usage>"`, libellé, module, fournisseur par défaut, conversation requise ou non), enregistrée par `services.AddAiFeature(...)`.
+- `ILlmGateway.ForFeatureAsync(feature)` : renvoie le client du fournisseur et du modèle (ou de l'agent) ciblés pour cette fonctionnalité. Un module n'injecte jamais un fournisseur directement.
+- `LlmServiceBase` : base des fournisseurs (services à clé, enregistrés une seule fois par `AddAiProvidersAsync` dans `Common.Infrastructure.Ai`) ; publie `LlmCalledIntegrationEvent` après chaque appel (tokens, durée, modèle, session, succès).
+- `ILlmTargetResolver` : par défaut, le fournisseur de la fonctionnalité ; remplacé en DI par celui du module AiEngine.
+
+Le module **AiEngine** pilote et observe, il n'appelle pas les LLM pour les autres : catalogue `Model` / `ModelPrice` (tarifs datés), `FeatureSetting` (cible par fonctionnalité + cible `default`), `Agent` (agents hébergés), `Session` / `LlmCall` (journal via l'inbox, coût figé au tarif du jour), statistiques.
+
+Conséquence : aucun module ne dépend d'AiEngine ; pas de projet `Contracts`. Écarts volontaires avec ChaussonStore : horodatage en UTC (`IDateTimeProvider`), fournisseur Anthropic d'abord (Vertex AI / Foundry plus tard), recherche web des tarifs reportée.
+
+## ADR-008 — Agent : boucle d'outils dans Pricely
+
+**Statut** : acceptée (2026-10-25)
+
+La passerelle de ChaussonStore ne fait que message → texte (ou JSON) ; ses « agents » sont hébergés chez le fournisseur avec leurs propres outils. Pour un agent qui utilise les tools de Pricely, on ajoute à la passerelle un `IChatClient` (`Microsoft.Extensions.AI`) par fonctionnalité, enveloppé par `FunctionInvokingChatClient`, avec journalisation `LlmCalled` conservée.
+
+La boucle tourne dans Pricely (et non dans un agent hébergé) pour :
+- intercepter les tools d'écriture soumis à approbation (action en attente, validée par l'utilisateur) ;
+- récupérer les résultats typés des tools pour les composants du front Blazor ;
+- persister la conversation (`AgentConversation`) et la rejouer.
+
+L'agent hébergé (Anthropic Managed Agents branché sur le MCP de Pricely) reste possible plus tard comme cible `Agent` d'AiEngine.
+
+## ADR-009 — Tools définis une fois, exposés à l'agent interne et en MCP HTTP
+
+**Statut** : acceptée (2026-10-25)
+
+Chaque module déclare ses tools dans `Presentation` (comme ses endpoints) : méthodes décrites (`[Description]`, en français) qui envoient une commande ou une requête via `ISender`, avec deux métadonnées : lecture / écriture, approbation requise ou non. Une même définition (`AIFunction`) sert :
+- à l'agent interne (front Blazor) ;
+- au serveur MCP en **transport HTTP** (`/mcp` dans l'API, authentifié), utilisable depuis Claude.ai, Claude Desktop / Code ou tout client MCP.
+
+Écart volontaire avec ChaussonStore (MCP stdio, tools clients Refit de l'API) : un MCP distant est nécessaire et l'agent interne ne doit pas s'appeler lui-même en HTTP. L'amorce `IMcpTool` / `McpServerExtensions` du template (stdio, `Activator.CreateInstance`) est remplacée.
+
+Garde-fous : un tool ne contient pas de logique métier ; l'agent ne confirme jamais une offre lui-même (`OfferMatchingPolicy` ou décision humaine) ; un prix soumis par l'agent doit figurer dans une page réellement récupérée par Pricely (instantané de page).
+
 ## Décisions ouvertes
 
 - Démarrage de l'API : câbler `AddPricelyAsync` dans `Program.cs` et réactiver le `DbContext` Users, ou isoler Users tant qu'il n'est pas nettoyé.
 - Migrations : via l'hôte ou via des `IDesignTimeDbContextFactory` par module (skill `add-migration`).
-- Collecteur : agent IA (`Dea972/Agent` ou `Microsoft.Extensions.AI`), choix du fournisseur et des enseignes à scraper en direct.
+- Authentification du MCP HTTP : clé d'API d'abord ou OAuth directement (requis pour un connecteur Claude.ai distant).
+- Front Blazor : Blazor Server ou Blazor Web App en rendu interactif automatique ; projet de la solution (`src/Web/Pricely.Web`) ou application séparée.
+- API de recherche web pour l'agent de collecte (Brave, Tavily, Bing…).
 - Plusieurs conditionnements d'un même produit chez une enseigne : aujourd'hui un produit de référence par conditionnement.
