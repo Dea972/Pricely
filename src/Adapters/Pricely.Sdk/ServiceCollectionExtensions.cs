@@ -5,7 +5,7 @@ using Pricely.Common.Infrastructure.Authentication;
 using Pricely.Common.Infrastructure.Authorization;
 using Pricely.Common.Infrastructure.Configuration;
 using Pricely.Common.Presentation.Endpoints;
-using Pricely.Common.Presentation.Tools;
+using Pricely.Common.Presentation.Mcp;
 using Pricely.Modules.AiEngine.Infrastructure;
 using Pricely.Modules.Catalog.Infrastructure;
 using Pricely.Modules.Pricing.Infrastructure;
@@ -73,11 +73,8 @@ public static class ServiceCollectionExtensions
         // Keep this section as the single place to aggregate module additions.
 
 
-        // Register MCP server (Model Context Protocol) with tool implementations.
-        services.AddMcpServerWithTools([]);
-
-        // Discover and register endpoint definitions from presentation layer / modules.
-        services.AddEndpoints((System.Reflection.Assembly[])Array.Empty<object>());
+        // MCP server over HTTP (/mcp): the tools declared by the modules (ADR-009).
+        services.AddPricelyMcpServer([CatalogModule.ToolAssembly, PricingModule.ToolAssembly]);
 
         // Return the modified service collection.
         return services;
@@ -96,6 +93,9 @@ public static class ServiceCollectionExtensions
 
         // Delegate mapping to the endpoint discovery/registration mechanism.
         app.MapEndpoints(apiGroup);
+
+        // MCP server (streamable HTTP), outside /api, protected like the API.
+        app.MapPricelyMcp();
 
         // Return the application builder for further middleware chaining.
         return app;

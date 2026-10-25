@@ -42,6 +42,11 @@ public static class PricingModule
         typeof(PricingModule).Assembly
     ];
 
+    /// <summary>
+    /// Assembly declaring the module's MCP / agent tools (<c>[McpServerToolType]</c> classes in Presentation).
+    /// </summary>
+    public static readonly Assembly ToolAssembly = Presentation.AssemblyReference.Assembly;
+
     public static IServiceCollection AddPricingModule(
         this IServiceCollection services,
         IConfiguration configuration,

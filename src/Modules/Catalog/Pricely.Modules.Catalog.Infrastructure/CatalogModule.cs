@@ -28,6 +28,11 @@ public static class CatalogModule
         typeof(CatalogModule).Assembly
     ];
 
+    /// <summary>
+    /// Assembly declaring the module's MCP / agent tools (<c>[McpServerToolType]</c> classes in Presentation).
+    /// </summary>
+    public static readonly System.Reflection.Assembly ToolAssembly = Presentation.AssemblyReference.Assembly;
+
     public static IServiceCollection AddCatalogModule(
         this IServiceCollection services,
         IConfiguration configuration,
