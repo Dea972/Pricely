@@ -14,6 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Modules\AiEngine\Pricely.Modules.AiEngine.Infrastructure\Pricely.Modules.AiEngine.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Catalog\Pricely.Modules.Catalog.Infrastructure\Pricely.Modules.Catalog.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Pricing\Pricely.Modules.Pricing.Infrastructure\Pricely.Modules.Pricing.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Users\Pricely.Modules.Users.Infrastructure\Pricely.Modules.Users.Infrastructure.csproj" />

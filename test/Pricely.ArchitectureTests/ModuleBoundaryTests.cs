@@ -1,6 +1,7 @@
 using System.Reflection;
 using FluentAssertions;
 using NetArchTest.Rules;
+using Pricely.Modules.AiEngine.Infrastructure;
 using Pricely.Modules.Catalog.Infrastructure;
 using Pricely.Modules.Pricing.Infrastructure;
 using Pricely.Modules.Users.Infrastructure;
@@ -15,6 +16,7 @@ public sealed class ModuleBoundaryTests
     private const string CatalogNamespace = "Pricely.Modules.Catalog";
     private const string PricingNamespace = "Pricely.Modules.Pricing";
     private const string UsersNamespace = "Pricely.Modules.Users";
+    private const string AiEngineNamespace = "Pricely.Modules.AiEngine";
 
     private static readonly Assembly[] CatalogAssemblies =
     [
@@ -40,9 +42,18 @@ public sealed class ModuleBoundaryTests
         Modules.Users.Presentation.AssemblyReference.Assembly
     ];
 
+    private static readonly Assembly[] AiEngineAssemblies =
+    [
+        typeof(Modules.AiEngine.Domain.Models.Model).Assembly,
+        Modules.AiEngine.Application.AssemblyReference.Assembly,
+        typeof(AiEngineModule).Assembly,
+        Modules.AiEngine.Presentation.AssemblyReference.Assembly
+    ];
+
     private static readonly string[] CatalogInternals = Internals(CatalogNamespace);
     private static readonly string[] PricingInternals = Internals(PricingNamespace);
     private static readonly string[] UsersInternals = Internals(UsersNamespace);
+    private static readonly string[] AiEngineInternals = Internals(AiEngineNamespace);
 
     [Fact]
     public void CatalogModule_ShouldNotDependOn_OtherModules()
@@ -66,12 +77,28 @@ public sealed class ModuleBoundaryTests
     }
 
     [Fact]
+    public void AiEngineModule_ShouldNotDependOn_OtherModules()
+    {
+        AssertNoDependency(AiEngineAssemblies, [.. CatalogInternals, CatalogNamespace + ".IntegrationEvents"]);
+        AssertNoDependency(AiEngineAssemblies, [.. PricingInternals, PricingNamespace + ".IntegrationEvents"]);
+        AssertNoDependency(AiEngineAssemblies, [.. UsersInternals, UsersNamespace + ".IntegrationEvents"]);
+    }
+
+    [Fact]
+    public void OtherModules_ShouldNotDependOn_AiEngine()
+    {
+        AssertNoDependency(CatalogAssemblies, AiEngineInternals);
+        AssertNoDependency(PricingAssemblies, AiEngineInternals);
+        AssertNoDependency(UsersAssemblies, AiEngineInternals);
+    }
+
+    [Fact]
     public void DomainLayers_ShouldNotDependOn_PersistenceOrMessaging()
     {
         string[] forbidden = ["Microsoft.EntityFrameworkCore", "MassTransit", "Microsoft.AspNetCore", "Dapper"];
 
         TestResult result = Types
-            .InAssemblies([CatalogAssemblies[0], PricingAssemblies[0]])
+            .InAssemblies([CatalogAssemblies[0], PricingAssemblies[0], AiEngineAssemblies[0]])
             .ShouldNot()
             .HaveDependencyOnAny(forbidden)
             .GetResult();

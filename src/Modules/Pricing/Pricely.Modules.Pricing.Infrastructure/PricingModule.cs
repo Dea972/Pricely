@@ -5,11 +5,13 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Pricely.Common.Application.AI;
 using Pricely.Common.Application.EventBus;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Infrastructure.Outbox;
 using Pricely.Common.Presentation.Endpoints;
 using Pricely.Modules.Catalog.IntegrationEvents;
+using Pricely.Modules.Pricing.Application;
 using Pricely.Modules.Pricing.Application.Abstractions.Collection;
 using Pricely.Modules.Pricing.Application.Abstractions.Data;
 using Pricely.Modules.Pricing.Application.Offers.CollectProductOffers;
@@ -40,6 +42,11 @@ public static class PricingModule
         typeof(PricingModule).Assembly
     ];
 
+    /// <summary>
+    /// Assembly declaring the module's MCP / agent tools (<c>[McpServerToolType]</c> classes in Presentation).
+    /// </summary>
+    public static readonly Assembly ToolAssembly = Presentation.AssemblyReference.Assembly;
+
     public static IServiceCollection AddPricingModule(
         this IServiceCollection services,
         IConfiguration configuration,
@@ -68,6 +75,8 @@ public static class PricingModule
 
         // Replace with the real collector (AI agent, scrapers, partner feeds) when available.
         services.TryAddScoped<IOfferCollector, NotConfiguredOfferCollector>();
+
+        services.AddAiFeature(PricingAiFeatures.OfferCollection);
 
         services.AddDomainEventHandlers();
         services.AddIntegrationEventHandlers();

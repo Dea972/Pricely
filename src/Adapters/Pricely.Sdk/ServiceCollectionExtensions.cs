@@ -1,10 +1,12 @@
 using Pricely.Common.Application;
 using Pricely.Common.Infrastructure;
+using Pricely.Common.Infrastructure.Ai;
 using Pricely.Common.Infrastructure.Authentication;
 using Pricely.Common.Infrastructure.Authorization;
 using Pricely.Common.Infrastructure.Configuration;
 using Pricely.Common.Presentation.Endpoints;
-using Pricely.Common.Presentation.Tools;
+using Pricely.Common.Presentation.Mcp;
+using Pricely.Modules.AiEngine.Infrastructure;
 using Pricely.Modules.Catalog.Infrastructure;
 using Pricely.Modules.Pricing.Infrastructure;
 using Pricely.Modules.Users.Infrastructure;
@@ -39,10 +41,18 @@ public static class ServiceCollectionExtensions
         IConfiguration configuration)
     {
         // Register application layer services (CQRS handlers, mediators, validators, etc.).
-        services.AddApplication([.. CatalogModule.HandlerAssemblies, .. PricingModule.HandlerAssemblies]);
+        services.AddApplication(
+        [
+            .. CatalogModule.HandlerAssemblies,
+            .. PricingModule.HandlerAssemblies,
+            .. AiEngineModule.HandlerAssemblies
+        ]);
 
         // Register infrastructure concerns (DbContext, repositories, outbox, message bus, etc.).
-        services.AddInfrastructure(connectionString, [PricingModule.ConfigureConsumers]);
+        services.AddInfrastructure(connectionString, [PricingModule.ConfigureConsumers, AiEngineModule.ConfigureConsumers]);
+
+        // Register the LLM providers and the gateway (every LLM call goes through ILlmGateway, ADR-007).
+        services.AddAiProviders(configuration);
 
         // Register authentication (JWT Bearer) and authorization (permission-based policies).
         await services.AddAuthenticationInternalAsync(configuration);
@@ -57,14 +67,14 @@ public static class ServiceCollectionExtensions
         // Pricing module: merchants, collection profiles, offers and price observations.
         services.AddPricingModule(configuration, connectionString);
 
+        // AiEngine module: model catalog and prices, target of each AI feature, LLM call journal and usage.
+        services.AddAiEngineModule(configuration, connectionString);
+
         // Keep this section as the single place to aggregate module additions.
 
 
-        // Register MCP server (Model Context Protocol) with tool implementations.
-        services.AddMcpServerWithTools([]);
-
-        // Discover and register endpoint definitions from presentation layer / modules.
-        services.AddEndpoints((System.Reflection.Assembly[])Array.Empty<object>());
+        // MCP server over HTTP (/mcp): the tools declared by the modules (ADR-009).
+        services.AddPricelyMcpServer([CatalogModule.ToolAssembly, PricingModule.ToolAssembly]);
 
         // Return the modified service collection.
         return services;
@@ -83,6 +93,9 @@ public static class ServiceCollectionExtensions
 
         // Delegate mapping to the endpoint discovery/registration mechanism.
         app.MapEndpoints(apiGroup);
+
+        // MCP server (streamable HTTP), outside /api, protected like the API.
+        app.MapPricelyMcp();
 
         // Return the application builder for further middleware chaining.
         return app;

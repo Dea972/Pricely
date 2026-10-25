@@ -55,12 +55,12 @@ L'audit NuGet (transitif compris) reste bloquant. Correction par montée de vers
 Repris de ChaussonStore. Les appels LLM passent tous par un port de `Common.Application.AI` :
 - `AiFeature` : fonctionnalité IA déclarée par un module (code `"<module>.<usage>"`, libellé, module, fournisseur par défaut, conversation requise ou non), enregistrée par `services.AddAiFeature(...)`.
 - `ILlmGateway.ForFeatureAsync(feature)` : renvoie le client du fournisseur et du modèle (ou de l'agent) ciblés pour cette fonctionnalité. Un module n'injecte jamais un fournisseur directement.
-- `LlmServiceBase` : base des fournisseurs (services à clé, enregistrés une seule fois par `AddAiProvidersAsync` dans `Common.Infrastructure.Ai`) ; publie `LlmCalledIntegrationEvent` après chaque appel (tokens, durée, modèle, session, succès).
+- `LlmServiceBase` : base des fournisseurs (services à clé, enregistrés une seule fois par `AddAiProviders` dans `Common.Infrastructure.Ai`) ; publie `LlmCalledIntegrationEvent` après chaque appel (tokens, durée, modèle, session, succès). La publication est directe sur le bus, sans outbox : un événement peut être perdu si le processus s'arrête, ce qui est accepté pour des statistiques d'usage.
 - `ILlmTargetResolver` : par défaut, le fournisseur de la fonctionnalité ; remplacé en DI par celui du module AiEngine.
 
-Le module **AiEngine** pilote et observe, il n'appelle pas les LLM pour les autres : catalogue `Model` / `ModelPrice` (tarifs datés), `FeatureSetting` (cible par fonctionnalité + cible `default`), `Agent` (agents hébergés), `Session` / `LlmCall` (journal via l'inbox, coût figé au tarif du jour), statistiques.
+Le module **AiEngine** pilote et observe, il n'appelle pas les LLM pour les autres : catalogue `Model` / `ModelPrice` (tarifs datés), `FeatureSetting` (cible par fonctionnalité + cible `default`), `LlmCall` (journal via l'inbox, coût figé au tarif du jour), statistiques. La session n'est pas un agrégat (contrairement à ChaussonStore) : c'est une clé de regroupement portée par chaque `LlmCall` (`SessionId`), ce qui garde « un agrégat par transaction » et évite une ligne de session par appel. Agents hébergés reportés.
 
-Conséquence : aucun module ne dépend d'AiEngine ; pas de projet `Contracts`. Écarts volontaires avec ChaussonStore : horodatage en UTC (`IDateTimeProvider`), fournisseur Anthropic d'abord (Vertex AI / Foundry plus tard), recherche web des tarifs reportée.
+Conséquence : aucun module ne dépend d'AiEngine ; pas de projet `Contracts`. Écarts volontaires avec ChaussonStore : horodatage en UTC (`IDateTimeProvider`), fournisseur Anthropic d'abord (Vertex AI / Foundry plus tard), recherche web des tarifs et agents hébergés reportés (une cible = un modèle), `LlmCall.Record` regroupe les données de l'appel dans `LlmCallDetails` (pas de factory à 15 paramètres).
 
 ## ADR-008 — Agent : boucle d'outils dans Pricely
 
@@ -84,6 +84,8 @@ Chaque module déclare ses tools dans `Presentation` (comme ses endpoints) : mé
 - au serveur MCP en **transport HTTP** (`/mcp` dans l'API, authentifié), utilisable depuis Claude.ai, Claude Desktop / Code ou tout client MCP.
 
 Écart volontaire avec ChaussonStore (MCP stdio, tools clients Refit de l'API) : un MCP distant est nécessaire et l'agent interne ne doit pas s'appeler lui-même en HTTP. L'amorce `IMcpTool` / `McpServerExtensions` du template (stdio, `Activator.CreateInstance`) est remplacée.
+
+**Mise en œuvre (2026-10-25)** : pas d'abstraction maison. Les tools sont des classes `public static` `[McpServerToolType]` du SDK MCP (`ModelContextProtocol.AspNetCore`), méthodes `[McpServerTool]` + `[Description]`, services (`ISender`, `CancellationToken`) injectés. Les métadonnées sont les annotations MCP : `ReadOnly`, `Destructive`, `Idempotent`, `OpenWorld`. Pour l'agent interne (étape 4), les mêmes méthodes seront converties en `AIFunction` (le SDK MCP s'appuie sur `Microsoft.Extensions.AI`) ; l'agent exigera une approbation pour tout tool qui n'est pas `ReadOnly`. Le filtrage par scope (ADR-010) s'appuiera sur ces mêmes annotations ou sur un attribut dédié, à décider avec l'étape 0.
 
 Garde-fous : un tool ne contient pas de logique métier ; l'agent ne confirme jamais une offre lui-même (`OfferMatchingPolicy` ou décision humaine) ; un prix soumis par l'agent doit figurer dans une page réellement récupérée par Pricely (instantané de page).
 

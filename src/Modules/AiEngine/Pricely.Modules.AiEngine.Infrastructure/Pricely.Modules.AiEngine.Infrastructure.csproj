@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pricely.Modules.AiEngine.Application\Pricely.Modules.AiEngine.Application.csproj" />
+    <ProjectReference Include="..\Pricely.Modules.AiEngine.Presentation\Pricely.Modules.AiEngine.Presentation.csproj" />
+    <ProjectReference Include="..\..\..\Common\Pricely.Common.Infrastructure\Pricely.Common.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

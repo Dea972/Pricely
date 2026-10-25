@@ -40,6 +40,26 @@ Le code utilise la colonne « Code » (anglais). L'interface et les échanges ut
 | `OfferCollectionPlan` | Plan de collecte | Produit, enseignes et instructions d'une collecte. |
 | `CatalogProduct`, `CatalogCategory` | Copies locales du catalogue | Read models de Pricing alimentés par les événements de Catalog. |
 
+## AiEngine
+
+| Code | Français | Définition |
+|---|---|---|
+| `AiFeature` | Fonctionnalité IA | Usage d'un LLM déclaré par un module (code `module.usage`, fournisseur par défaut). Exemple : `pricing.offer-collection`. |
+| `Model` | Modèle | LLM tel qu'appelé chez un fournisseur (identifiant fournisseur, libellé), avec l'historique de ses tarifs. |
+| `ModelPrice` | Tarif | Prix en USD par million de tokens (entrée, entrée en cache, écriture en cache, sortie), applicable à partir d'un jour UTC. |
+| `FeatureSetting` | Cible | Modèle choisi pour une fonctionnalité ; la cible `default` s'applique aux fonctionnalités sans cible propre. |
+| `LlmTarget` | Cible résolue | Fournisseur et modèle réellement appelés par une fonctionnalité. |
+| `LlmCall` | Appel LLM | Appel journalisé, immuable : tokens, durée, succès, coût figé au tarif du jour. |
+| `SessionId` | Session | Clé qui regroupe les appels d'une même unité de travail (conversation, collecte). |
+| Appel non tarifé | | Appel sans tarif applicable (modèle absent du catalogue ou sans prix ce jour-là) : compté pour 0 dans les coûts. |
+
+## Agents et MCP
+
+| Code | Français | Définition |
+|---|---|---|
+| Tool | Outil | Capacité offerte aux agents (MCP et agent interne), fine, adossée à une requête ou une commande. |
+| `ReadOnly` / `Destructive` | Lecture / action sensible | Annotations d'un tool ; un tool qui n'est pas en lecture seule exige une approbation de l'agent interne. |
+
 ## Règles à retenir
 
 - On compare des **offres confirmées**, jamais des offres proposées.

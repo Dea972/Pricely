@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pricely.Modules.AiEngine.Domain\Pricely.Modules.AiEngine.Domain.csproj" />
+    <ProjectReference Include="..\..\..\Common\Pricely.Common.Application\Pricely.Common.Application.csproj" />
+  </ItemGroup>
+
+</Project>

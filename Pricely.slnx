@@ -33,6 +33,22 @@
 			Id="10389c52-f0f3-44e1-abff-bb8c952dd334" />
 	</Folder>
 	<Folder Name="/src/Modules/" />
+	<Folder Name="/src/Modules/AiEngine/">
+		<Project
+			Path="src/Modules/AiEngine/Pricely.Modules.AiEngine.Domain/Pricely.Modules.AiEngine.Domain.csproj" />
+		<Project
+			Path="src/Modules/AiEngine/Pricely.Modules.AiEngine.Application/Pricely.Modules.AiEngine.Application.csproj" />
+		<Project
+			Path="src/Modules/AiEngine/Pricely.Modules.AiEngine.Infrastructure/Pricely.Modules.AiEngine.Infrastructure.csproj" />
+		<Project
+			Path="src/Modules/AiEngine/Pricely.Modules.AiEngine.Presentation/Pricely.Modules.AiEngine.Presentation.csproj" />
+	</Folder>
+	<Folder Name="/src/Modules/AiEngine/test/">
+		<Project
+			Path="src/Modules/AiEngine/test/Pricely.Modules.AiEngine.ArchitectureTests/Pricely.Modules.AiEngine.ArchitectureTests.csproj" />
+		<Project
+			Path="src/Modules/AiEngine/test/Pricely.Modules.AiEngine.UnitTests/Pricely.Modules.AiEngine.UnitTests.csproj" />
+	</Folder>
 	<Folder Name="/src/Modules/Catalog/">
 		<Project
 			Path="src/Modules/Catalog/Pricely.Modules.Catalog.Domain/Pricely.Modules.Catalog.Domain.csproj" />
@@ -89,6 +105,8 @@
 			Id="b130d505-c013-460c-93ef-d6a34c9babfc" />
 	</Folder>
 	<Folder Name="/test/">
+		<Project
+			Path="test/Pricely.Common.UnitTests/Pricely.Common.UnitTests.csproj" />
 		<Project
 			Path="test/Pricely.ArchitectureTests/Pricely.ArchitectureTests.csproj"
 			Id="51f19f97-3b18-4457-a111-1d4698f121cc" />

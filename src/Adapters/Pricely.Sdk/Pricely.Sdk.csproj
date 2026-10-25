@@ -9,5 +9,6 @@
     <ProjectReference Include="..\..\Modules\Users\Pricely.Modules.Users.Infrastructure\Pricely.Modules.Users.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Catalog\Pricely.Modules.Catalog.Infrastructure\Pricely.Modules.Catalog.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Pricing\Pricely.Modules.Pricing.Infrastructure\Pricely.Modules.Pricing.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\AiEngine\Pricely.Modules.AiEngine.Infrastructure\Pricely.Modules.AiEngine.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

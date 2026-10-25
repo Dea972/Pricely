@@ -1,12 +1,14 @@
-﻿using MassTransit;
+using MassTransit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Pricely.Common.Application.Caching;
 using Pricely.Common.Application.Data;
+using Pricely.Common.Application.EventBus;
 using Pricely.Common.Application.Clock;
 using Pricely.Common.Infrastructure.Caching;
 using Pricely.Common.Infrastructure.Clock;
 using Pricely.Common.Infrastructure.Data;
+using Pricely.Common.Infrastructure.EventBus;
 using Pricely.Common.Infrastructure.Outbox;
 using Quartz;
 
@@ -28,6 +30,8 @@ public static class InfrastructureConfiguration
         services.TryAddScoped<IDbConnectionFactory, DbConnectionFactory>();
 
         services.TryAddSingleton<ICacheService, CacheService>();
+
+        services.TryAddScoped<IEventBus, MassTransitEventBus>();
 
         services.AddQuartz(configurator =>
         {
