@@ -90,6 +90,8 @@
 	</Folder>
 	<Folder Name="/test/">
 		<Project
+			Path="test/Pricely.Common.UnitTests/Pricely.Common.UnitTests.csproj" />
+		<Project
 			Path="test/Pricely.ArchitectureTests/Pricely.ArchitectureTests.csproj"
 			Id="51f19f97-3b18-4457-a111-1d4698f121cc" />
 	</Folder>
