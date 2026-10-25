@@ -37,7 +37,7 @@ test/Pricely.Common.UnitTests  Passerelle LLM
 | Users | `User` | Profils, rôles, permissions métier (l'identité est portée par Keycloak, ADR-010) |
 | Catalog | `ProductCategory`, `Product` | Produits de référence (GTIN, marque, référence fabricant) et typologies (arbre de 3 niveaux max) |
 | Pricing | `Merchant`, `CollectionProfile`, `Offer`, `PriceObservation` | Enseignes, profils de collecte par typologie, offres, historique de prix, collecte |
-| AiEngine | `Model` (+ `ModelPrice`), `FeatureSetting`, `Session`, `LlmCall` | Catalogue des modèles et tarifs, modèle ciblé par fonctionnalité IA, journal des appels LLM et coûts, statistiques d'usage |
+| AiEngine | `Model` (+ `ModelPrice`), `FeatureSetting`, `LlmCall` | Catalogue des modèles et tarifs, modèle ciblé par fonctionnalité IA, journal des appels LLM et coûts, statistiques d'usage |
 
 Pricing ne lit jamais Catalog : il garde des read models locaux `CatalogProduct` / `CatalogCategory`, alimentés par les événements d'intégration de Catalog (inbox, upsert idempotent sur l'identifiant source).
 
@@ -71,7 +71,7 @@ Pricing ne lit jamais Catalog : il garde des read models locaux `CatalogProduct`
 - **Publication inter-modules** : un `DomainEventHandler<T>` dans Application publie l'`IntegrationEvent` via `IEventBus`. L'outbox garantit la livraison.
 - **Consommation inter-modules** : `IntegrationEventHandler<T>` dans **Presentation** (`internal sealed`, suffixe `IntegrationEventHandler`) qui envoie une commande ; `PricingModule.ConfigureConsumers` déclare `IntegrationEventConsumer<T>` ; l'inbox du module assure l'idempotence.
 - **Endpoint** : une classe `internal sealed` par endpoint dans `Presentation/<Agrégats>/`, implémente `IEndpoint`, route sans préfixe `/api` (ajouté par `MapPricelyEndpoints`), `.RequireAuthorization().WithTags(Tags.X)`, accepte un `CancellationToken`, renvoie `result.Match(Results.Ok|NoContent, ApiResults.Problem)`. DTO d'entrée : classe imbriquée `Request` avec `{ get; init; }`.
-- **Persistance** : `Infrastructure/<Agrégats>/<Agrégat>Configuration.cs` et `<Agrégat>Repository.cs`. Toujours `builder.Ignore(x => x.DomainEvents)`. Enums en chaîne (`HasConversion<string>()`). VO non nuls en `ComplexProperty` avec `HasColumnName` explicite ; VO nullable en `HasConversion`. Collections possédées : `OwnsMany` + `UsePropertyAccessMode(Field)`.
+- **Persistance** : `Infrastructure/<Agrégats>/<Agrégat>Configuration.cs` et `<Agrégat>Repository.cs`. Toujours `builder.Ignore(x => x.DomainEvents)`. Enums en chaîne (`HasConversion<string>()`). VO non nuls en `ComplexProperty` avec `HasColumnName` explicite ; VO nullable en `HasConversion`. Collections possédées : `OwnsMany` + `UsePropertyAccessMode(Field)`. Entité enfant (`HasMany`) dont l'`Id` est fixé par le domaine : `ValueGeneratedNever()`, sinon EF Core fait un `UPDATE` au lieu d'un `INSERT` quand on l'ajoute à un agrégat déjà suivi.
 - **Module** : `Infrastructure/<Module>Module.cs` expose `HandlerAssemblies` et `Add<Module>Module(configuration, connectionString)`, enregistré dans `Pricely.Sdk/ServiceCollectionExtensions.cs`. Options dans `appsettings.json` sous `<Module>:Outbox|Inbox|...`.
 
 ## Analyseurs : pièges connus
