@@ -1,0 +1,3 @@
+# EF Core generated migrations: not subject to the code analyzers
+[*.cs]
+generated_code = true
