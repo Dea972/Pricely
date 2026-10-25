@@ -1,4 +1,4 @@
-﻿
+
 using System.Security.Claims;
 using Pricely.Common.Application.Authorization;
 using Pricely.Common.Application.Exceptions;
@@ -9,11 +9,15 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Pricely.Common.Infrastructure.Authorization;
 
+/// <summary>
+/// Adds the business permissions and the internal user id to an authenticated principal. The user is created on
+/// its first authenticated request.
+/// </summary>
 internal sealed class CustomClaimsTransformation(IServiceScopeFactory serviceScopeFactory) : IClaimsTransformation
 {
     public async Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
     {
-        if (principal.HasClaim(c => c.Type == CustomClaims.Sub))
+        if (principal.Identity?.IsAuthenticated != true || principal.HasClaim(c => c.Type == CustomClaims.UserId))
         {
             return principal;
         }
@@ -22,9 +26,7 @@ internal sealed class CustomClaimsTransformation(IServiceScopeFactory serviceSco
 
         IPermissionService permissionService = scope.ServiceProvider.GetRequiredService<IPermissionService>();
 
-        string identityId = principal.GetIdentityId();
-
-        Result<PermissionsResponse> result = await permissionService.GetUserPermissionsAsync(identityId);
+        Result<PermissionsResponse> result = await permissionService.GetUserPermissionsAsync(principal.GetIdentityProfile());
 
         if (result.IsFailure)
         {
@@ -33,7 +35,7 @@ internal sealed class CustomClaimsTransformation(IServiceScopeFactory serviceSco
 
         var claimsIdentity = new ClaimsIdentity();
 
-        claimsIdentity.AddClaim(new Claim(CustomClaims.Sub, result.Value.UserId.ToString()));
+        claimsIdentity.AddClaim(new Claim(CustomClaims.UserId, result.Value.UserId.ToString()));
 
         foreach (string permission in result.Value.Permissions)
         {

@@ -1,50 +1,60 @@
-﻿
-using System.Linq;
-using System.Text;
-using Pricely.Common.Infrastructure.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Pricely.Common.Infrastructure.Authentication;
 
 internal static class AuthenticationExtensions
 {
-    internal static async Task<IServiceCollection> AddAuthenticationInternalAsync(this IServiceCollection services, IConfiguration configuration)
+    internal static IServiceCollection AddAuthenticationInternal(this IServiceCollection services)
     {
-
-        string jwtSecret = await configuration.GetSecretValueFromPathAsync("Jwt:Secret")
-                    ?? throw new InvalidOperationException("JWT Secret not configured");
+        services.AddOptions<IdentityProviderOptions>()
+            .BindConfiguration(IdentityProviderOptions.SectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
 
         services.AddAuthorization();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(async options =>
-            {
-                ServiceProvider serviceProvider = services.BuildServiceProvider();
-                IConfiguration configuration = serviceProvider.GetRequiredService<IConfiguration>();
-                IConfigurationSection jwtSettings = configuration.GetSection("Jwt");
-                 
+            .AddJwtBearer();
 
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
-                    ValidateIssuer = true,
-                    ValidIssuer = jwtSettings["Issuer"],
-                    ValidateAudience = true,
-                    ValidAudience = jwtSettings["Audience"],
-                    ValidateLifetime = true,
-                    ClockSkew = TimeSpan.Zero
-                };
-            });
+        services.AddSingleton<IConfigureOptions<JwtBearerOptions>, ConfigureJwtBearer>();
 
         services.AddHttpContextAccessor();
 
-        services.ConfigureOptions<JwtBearerConfigureOptions>();
-
         return services;
+    }
+
+    private sealed class ConfigureJwtBearer(IOptions<IdentityProviderOptions> identityProvider)
+        : IConfigureNamedOptions<JwtBearerOptions>
+    {
+        public void Configure(JwtBearerOptions options) => Configure(JwtBearerDefaults.AuthenticationScheme, options);
+
+        public void Configure(string? name, JwtBearerOptions options)
+        {
+            if (name != JwtBearerDefaults.AuthenticationScheme)
+            {
+                return;
+            }
+
+            IdentityProviderOptions settings = identityProvider.Value;
+
+            options.Authority = settings.Authority!.ToString();
+            options.RequireHttpsMetadata = settings.RequireHttpsMetadata;
+
+            // Keep the claim names of the token (sub, email, scope...) instead of the legacy WS-* mapping.
+            options.MapInboundClaims = false;
+
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidAudience = settings.Audience,
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.FromSeconds(30),
+                NameClaimType = CustomClaims.PreferredUserName
+            };
+        }
     }
 }
