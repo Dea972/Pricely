@@ -36,3 +36,10 @@ test/                   Solution-level architecture and integration tests
 dotnet build
 dotnet test
 ```
+
+## Working with Claude Code
+
+- `CLAUDE.md`: architecture rules, conventions, analyzer pitfalls, Pricing business rules, known gaps.
+- `.claude/skills/`: `new-module`, `new-aggregate`, `new-use-case`, `new-integration-event`, `add-migration`, `add-offer-collector`.
+- `.claude/agents/architecture-reviewer.md`: review sub-agent to run on every diff.
+- `docs/architecture/`: ubiquitous language, decisions (ADR), model (Mermaid).
