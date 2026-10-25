@@ -1,0 +1,40 @@
+using Microsoft.EntityFrameworkCore;
+using Pricely.Common.Infrastructure.Inbox;
+using Pricely.Modules.AiEngine.Application.Abstractions.Data;
+using Pricely.Modules.AiEngine.Domain.Features;
+using Pricely.Modules.AiEngine.Domain.LlmCalls;
+using Pricely.Modules.AiEngine.Domain.Models;
+using Pricely.Modules.AiEngine.Domain.Sessions;
+using Pricely.Modules.AiEngine.Infrastructure.Features;
+using Pricely.Modules.AiEngine.Infrastructure.LlmCalls;
+using Pricely.Modules.AiEngine.Infrastructure.Models;
+using Pricely.Modules.AiEngine.Infrastructure.Sessions;
+
+namespace Pricely.Modules.AiEngine.Infrastructure.Database;
+
+/// <summary>
+/// AiEngine raises no domain events: no outbox, only the inbox that receives <c>LlmCalledIntegrationEvent</c>.
+/// </summary>
+public sealed class AiEngineDbContext(DbContextOptions<AiEngineDbContext> options) : DbContext(options), IUnitOfWork
+{
+    internal DbSet<Model> Models { get; set; }
+
+    internal DbSet<FeatureSetting> FeatureSettings { get; set; }
+
+    internal DbSet<Session> Sessions { get; set; }
+
+    internal DbSet<LlmCall> LlmCalls { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.HasDefaultSchema(Schemas.AiEngine);
+
+        modelBuilder.ApplyConfiguration(new InboxMessageConfiguration());
+        modelBuilder.ApplyConfiguration(new InboxMessageConsumerConfiguration());
+        modelBuilder.ApplyConfiguration(new ModelConfiguration());
+        modelBuilder.ApplyConfiguration(new ModelPriceConfiguration());
+        modelBuilder.ApplyConfiguration(new FeatureSettingConfiguration());
+        modelBuilder.ApplyConfiguration(new SessionConfiguration());
+        modelBuilder.ApplyConfiguration(new LlmCallConfiguration());
+    }
+}
