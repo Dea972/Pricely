@@ -2,7 +2,6 @@ using System.ComponentModel;
 using MediatR;
 using ModelContextProtocol.Server;
 using Pricely.Common.Presentation.Mcp;
-using Pricely.Modules.Pricing.Application.Abstractions.Collection;
 using Pricely.Modules.Pricing.Application.Merchants.GetMerchants;
 using Pricely.Modules.Pricing.Application.Offers.GetCollectionPlan;
 using Pricely.Modules.Pricing.Application.Offers.GetOffersPendingReview;
@@ -72,7 +71,7 @@ public static class PricingTools
         instructions de collecte de la typologie, de la plus générale à la plus précise. À suivre pour chercher les
         offres du produit chez ces enseignes.
         """)]
-    public static async Task<OfferCollectionRequest> GetCollectionPlan(
+    public static async Task<CollectionPlanResponse> GetCollectionPlan(
         ISender sender,
         [Description("Identifiant du produit.")] Guid productId,
         CancellationToken cancellationToken = default) =>

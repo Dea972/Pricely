@@ -7,9 +7,17 @@ namespace Pricely.Modules.AiEngine.Domain.LlmCalls;
 /// </summary>
 public sealed class LlmCallDetails
 {
+    /// <summary>Groups the calls of one unit of work (conversation, collection run...), given by the caller.</summary>
+    public required string SessionId { get; init; }
+
     public required DateTime CalledOnUtc { get; init; }
 
     public required string FeatureCode { get; init; }
+
+    /// <summary>Module that declares the feature.</summary>
+    public required string SourceModule { get; init; }
+
+    public string? UserId { get; init; }
 
     public required string ModelProvider { get; init; }
 

@@ -15,6 +15,10 @@ internal sealed class ModelPriceConfiguration : IEntityTypeConfiguration<ModelPr
 
         builder.HasKey(p => p.Id);
 
+        // The identifier is set by the domain: without this, EF Core would track a new price added to a tracked
+        // model as Modified (UPDATE of a missing row) instead of Added.
+        builder.Property(p => p.Id).ValueGeneratedNever();
+
         builder.Ignore(p => p.DomainEvents);
 
         builder.Property(p => p.InputPerMillion).HasPrecision(PricePrecision, PriceScale);

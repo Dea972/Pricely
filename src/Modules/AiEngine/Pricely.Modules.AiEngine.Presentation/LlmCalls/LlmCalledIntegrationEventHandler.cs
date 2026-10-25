@@ -18,11 +18,11 @@ internal sealed class LlmCalledIntegrationEventHandler(ISender sender)
     {
         Result result = await sender.Send(
             new RecordLlmCallCommand(
-                integrationEvent.SessionId,
-                integrationEvent.SourceModule,
-                integrationEvent.UserId,
                 new LlmCallDetails
                 {
+                    SessionId = integrationEvent.SessionId,
+                    SourceModule = integrationEvent.SourceModule,
+                    UserId = integrationEvent.UserId,
                     CalledOnUtc = integrationEvent.OccurredOnUtc,
                     FeatureCode = integrationEvent.FeatureCode,
                     ModelProvider = integrationEvent.ModelProvider,

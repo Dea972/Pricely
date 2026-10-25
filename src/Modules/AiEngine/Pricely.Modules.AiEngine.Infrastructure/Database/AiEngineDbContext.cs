@@ -4,11 +4,9 @@ using Pricely.Modules.AiEngine.Application.Abstractions.Data;
 using Pricely.Modules.AiEngine.Domain.Features;
 using Pricely.Modules.AiEngine.Domain.LlmCalls;
 using Pricely.Modules.AiEngine.Domain.Models;
-using Pricely.Modules.AiEngine.Domain.Sessions;
 using Pricely.Modules.AiEngine.Infrastructure.Features;
 using Pricely.Modules.AiEngine.Infrastructure.LlmCalls;
 using Pricely.Modules.AiEngine.Infrastructure.Models;
-using Pricely.Modules.AiEngine.Infrastructure.Sessions;
 
 namespace Pricely.Modules.AiEngine.Infrastructure.Database;
 
@@ -21,8 +19,6 @@ public sealed class AiEngineDbContext(DbContextOptions<AiEngineDbContext> option
 
     internal DbSet<FeatureSetting> FeatureSettings { get; set; }
 
-    internal DbSet<Session> Sessions { get; set; }
-
     internal DbSet<LlmCall> LlmCalls { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -34,7 +30,6 @@ public sealed class AiEngineDbContext(DbContextOptions<AiEngineDbContext> option
         modelBuilder.ApplyConfiguration(new ModelConfiguration());
         modelBuilder.ApplyConfiguration(new ModelPriceConfiguration());
         modelBuilder.ApplyConfiguration(new FeatureSettingConfiguration());
-        modelBuilder.ApplyConfiguration(new SessionConfiguration());
         modelBuilder.ApplyConfiguration(new LlmCallConfiguration());
     }
 }

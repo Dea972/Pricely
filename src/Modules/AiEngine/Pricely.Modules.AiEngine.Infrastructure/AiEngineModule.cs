@@ -12,13 +12,11 @@ using Pricely.Modules.AiEngine.Application.Abstractions.Data;
 using Pricely.Modules.AiEngine.Domain.Features;
 using Pricely.Modules.AiEngine.Domain.LlmCalls;
 using Pricely.Modules.AiEngine.Domain.Models;
-using Pricely.Modules.AiEngine.Domain.Sessions;
 using Pricely.Modules.AiEngine.Infrastructure.Database;
 using Pricely.Modules.AiEngine.Infrastructure.Features;
 using Pricely.Modules.AiEngine.Infrastructure.Inbox;
 using Pricely.Modules.AiEngine.Infrastructure.LlmCalls;
 using Pricely.Modules.AiEngine.Infrastructure.Models;
-using Pricely.Modules.AiEngine.Infrastructure.Sessions;
 
 namespace Pricely.Modules.AiEngine.Infrastructure;
 
@@ -55,7 +53,6 @@ public static class AiEngineModule
         services.AddScoped<IUnitOfWork>(serviceProvider => serviceProvider.GetRequiredService<AiEngineDbContext>());
         services.AddScoped<IModelRepository, ModelRepository>();
         services.AddScoped<IFeatureSettingRepository, FeatureSettingRepository>();
-        services.AddScoped<ISessionRepository, SessionRepository>();
         services.AddScoped<ILlmCallRepository, LlmCallRepository>();
 
         // Replaces the default resolver of Common: the target of a feature comes from the settings.

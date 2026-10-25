@@ -4,8 +4,4 @@ using Pricely.Modules.AiEngine.Domain.LlmCalls;
 namespace Pricely.Modules.AiEngine.Application.LlmCalls.RecordLlmCall;
 
 /// <summary>Adds a call reported by a provider to the journal, with its frozen cost.</summary>
-public sealed record RecordLlmCallCommand(
-    string SessionExternalId,
-    string SourceModule,
-    string? UserId,
-    LlmCallDetails Details) : ICommand;
+public sealed record RecordLlmCallCommand(LlmCallDetails Details) : ICommand;

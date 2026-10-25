@@ -23,24 +23,28 @@ public abstract class LlmServiceBase(IEventBus eventBus, IDateTimeProvider dateT
         var stopwatch = Stopwatch.StartNew();
         string model = request.Model ?? DefaultModel;
 
+        LlmResponse response;
+        string? errorMessage = null;
+
         try
         {
-            LlmResponse response = await SendCoreAsync(request, model, cancellationToken);
-            stopwatch.Stop();
-
-            await PublishCallAsync(request, calledOnUtc, stopwatch.ElapsedMilliseconds, response, null, cancellationToken);
-
-            return response;
+            response = await SendCoreAsync(request, model, cancellationToken);
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
         {
-            stopwatch.Stop();
-
-            LlmResponse failed = new(string.Empty, LlmTokenUsage.None, model);
-            await PublishCallAsync(request, calledOnUtc, stopwatch.ElapsedMilliseconds, failed, exception.Message, cancellationToken);
-
-            return Result.Failure<LlmResponse>(LlmErrors.CallFailed(ProviderName, exception.Message));
+            // Provider errors and HTTP timeouts (TaskCanceledException without caller cancellation) are failures.
+            response = new LlmResponse(string.Empty, LlmTokenUsage.None, model);
+            errorMessage = exception.Message;
         }
+
+        stopwatch.Stop();
+
+        // Published outside the try: a publication failure must not turn a successful (and billed) call into a failure.
+        await PublishCallAsync(request, calledOnUtc, stopwatch.ElapsedMilliseconds, response, errorMessage, cancellationToken);
+
+        return errorMessage is null
+            ? response
+            : Result.Failure<LlmResponse>(LlmErrors.CallFailed(ProviderName, errorMessage));
     }
 
     /// <summary>Calls the provider. Throws on failure; <see cref="SendAsync"/> turns the exception into a result.</summary>

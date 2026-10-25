@@ -30,14 +30,21 @@ public sealed class FeatureSetting : Entity
     public static bool IsDefaultCode(string featureCode) =>
         string.Equals(featureCode, DefaultCode, StringComparison.OrdinalIgnoreCase);
 
-    public static FeatureSetting Create(string featureCode, Guid modelId, DateTime utcNow) =>
-        new()
+    public static Result<FeatureSetting> Create(string featureCode, Guid modelId, DateTime utcNow)
+    {
+        if (string.IsNullOrWhiteSpace(featureCode) || featureCode.Trim().Length > FeatureCodeMaxLength)
+        {
+            return Result.Failure<FeatureSetting>(FeatureSettingErrors.InvalidFeatureCode);
+        }
+
+        return new FeatureSetting
         {
             Id = Guid.CreateVersion7(),
             FeatureCode = featureCode.Trim(),
             ModelId = modelId,
             UpdatedOnUtc = utcNow
         };
+    }
 
     public void Target(Guid modelId, DateTime utcNow)
     {

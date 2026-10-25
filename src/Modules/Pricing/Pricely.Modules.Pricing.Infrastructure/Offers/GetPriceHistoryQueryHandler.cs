@@ -4,6 +4,7 @@ using Pricely.Common.Application.Data;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Domain;
 using Pricely.Modules.Pricing.Application.Offers.GetPriceHistory;
+using Pricely.Modules.Pricing.Domain.Offers;
 
 namespace Pricely.Modules.Pricing.Infrastructure.Offers;
 
@@ -31,14 +32,24 @@ internal sealed class GetPriceHistoryQueryHandler(IDbConnectionFactory dbConnect
              INNER JOIN pricing.offers o ON o.id = po.offer_id
              INNER JOIN pricing.merchants m ON m.id = o.merchant_id
              WHERE o.product_id = @ProductId
-               AND o.status = 'Confirmed'
+               AND o.status = @ConfirmedStatus
                AND (@FromUtc IS NULL OR po.observed_on_utc >= @FromUtc)
                AND (@ToUtc IS NULL OR po.observed_on_utc < @ToUtc)
              ORDER BY po.observed_on_utc DESC
              """;
 
         IEnumerable<PriceHistoryEntryResponse> entries = await connection.QueryAsync<PriceHistoryEntryResponse>(
-            new CommandDefinition(sql, request, cancellationToken: cancellationToken));
+            new CommandDefinition(
+                sql,
+                new
+                {
+                    request.ProductId,
+                    request.FromUtc,
+                    request.ToUtc,
+                    request.Limit,
+                    ConfirmedStatus = nameof(MatchStatus.Confirmed)
+                },
+                cancellationToken: cancellationToken));
 
         return Result.Success<IReadOnlyCollection<PriceHistoryEntryResponse>>(entries.ToList());
     }

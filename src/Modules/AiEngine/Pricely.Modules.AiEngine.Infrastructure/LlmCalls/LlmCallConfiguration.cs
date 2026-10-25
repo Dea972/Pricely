@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Pricely.Modules.AiEngine.Domain.LlmCalls;
-using Pricely.Modules.AiEngine.Domain.Sessions;
 
 namespace Pricely.Modules.AiEngine.Infrastructure.LlmCalls;
 
@@ -19,9 +18,12 @@ internal sealed class LlmCallConfiguration : IEntityTypeConfiguration<LlmCall>
         builder.Ignore(c => c.DomainEvents);
         builder.Ignore(c => c.TotalTokens);
 
-        builder.Property(c => c.FeatureCode).HasMaxLength(100);
-        builder.Property(c => c.ModelProvider).HasMaxLength(50);
-        builder.Property(c => c.ModelName).HasMaxLength(150);
+        builder.Property(c => c.SessionId).HasMaxLength(LlmCall.SessionIdMaxLength);
+        builder.Property(c => c.FeatureCode).HasMaxLength(LlmCall.FeatureCodeMaxLength);
+        builder.Property(c => c.SourceModule).HasMaxLength(LlmCall.SourceModuleMaxLength);
+        builder.Property(c => c.UserId).HasMaxLength(LlmCall.UserIdMaxLength);
+        builder.Property(c => c.ModelProvider).HasMaxLength(LlmCall.ModelProviderMaxLength);
+        builder.Property(c => c.ModelName).HasMaxLength(LlmCall.ModelNameMaxLength);
         builder.Property(c => c.ErrorMessage).HasMaxLength(LlmCall.ErrorMessageMaxLength);
 
         builder.Property(c => c.InputCost).HasPrecision(CostPrecision, CostScale);
@@ -30,12 +32,8 @@ internal sealed class LlmCallConfiguration : IEntityTypeConfiguration<LlmCall>
         builder.Property(c => c.OutputCost).HasPrecision(CostPrecision, CostScale);
         builder.Property(c => c.TotalCost).HasPrecision(CostPrecision, CostScale);
 
-        builder.HasOne<Session>()
-            .WithMany()
-            .HasForeignKey(c => c.SessionId)
-            .OnDelete(DeleteBehavior.Cascade);
-
         builder.HasIndex(c => c.CalledOnUtc);
         builder.HasIndex(c => c.FeatureCode);
+        builder.HasIndex(c => c.SessionId);
     }
 }

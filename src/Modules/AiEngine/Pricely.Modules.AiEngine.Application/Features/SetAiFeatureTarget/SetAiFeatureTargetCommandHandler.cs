@@ -33,8 +33,13 @@ internal sealed class SetAiFeatureTargetCommandHandler(
         FeatureSetting? setting = await featureSettingRepository.GetAsync(request.FeatureCode, cancellationToken);
         if (setting is null)
         {
-            featureSettingRepository.Insert(
-                FeatureSetting.Create(request.FeatureCode, request.ModelId, dateTimeProvider.UtcNow));
+            Result<FeatureSetting> created = FeatureSetting.Create(request.FeatureCode, request.ModelId, dateTimeProvider.UtcNow);
+            if (created.IsFailure)
+            {
+                return created;
+            }
+
+            featureSettingRepository.Insert(created.Value);
         }
         else
         {

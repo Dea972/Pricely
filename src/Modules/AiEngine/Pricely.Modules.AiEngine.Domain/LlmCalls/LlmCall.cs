@@ -8,6 +8,18 @@ namespace Pricely.Modules.AiEngine.Domain.LlmCalls;
 /// </summary>
 public sealed class LlmCall : Entity
 {
+    public const int SessionIdMaxLength = 100;
+
+    public const int FeatureCodeMaxLength = 100;
+
+    public const int SourceModuleMaxLength = 50;
+
+    public const int UserIdMaxLength = 100;
+
+    public const int ModelProviderMaxLength = 50;
+
+    public const int ModelNameMaxLength = 150;
+
     public const int ErrorMessageMaxLength = 2000;
 
     private LlmCall()
@@ -16,11 +28,16 @@ public sealed class LlmCall : Entity
 
     public Guid Id { get; private set; }
 
-    public Guid SessionId { get; private set; }
+    /// <summary>Groups the calls of one unit of work (given by the caller); a new value per call when none is given.</summary>
+    public string SessionId { get; private set; }
 
     public DateTime CalledOnUtc { get; private set; }
 
     public string FeatureCode { get; private set; }
+
+    public string SourceModule { get; private set; }
+
+    public string? UserId { get; private set; }
 
     public string ModelProvider { get; private set; }
 
@@ -62,16 +79,18 @@ public sealed class LlmCall : Entity
     /// Records a call and freezes its cost with the price of <paramref name="model"/> in force on the day of the call.
     /// Without a model, or without a price on that day, the call stays unpriced.
     /// </summary>
-    public static LlmCall Record(Guid sessionId, LlmCallDetails details, Model? model)
+    public static LlmCall Record(LlmCallDetails details, Model? model)
     {
         LlmCall call = new()
         {
             Id = Guid.CreateVersion7(),
-            SessionId = sessionId,
+            SessionId = Truncate(details.SessionId, SessionIdMaxLength),
             CalledOnUtc = details.CalledOnUtc,
-            FeatureCode = details.FeatureCode,
-            ModelProvider = details.ModelProvider,
-            ModelName = details.ModelName,
+            FeatureCode = Truncate(details.FeatureCode, FeatureCodeMaxLength),
+            SourceModule = Truncate(details.SourceModule, SourceModuleMaxLength),
+            UserId = details.UserId is null ? null : Truncate(details.UserId, UserIdMaxLength),
+            ModelProvider = Truncate(details.ModelProvider, ModelProviderMaxLength),
+            ModelName = Truncate(details.ModelName, ModelNameMaxLength),
             InputTokens = details.TokenUsage.InputTokens,
             InputCachedTokens = details.TokenUsage.InputCachedTokens,
             InputCacheCreationTokens = details.TokenUsage.InputCacheCreationTokens,
@@ -79,15 +98,17 @@ public sealed class LlmCall : Entity
             OutputReasoningTokens = details.TokenUsage.OutputReasoningTokens,
             ResponseTimeMs = details.ResponseTimeMs,
             IsSuccess = details.IsSuccess,
-            ErrorMessage = details.ErrorMessage is { Length: > ErrorMessageMaxLength } message
-                ? message[..ErrorMessageMaxLength]
-                : details.ErrorMessage
+            ErrorMessage = details.ErrorMessage is null ? null : Truncate(details.ErrorMessage, ErrorMessageMaxLength)
         };
 
         call.ApplyPricing(model);
 
         return call;
     }
+
+    /// <summary>A journal entry is never lost because a reported value is too long: it is cut to the column size.</summary>
+    private static string Truncate(string value, int maxLength) =>
+        value.Length > maxLength ? value[..maxLength] : value;
 
     private void ApplyPricing(Model? model)
     {

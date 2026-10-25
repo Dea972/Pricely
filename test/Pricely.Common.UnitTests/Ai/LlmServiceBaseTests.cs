@@ -55,6 +55,32 @@ public sealed class LlmServiceBaseTests
         call.ErrorMessage.Should().Be("boom");
     }
 
+    [Fact]
+    public async Task SendAsync_ShouldReturnFailure_WhenProviderTimesOut()
+    {
+        RecordingEventBus eventBus = new();
+        FakeLlmService service = new(eventBus, new TaskCanceledException("timeout"));
+
+        Result<LlmResponse> result = await service.SendAsync(Request(model: null, sessionId: "session-1"));
+
+        result.Error.Code.Should().Be("Llm.CallFailed");
+        eventBus.Published.OfType<LlmCalledIntegrationEvent>().Single().IsSuccess.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SendAsync_ShouldPropagateCancellation_WhenCallerCancels()
+    {
+        RecordingEventBus eventBus = new();
+        FakeLlmService service = new(eventBus, new OperationCanceledException());
+        using CancellationTokenSource cancellation = new();
+        await cancellation.CancelAsync();
+
+        Func<Task> send = () => service.SendAsync(Request(model: null, sessionId: "session-1"), cancellation.Token);
+
+        await send.Should().ThrowAsync<OperationCanceledException>();
+        eventBus.Published.Should().BeEmpty();
+    }
+
     private static LlmRequest Request(string? model, string sessionId) =>
         new()
         {
