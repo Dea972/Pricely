@@ -7,6 +7,8 @@
         <!-- Aspire & Container Tools -->
         <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.6.1" />
         <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.1" />
+        <!-- Only published as a preview; the 13.6.1 train matches Aspire.Hosting.AppHost 13.6.1 -->
+        <PackageVersion Include="Aspire.Hosting.Keycloak" Version="13.6.1-preview.1.26506.6" />
         <!-- Resilience & Service Discovery -->
         <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.2.0" />
         <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.2.0" />
@@ -34,6 +36,7 @@
         <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.2" />
         <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.2" />
         <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.2" />
+        <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.2" />
         <!-- Messaging -->
         <PackageVersion Include="MassTransit" Version="8.5.7" />
         <!-- CQRS & Validation -->

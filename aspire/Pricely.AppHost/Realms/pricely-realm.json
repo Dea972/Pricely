@@ -1,0 +1,241 @@
+{
+  "realm": "pricely",
+  "displayName": "Pricely",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "accessTokenLifespan": 900,
+  "defaultDefaultClientScopes": ["basic", "profile", "email", "pricely.read"],
+  "defaultOptionalClientScopes": ["pricely.write", "pricely.review"],
+  "clientScopes": [
+    {
+      "name": "basic",
+      "description": "Adds the sub claim",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "false", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        {
+          "name": "sub",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "consentRequired": false,
+          "config": { "introspection.token.claim": "true", "access.token.claim": "true" }
+        }
+      ]
+    },
+    {
+      "name": "profile",
+      "description": "Name of the user",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" },
+      "protocolMappers": [
+        {
+          "name": "given name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "firstName",
+            "claim.name": "given_name",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "family name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "lastName",
+            "claim.name": "family_name",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "username",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "username",
+            "claim.name": "preferred_username",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "email",
+      "description": "Email address of the user",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" },
+      "protocolMappers": [
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "email",
+            "claim.name": "email",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "pricely.read",
+      "description": "Read products, offers and prices",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" },
+      "protocolMappers": [
+        {
+          "name": "pricely-api audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": { "included.custom.audience": "pricely-api", "access.token.claim": "true", "id.token.claim": "false", "introspection.token.claim": "true" }
+        }
+      ]
+    },
+    {
+      "name": "pricely.write",
+      "description": "Administer the catalog and trigger price collection",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" },
+      "protocolMappers": [
+        {
+          "name": "pricely-api audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": { "included.custom.audience": "pricely-api", "access.token.claim": "true", "id.token.claim": "false", "introspection.token.claim": "true" }
+        }
+      ]
+    },
+    {
+      "name": "pricely.review",
+      "description": "Confirm or reject proposed offers",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" },
+      "protocolMappers": [
+        {
+          "name": "pricely-api audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": { "included.custom.audience": "pricely-api", "access.token.claim": "true", "id.token.claim": "false", "introspection.token.claim": "true" }
+        }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "pricely-web",
+      "name": "Pricely front (public, PKCE)",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["https://localhost:*", "http://localhost:*"],
+      "webOrigins": ["+"],
+      "attributes": { "pkce.code.challenge.method": "S256", "post.logout.redirect.uris": "+" },
+      "defaultClientScopes": ["basic", "profile", "email", "pricely.read"],
+      "optionalClientScopes": ["pricely.write", "pricely.review"]
+    },
+    {
+      "clientId": "pricely-mcp",
+      "name": "MCP clients (pre-registered fallback when dynamic registration is not available)",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "http://localhost:*",
+        "http://127.0.0.1:*",
+        "https://claude.ai/api/mcp/auth_callback",
+        "https://claude.com/api/mcp/auth_callback"
+      ],
+      "webOrigins": ["+"],
+      "attributes": { "pkce.code.challenge.method": "S256" },
+      "defaultClientScopes": ["basic", "profile", "email", "pricely.read"],
+      "optionalClientScopes": ["pricely.write", "pricely.review"]
+    },
+    {
+      "clientId": "pricely-dev",
+      "name": "Local development only: password grant to get a token with curl",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "defaultClientScopes": ["basic", "profile", "email", "pricely.read"],
+      "optionalClientScopes": ["pricely.write", "pricely.review"]
+    }
+  ],
+  "users": [
+    {
+      "username": "dev",
+      "enabled": true,
+      "email": "dev@pricely.local",
+      "emailVerified": true,
+      "firstName": "Dev",
+      "lastName": "Pricely",
+      "credentials": [{ "type": "password", "value": "dev", "temporary": false }]
+    }
+  ],
+  "components": {
+    "org.keycloak.services.clientregistration.policy.ClientRegistrationPolicy": [
+      {
+        "name": "Trusted Hosts",
+        "providerId": "trusted-hosts",
+        "subType": "anonymous",
+        "config": {
+          "trusted-hosts": ["localhost", "127.0.0.1", "claude.ai", "claude.com"],
+          "host-sending-registration-request-must-match": ["false"],
+          "client-uris-must-match": ["true"]
+        }
+      },
+      {
+        "name": "Allowed Client Scopes",
+        "providerId": "allowed-client-templates",
+        "subType": "anonymous",
+        "config": {
+          "allow-default-scopes": ["true"],
+          "allowed-client-scopes": ["pricely.read", "pricely.write", "pricely.review", "basic", "profile", "email"]
+        }
+      },
+      {
+        "name": "Max Clients Limit",
+        "providerId": "max-clients",
+        "subType": "anonymous",
+        "config": { "max-clients": ["200"] }
+      },
+      {
+        "name": "Consent Required",
+        "providerId": "consent-required",
+        "subType": "anonymous",
+        "config": {}
+      }
+    ]
+  }
+}
