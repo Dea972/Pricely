@@ -32,7 +32,7 @@ public sealed class McpToolTests
     {
         using ServiceProvider serviceProvider = BuildServices(CatalogModule.ToolAssembly, PricingModule.ToolAssembly);
 
-        List<McpServerTool> tools = serviceProvider.GetServices<McpServerTool>().ToList();
+        var tools = serviceProvider.GetServices<McpServerTool>().ToList();
 
         tools.Select(t => t.ProtocolTool.Name).Should().BeEquivalentTo(ExpectedTools);
 
