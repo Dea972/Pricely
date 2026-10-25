@@ -19,7 +19,7 @@ internal sealed class LlmTargetResolver(AiEngineDbContext context) : ILlmTargetR
             .Where(s => s.FeatureCode == feature.Code || s.FeatureCode == FeatureSetting.DefaultCode)
             .ToListAsync(cancellationToken);
 
-        FeatureSetting? effective = FeatureSetting.Effective(
+        var effective = FeatureSetting.Effective(
             settings.Find(s => string.Equals(s.FeatureCode, feature.Code, StringComparison.OrdinalIgnoreCase)),
             settings.Find(s => s.IsDefault));
 

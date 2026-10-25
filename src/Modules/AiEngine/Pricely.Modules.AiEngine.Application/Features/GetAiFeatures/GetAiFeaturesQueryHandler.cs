@@ -40,7 +40,7 @@ internal sealed class GetAiFeaturesQueryHandler(
         foreach (AiFeature feature in declaredFeatures)
         {
             FeatureSetting? own = settingsByCode.GetValueOrDefault(feature.Code);
-            FeatureSetting? effective = FeatureSetting.Effective(own, fallback);
+            var effective = FeatureSetting.Effective(own, fallback);
 
             rows.Add(new AiFeatureResponse(
                 feature.Code,
