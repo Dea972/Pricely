@@ -128,7 +128,7 @@ L'audit NuGet (transitif compris) est **bloquant** : ne jamais ajouter `NU190x` 
 
 - L'API démarre (`Program.cs` : modules, authentification, `/api` et `/mcp`, validation de la DI) ; en Development elle applique les migrations des quatre modules au démarrage. L'AppHost complet (SQL Server + Keycloak + API) n'a pas encore été exécuté de bout en bout dans un environnement avec conteneurs : le faire avant de s'appuyer dessus.
 - Migrations `Initial` de Catalog, Pricing, Users et AiEngine en place (`Database/Migrations`, `generated_code = true`). Hors Development, aucun mécanisme n'applique les migrations (décision ouverte).
-- Seul `/mcp` exige un scope (`pricely.read`) ; les endpoints existants sont « authentifié » et le filtrage des tools par scope reste à faire.
+- Seul `/mcp` exige un scope (`pricely.read`). Les endpoints existants sont seulement « authentifié » : un jeton en lecture seule peut donc appeler les endpoints de mutation (écart assumé, ADR-011) ; poser `PricelyScopes.Write` / `Review` sur les mutations avant tout déploiement, puis filtrer les tools par scope.
 - Les tests d'intégration hérités (Users, solution) sont exclus de la solution : ils référencent un module `Ticketing` inexistant.
 - `Users/USAGE_GUIDE.md` décrit un template `dotnet new` absent du dépôt : ne pas s'y fier, utiliser le skill `new-module`.
 - Le code Key Vault de `Common.Infrastructure` (`AzureKeyvaultClient`, `ConfigureWithSecretsAsync`) n'est plus utilisé par l'authentification ; à supprimer ou à réutiliser pour les secrets.

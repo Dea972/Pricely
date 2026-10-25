@@ -30,10 +30,12 @@ internal sealed class PermissionConfiguration : IEntityTypeConfiguration<Permiss
 
         builder
             .HasMany<Role>()
-            .WithMany()
+            .WithMany(r => r.Permissions)
             .UsingEntity(joinBuilder =>
             {
                 joinBuilder.ToTable("role_permissions");
+
+                joinBuilder.Property("PermissionsCode").HasColumnName("permission_code");
 
                 joinBuilder.HasData(
                     // ===== MEMBER ROLE PERMISSIONS =====
@@ -63,7 +65,7 @@ internal sealed class PermissionConfiguration : IEntityTypeConfiguration<Permiss
         return new
         {
             RoleName = role.Name,
-            PermissionCode = permission.Code
+            PermissionsCode = permission.Code
         };
     }
 }

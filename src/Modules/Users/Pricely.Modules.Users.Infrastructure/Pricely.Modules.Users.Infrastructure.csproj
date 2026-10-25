@@ -11,4 +11,8 @@
     <ProjectReference Include="..\..\..\Common\Pricely.Common.Infrastructure\Pricely.Common.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pricely.Modules.Users.UnitTests" />
+  </ItemGroup>
+
 </Project>

@@ -21,7 +21,7 @@ public static class UserErrors
 
     public static readonly Error MissingEmail = Error.Problem(
         "Users.MissingEmail",
-        "The access token carries no email claim: request the email scope.");
+        "The identity has no email address.");
 
     public static Error InvalidRole(string roleName) =>
         Error.Problem("Users.InvalidRole", $"The role '{roleName}' is not valid");

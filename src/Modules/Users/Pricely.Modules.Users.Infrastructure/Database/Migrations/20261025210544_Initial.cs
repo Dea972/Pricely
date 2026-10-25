@@ -77,6 +77,19 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "permissions",
+                schema: "users",
+                columns: table => new
+                {
+                    code = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("ak_permission_code", x => x.code);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "roles",
                 schema: "users",
                 columns: table => new
@@ -105,53 +118,6 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "permissions",
-                schema: "users",
-                columns: table => new
-                {
-                    code = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    role_name = table.Column<string>(type: "nvarchar(50)", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("ak_permission_code", x => x.code);
-                    table.ForeignKey(
-                        name: "fk_permissions_roles_role_name",
-                        column: x => x.role_name,
-                        principalSchema: "users",
-                        principalTable: "roles",
-                        principalColumn: "name");
-                });
-
-            migrationBuilder.CreateTable(
-                name: "user_roles",
-                schema: "users",
-                columns: table => new
-                {
-                    role_name = table.Column<string>(type: "nvarchar(50)", nullable: false),
-                    user_id = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_user_roles", x => new { x.role_name, x.user_id });
-                    table.ForeignKey(
-                        name: "fk_user_roles_roles_roles_name",
-                        column: x => x.role_name,
-                        principalSchema: "users",
-                        principalTable: "roles",
-                        principalColumn: "name",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "fk_user_roles_users_user_id",
-                        column: x => x.user_id,
-                        principalSchema: "users",
-                        principalTable: "users",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "role_permissions",
                 schema: "users",
                 columns: table => new
@@ -163,7 +129,7 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
                 {
                     table.PrimaryKey("pk_role_permissions", x => new { x.permission_code, x.role_name });
                     table.ForeignKey(
-                        name: "fk_role_permissions_permissions_permission_code",
+                        name: "fk_role_permissions_permissions_permissions_code",
                         column: x => x.permission_code,
                         principalSchema: "users",
                         principalTable: "permissions",
@@ -205,17 +171,44 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "user_roles",
+                schema: "users",
+                columns: table => new
+                {
+                    role_name = table.Column<string>(type: "nvarchar(50)", nullable: false),
+                    user_id = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_user_roles", x => new { x.role_name, x.user_id });
+                    table.ForeignKey(
+                        name: "fk_user_roles_roles_roles_name",
+                        column: x => x.role_name,
+                        principalSchema: "users",
+                        principalTable: "roles",
+                        principalColumn: "name",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "fk_user_roles_users_user_id",
+                        column: x => x.user_id,
+                        principalSchema: "users",
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.InsertData(
                 schema: "users",
                 table: "permissions",
-                columns: new[] { "code", "name", "role_name" },
+                columns: new[] { "code", "name" },
                 values: new object[,]
                 {
-                    { "admin:access", "Admin Access", null },
-                    { "admin:settings", "Admin Settings", null },
-                    { "users:delete", "Delete Users", null },
-                    { "users:read", "Read Users", null },
-                    { "users:write", "Write Users", null }
+                    { "admin:access", "Admin Access" },
+                    { "admin:settings", "Admin Settings" },
+                    { "users:delete", "Delete Users" },
+                    { "users:read", "Read Users" },
+                    { "users:write", "Write Users" }
                 });
 
             migrationBuilder.InsertData(
@@ -242,12 +235,6 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
                     { "users:read", "Member" },
                     { "users:write", "Administrator" }
                 });
-
-            migrationBuilder.CreateIndex(
-                name: "ix_permissions_role_name",
-                schema: "users",
-                table: "permissions",
-                column: "role_name");
 
             migrationBuilder.CreateIndex(
                 name: "ix_role_permissions_role_name",
@@ -318,11 +305,11 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
                 schema: "users");
 
             migrationBuilder.DropTable(
-                name: "users",
+                name: "roles",
                 schema: "users");
 
             migrationBuilder.DropTable(
-                name: "roles",
+                name: "users",
                 schema: "users");
         }
     }

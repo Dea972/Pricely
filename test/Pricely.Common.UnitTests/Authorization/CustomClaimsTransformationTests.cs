@@ -1,8 +1,8 @@
 using System.Security.Claims;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Pricely.Common.Application.Authorization;
-using Pricely.Common.Application.Exceptions;
 using Pricely.Common.Domain;
 using Pricely.Common.Infrastructure.Authentication;
 using Pricely.Common.Infrastructure.Authorization;
@@ -55,14 +55,15 @@ public sealed class CustomClaimsTransformationTests
     }
 
     [Fact]
-    public async Task Transform_ShouldThrow_WhenTheUserCannotBeResolved()
+    public async Task Transform_ShouldLeaveThePrincipalWithoutPermissions_WhenTheUserCannotBeResolved()
     {
         var permissionService = new FakePermissionService(Result.Failure<PermissionsResponse>(Error.Problem("Users.MissingEmail", "No email")));
         CustomClaimsTransformation transformation = Create(permissionService);
 
-        Func<Task> act = () => transformation.TransformAsync(Authenticated("kc-123", null, null, null));
+        ClaimsPrincipal principal = await transformation.TransformAsync(Authenticated("kc-123", null, null, null));
 
-        await act.Should().ThrowAsync<PricelyException>();
+        principal.HasClaim(c => c.Type == CustomClaims.UserId).Should().BeFalse();
+        principal.GetPermissions().Should().BeEmpty();
     }
 
     private static CustomClaimsTransformation Create(FakePermissionService permissionService)
@@ -71,7 +72,9 @@ public sealed class CustomClaimsTransformationTests
             .AddScoped<IPermissionService>(_ => permissionService)
             .BuildServiceProvider();
 
-        return new CustomClaimsTransformation(services.GetRequiredService<IServiceScopeFactory>());
+        return new CustomClaimsTransformation(
+            services.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<CustomClaimsTransformation>.Instance);
     }
 
     private static ClaimsPrincipal Authenticated(string sub, string? email, string? givenName, string? familyName)
@@ -100,7 +103,7 @@ public sealed class CustomClaimsTransformationTests
     {
         public List<IdentityProfile> Calls { get; } = [];
 
-        public Task<Result<PermissionsResponse>> GetUserPermissionsAsync(IdentityProfile identity, CancellationToken cancellationToken = default)
+        public Task<Result<PermissionsResponse>> ResolveCallerAsync(IdentityProfile identity, CancellationToken cancellationToken = default)
         {
             Calls.Add(identity);
 

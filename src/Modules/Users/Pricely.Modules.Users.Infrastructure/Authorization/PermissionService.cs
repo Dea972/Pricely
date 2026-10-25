@@ -11,7 +11,7 @@ namespace Pricely.Modules.Users.Infrastructure.Authorization;
 
 internal sealed class PermissionService(ISender sender) : IPermissionService
 {
-    public async Task<Result<PermissionsResponse>> GetUserPermissionsAsync(
+    public async Task<Result<PermissionsResponse>> ResolveCallerAsync(
         IdentityProfile identity,
         CancellationToken cancellationToken = default)
     {
@@ -45,7 +45,16 @@ internal sealed class PermissionService(ISender sender) : IPermissionService
         }
         catch (PricelyException exception) when (exception.InnerException is DbUpdateException)
         {
-            // A concurrent first request created the user (unique identity id): read it back below.
+            // A concurrent first request may have created the user (unique identity id): read it back. Any other
+            // database failure (e.g. the email already belongs to another identity) is not a race, rethrow it.
+            Result<PermissionsResponse> created = await sender.Send(new GetUserPermissionsQuery(identity.IdentityId), cancellationToken);
+
+            if (created.IsFailure)
+            {
+                throw;
+            }
+
+            return created;
         }
 
         return await sender.Send(new GetUserPermissionsQuery(identity.IdentityId), cancellationToken);

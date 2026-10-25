@@ -12,7 +12,7 @@ using Pricely.Modules.Users.Infrastructure.Database;
 namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
 {
     [DbContext(typeof(UsersDbContext))]
-    [Migration("20261025205339_Initial")]
+    [Migration("20261025210544_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -28,7 +28,7 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
 
             modelBuilder.Entity("PermissionRole", b =>
                 {
-                    b.Property<string>("PermissionCode")
+                    b.Property<string>("PermissionsCode")
                         .HasColumnType("nvarchar(100)")
                         .HasColumnName("permission_code");
 
@@ -36,7 +36,7 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
                         .HasColumnType("nvarchar(50)")
                         .HasColumnName("role_name");
 
-                    b.HasKey("PermissionCode", "RoleName")
+                    b.HasKey("PermissionsCode", "RoleName")
                         .HasName("pk_role_permissions");
 
                     b.HasIndex("RoleName")
@@ -47,32 +47,32 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
                     b.HasData(
                         new
                         {
-                            PermissionCode = "users:read",
+                            PermissionsCode = "users:read",
                             RoleName = "Member"
                         },
                         new
                         {
-                            PermissionCode = "users:read",
+                            PermissionsCode = "users:read",
                             RoleName = "Administrator"
                         },
                         new
                         {
-                            PermissionCode = "users:write",
+                            PermissionsCode = "users:write",
                             RoleName = "Administrator"
                         },
                         new
                         {
-                            PermissionCode = "users:delete",
+                            PermissionsCode = "users:delete",
                             RoleName = "Administrator"
                         },
                         new
                         {
-                            PermissionCode = "admin:access",
+                            PermissionsCode = "admin:access",
                             RoleName = "Administrator"
                         },
                         new
                         {
-                            PermissionCode = "admin:settings",
+                            PermissionsCode = "admin:settings",
                             RoleName = "Administrator"
                         });
                 });
@@ -196,15 +196,8 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
                         .HasColumnType("nvarchar(200)")
                         .HasColumnName("name");
 
-                    b.Property<string>("RoleName")
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("role_name");
-
                     b.HasKey("Code")
                         .HasName("ak_permission_code");
-
-                    b.HasIndex("RoleName")
-                        .HasDatabaseName("ix_permissions_role_name");
 
                     b.ToTable("permissions", "users");
 
@@ -350,10 +343,10 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
                 {
                     b.HasOne("Pricely.Modules.Users.Domain.Users.Permission", null)
                         .WithMany()
-                        .HasForeignKey("PermissionCode")
+                        .HasForeignKey("PermissionsCode")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_role_permissions_permissions_permission_code");
+                        .HasConstraintName("fk_role_permissions_permissions_permissions_code");
 
                     b.HasOne("Pricely.Modules.Users.Domain.Users.Role", null)
                         .WithMany()
@@ -361,14 +354,6 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_role_permissions_roles_role_name");
-                });
-
-            modelBuilder.Entity("Pricely.Modules.Users.Domain.Users.Permission", b =>
-                {
-                    b.HasOne("Pricely.Modules.Users.Domain.Users.Role", null)
-                        .WithMany("Permissions")
-                        .HasForeignKey("RoleName")
-                        .HasConstraintName("fk_permissions_roles_role_name");
                 });
 
             modelBuilder.Entity("RoleUser", b =>
@@ -403,11 +388,6 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_user_permissions_users_user_id");
-                });
-
-            modelBuilder.Entity("Pricely.Modules.Users.Domain.Users.Role", b =>
-                {
-                    b.Navigation("Permissions");
                 });
 #pragma warning restore 612, 618
         }

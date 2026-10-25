@@ -41,7 +41,7 @@ test/                   Solution-level architecture and integration tests
 Requires the .NET 10 SDK and a container runtime (Docker or Podman).
 
 ```bash
-dotnet user-secrets set "Parameters:anthropic-api-key" "<key>" --project aspire/Pricely.AppHost   # once
+dotnet user-secrets set "Parameters:anthropic-api-key" "<key>" --project aspire/Pricely.AppHost   # once, optional: without it only the LLM calls fail
 dotnet run --project aspire/Pricely.AppHost
 ```
 
