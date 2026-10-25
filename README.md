@@ -18,7 +18,7 @@ test/                   Solution-level architecture and integration tests
 
 | Module | Role |
 |---|---|
-| Users | Accounts, roles, permissions, authentication |
+| Users | Profiles, roles and business permissions (identity is held by Keycloak) |
 | Catalog | Reference products (GTIN, brand, manufacturer reference) and product typologies (3-level tree) |
 | Pricing | Merchants, collection profiles per typology, offers (product × merchant), price observations, collection |
 | AiEngine | LLM model catalog and prices, target model per AI feature, LLM call journal and costs, usage statistics |
@@ -36,12 +36,67 @@ test/                   Solution-level architecture and integration tests
 - **Collection** goes through the `IOfferCollector` port (AI agent, scrapers, partner feeds). The default implementation fails explicitly until a real collector is plugged in. The periodic job is disabled by default (`Pricing:Collection:Enabled`).
 - Catalog data is never read directly: Pricing keeps local read models fed by Catalog integration events (inbox).
 
+## Run locally
+
+Requires the .NET 10 SDK and a container runtime (Docker or Podman).
+
+```bash
+dotnet user-secrets set "Parameters:anthropic-api-key" "<key>" --project aspire/Pricely.AppHost   # once
+dotnet run --project aspire/Pricely.AppHost
+```
+
+The AppHost starts SQL Server (`pricely-db`), Keycloak (http://localhost:8080, realm `pricely` imported from `aspire/Pricely.AppHost/Realms/pricely-realm.json`) and the API (http://localhost:5136). In Development the API applies the EF Core migrations of every module at startup. The Keycloak admin credentials are the generated Aspire parameters (dashboard).
+
+## Authentication
+
+Pricely validates the JWT access tokens of Keycloak (ADR-010); it never issues tokens. Scopes: `pricely.read`, `pricely.write`, `pricely.review`. The first authenticated request of an identity creates its `User` (role `Member`).
+
+| Realm client | Use |
+|---|---|
+| `pricely-web` | Public client with PKCE for the future front |
+| `pricely-mcp` | Pre-registered public client for MCP clients (dynamic registration is also enabled on the realm) |
+| `pricely-dev` | Local development only: password grant to get a token from a script |
+
+The development user is `dev` / `dev` (`dev@pricely.local`).
+
+### Get a token
+
+```bash
+TOKEN=$(curl -s http://localhost:8080/realms/pricely/protocol/openid-connect/token \
+  -d grant_type=password -d client_id=pricely-dev -d username=dev -d password=dev \
+  -d "scope=openid pricely.read" | jq -r .access_token)
+
+curl -i http://localhost:5136/api/catalog/categories                            # 401
+curl -i http://localhost:5136/api/catalog/categories -H "Authorization: Bearer $TOKEN"   # 200
+```
+
+`src/API/Pricely.Api/Pricely.Api.http` contains the same requests for the IDE. Tokens last 15 minutes.
+
+### Use the MCP server from Claude Code
+
+`/mcp` is a streamable HTTP MCP server protected by the `pricely.read` scope. It publishes its OAuth metadata on `/.well-known/oauth-protected-resource` and Keycloak registers clients dynamically.
+
+```bash
+claude mcp add --transport http pricely http://localhost:5136/mcp
+```
+
+Then run `/mcp` in Claude Code, select `pricely` and authenticate: the browser opens the Keycloak login (`dev` / `dev`). If the client cannot register dynamically, use the pre-registered client:
+
+```bash
+claude mcp add --transport http --client-id pricely-mcp --callback-port 8765 pricely http://localhost:5136/mcp
+```
+
+Without the OAuth flow (scripts, tests), pass a token: `claude mcp add --transport http pricely http://localhost:5136/mcp --header "Authorization: Bearer $TOKEN"`.
+
 ## Commands
 
 ```bash
 dotnet build
 dotnet test
+dotnet ef migrations add <Name> -p src/Modules/<M>/Pricely.Modules.<M>.Infrastructure -s src/API/Pricely.Api -c <M>DbContext -o Database/Migrations
 ```
+
+`dotnet ef` builds the API host: set `ConnectionStrings__pricely-db` (any SQL Server connection string; nothing connects when adding a migration).
 
 ## Working with Claude Code
 

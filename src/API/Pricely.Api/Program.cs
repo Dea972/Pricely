@@ -32,8 +32,11 @@ if (app.Environment.IsDevelopment())
     // The local database is created empty by the AppHost: bring every module schema up to date.
     await app.Services.ApplyMigrationsAsync();
 }
-
-app.UseHttpsRedirection();
+else
+{
+    // Not in Development: MCP clients such as Claude Code call the plain HTTP address of the local API.
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthentication();
 app.UseAuthorization();

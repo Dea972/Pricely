@@ -1,6 +1,24 @@
 @Pricely.Api_HostAddress = http://localhost:5136
+@Keycloak = http://localhost:8080
 
-GET {{Pricely.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+### Access token of the development user (realm pricely, client pricely-dev, password grant: local development only)
+# @name token
+POST {{Keycloak}}/realms/pricely/protocol/openid-connect/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=password&client_id=pricely-dev&username=dev&password=dev&scope=openid pricely.read
 
 ###
+@accessToken = {{token.response.body.$.access_token}}
+
+### 401 without a token, 200 with one
+GET {{Pricely.Api_HostAddress}}/api/catalog/categories
+Authorization: Bearer {{accessToken}}
+
+### MCP: list the tools
+POST {{Pricely.Api_HostAddress}}/mcp
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{"jsonrpc":"2.0","id":1,"method":"tools/list"}

@@ -103,7 +103,7 @@ Le build échoue sur le moindre avertissement (`TreatWarningsAsErrors`, `Analysi
 - **Tools** : classes `public static` `[McpServerToolType]` dans `Presentation/Tools/` de chaque module, une méthode par tool, `[McpServerTool(Name = "snake_case", ReadOnly = ..., Destructive = ...)]` + `[Description]` en français, paramètres `ISender` et `CancellationToken` injectés, une requête ou commande par tool, `result.ValueOrToolError()`. Skill `add-agent-tool`. Jamais de logique métier dans un tool.
 - **MCP** : `AddPricelyMcpServer` (HTTP streamable, stateless) et `MapPricelyMcp` (`/mcp`, authentifié) dans `Pricely.Sdk` ; chaque module expose `ToolAssembly`.
 - **Agent interne** (`IChatClient` + `FunctionInvokingChatClient`, approbations, conversations) : à venir (étape 4 de la feuille de route).
-- **Authentification** (ADR-010) : Keycloak (OAuth 2.1 / OIDC) ; Pricely valide les jetons et n'en émet pas ; scopes `pricely.read|write|review` ; permissions métier dans le module Users.
+- **Authentification** (ADR-010, ADR-011) : Keycloak (OAuth 2.1 / OIDC, realm `pricely` importé par l'AppHost) ; Pricely valide les jetons (`AddJwtBearer`, `Authentication:Authority` / `Audience`) et n'en émet pas. Scopes `pricely.read|write|review` = politiques d'autorisation du même nom (`PricelyScopes`, `.RequireAuthorization(PricelyScopes.Read)`) ; `/mcp` exige `pricely.read`. `sub` = `User.IdentityId`, le `User` est créé (rôle `Member`) à la première requête authentifiée (`ProvisionUserCommand`) ; `CustomClaimsTransformation` ajoute `pricely_user_id` et les permissions métier du module Users.
 - Référence d'implémentation : AiEngine et Common AI de ChaussonStore (patterns uniquement, pas de code métier Chausson).
 
 ## Commandes
@@ -114,7 +114,8 @@ dotnet build Pricely.slnx -c Release
 dotnet test src/Modules/Pricing/test/Pricely.Modules.Pricing.UnitTests
 dotnet test test/Pricely.ArchitectureTests
 dotnet list Pricely.slnx package --vulnerable --include-transitive
-dotnet ef migrations add <Name> -p src/Modules/<M>/Pricely.Modules.<M>.Infrastructure -s src/API/Pricely.Api -c <M>DbContext -o Database/Migrations
+dotnet ef migrations add <Name> -p src/Modules/<M>/Pricely.Modules.<M>.Infrastructure -s src/API/Pricely.Api -c <M>DbContext -o Database/Migrations   # avec ConnectionStrings__pricely-db défini
+dotnet run --project aspire/Pricely.AppHost   # SQL Server + Keycloak + API ; secret : Parameters:anthropic-api-key
 ```
 
 La CI (`.github/workflows/ci.yml`) restaure, compile en Release et lance tous les projets `*.UnitTests` et `*.ArchitectureTests`. En cas d'échec, elle publie les erreurs en annotations (titres « Build errors », « Error codes », « Vulnerable packages ») et toujours un « Test summary ».
@@ -125,12 +126,12 @@ L'audit NuGet (transitif compris) est **bloquant** : ne jamais ajouter `NU190x` 
 
 ## État connu / à faire
 
-- `Program.cs` n'appelle pas encore `AddPricelyAsync` / `MapPricelyEndpoints` ; le `DbContext` du module Users est commenté dans `UsersModule`. L'API ne démarre pas en l'état.
-- Pas encore de migrations EF (Catalog, Pricing, Users, AiEngine).
-- `/mcp` est enregistré dans le SDK mais l'API ne démarre pas encore (étape 0) ; l'authentification Keycloak n'est pas en place.
+- L'API démarre (`Program.cs` : modules, authentification, `/api` et `/mcp`, validation de la DI) ; en Development elle applique les migrations des quatre modules au démarrage. L'AppHost complet (SQL Server + Keycloak + API) n'a pas encore été exécuté de bout en bout dans un environnement avec conteneurs : le faire avant de s'appuyer dessus.
+- Migrations `Initial` de Catalog, Pricing, Users et AiEngine en place (`Database/Migrations`, `generated_code = true`). Hors Development, aucun mécanisme n'applique les migrations (décision ouverte).
+- Seul `/mcp` exige un scope (`pricely.read`) ; les endpoints existants sont « authentifié » et le filtrage des tools par scope reste à faire.
 - Les tests d'intégration hérités (Users, solution) sont exclus de la solution : ils référencent un module `Ticketing` inexistant.
 - `Users/USAGE_GUIDE.md` décrit un template `dotnet new` absent du dépôt : ne pas s'y fier, utiliser le skill `new-module`.
-- Le module Users garde du SQL PostgreSQL (`::json`) dans son inbox et des permissions héritées (conversations, AI) à nettoyer.
+- Le code Key Vault de `Common.Infrastructure` (`AzureKeyvaultClient`, `ConfigureWithSecretsAsync`) n'est plus utilisé par l'authentification ; à supprimer ou à réutiliser pour les secrets.
 
 ## Méthode de travail
 

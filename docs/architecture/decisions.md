@@ -104,10 +104,23 @@ Un seul système d'identité pour l'API, le serveur MCP et le front Blazor.
 
 À vérifier lors du branchement : le mode exact d'OAuth des connecteurs distants de Claude.ai (DCR ou client pré-enregistré) dans leur documentation à jour ; Keycloak couvre les deux.
 
+## ADR-011 — Démarrage de l'API : Keycloak dans l'AppHost, provisionnement des utilisateurs, migrations
+
+**Statut** : acceptée (2026-10-25). Met en œuvre l'ADR-010 ; ne la remplace pas.
+
+- **Keycloak local** : `Aspire.Hosting.Keycloak` (seulement publié en préversion, `13.6.1-preview`, aligné sur Aspire 13.6.1), port fixe 8080 pour que l'émetteur des jetons (`http://localhost:8080/realms/pricely`) soit stable, realm importé depuis `aspire/Pricely.AppHost/Realms/pricely-realm.json`. L'API reçoit `Authentication__Authority` de l'AppHost ; l'audience attendue est `pricely-api`, ajoutée par un mapper d'audience sur les trois scopes `pricely.*` (sinon Keycloak émet `aud: account`). Les scopes de base (`basic` qui porte `sub`, `profile`, `email`) sont redéfinis dans le realm : un realm importé avec des `clientScopes` n'a pas les scopes par défaut.
+- **Clients** : `pricely-web` (public, PKCE S256), `pricely-mcp` (public, PKCE, pré-enregistré pour les clients MCP dont l'enregistrement dynamique échoue), `pricely-dev` (mot de passe, développement local seulement, pour obtenir un jeton en script). `pricely.read` est un scope par défaut, `pricely.write` et `pricely.review` sont optionnels.
+- **Enregistrement dynamique (DCR)** : activé en anonyme avec la politique « Trusted Hosts » limitée aux hôtes `localhost`, `127.0.0.1`, `claude.ai`, `claude.com` pour les URI de redirection, et « Consent Required » conservée. Realm de développement : en production, durcir ces politiques ou pré-enregistrer les clients.
+- **Identité et utilisateur** : `sub` reste l'identifiant Keycloak et devient `User.IdentityId` ; l'identifiant interne passe dans la claim `pricely_user_id`. Le `User` est créé (rôle `Member`) à la première requête authentifiée par `ProvisionUserCommand`, idempotente ; la course entre deux premières requêtes simultanées est absorbée par l'index unique sur `identity_id`. Le jeton doit porter l'e-mail (scope `email`), sinon `Users.MissingEmail`. `RegisterUser`, `GenerateAccessToken`, `JwtTokenService`, `JwtOptions`, `Jwt:Secret` et `IIdentityProviderService` sont supprimés : l'inscription est l'affaire de Keycloak.
+- **Autorisation** : une politique par scope, nommée comme le scope (`PricelyScopes` dans `Common.Application`) : `.RequireAuthorization(PricelyScopes.Read)`. Les politiques de permission métier (`CustomClaimsTransformation`) restent. Pour l'instant seul `/mcp` exige `pricely.read` ; les endpoints existants restent « authentifié ». Le filtrage des tools par scope, annoncé par l'ADR-009, reste à faire avec les tools d'écriture.
+- **MCP** : le schéma d'authentification `AddMcp` de `ModelContextProtocol.AspNetCore` sert la métadonnée `/.well-known/oauth-protected-resource` (RFC 9728) et le challenge 401 ; la validation du jeton reste faite par JwtBearer. Il est schéma de challenge par défaut, donc tout 401 de l'API pointe vers cette métadonnée.
+- **Migrations** : option A du skill `add-migration`. `dotnet ef` passe par l'hôte `Pricely.Api` (`Microsoft.EntityFrameworkCore.Design`), une migration `Initial` par module, `.editorconfig` `generated_code = true` dans chaque dossier `Migrations`. En Development, l'API applique les migrations des quatre modules au démarrage (`ApplyMigrationsAsync`) ; hors Development, elles doivent être jouées par le déploiement (job ou script `dotnet ef migrations script`), jamais par l'API.
+- **Validation de l'injection de dépendances** : `ValidateScopes` et `ValidateOnBuild` activés dans tous les environnements ; `StartupCompositionTests` construit l'hôte complet sans base ni Keycloak.
+
 ## Décisions ouvertes
 
-- Démarrage de l'API : câbler `AddPricelyAsync` dans `Program.cs` et réactiver le `DbContext` Users, ou isoler Users tant qu'il n'est pas nettoyé.
-- Migrations : via l'hôte ou via des `IDesignTimeDbContextFactory` par module (skill `add-migration`).
+- Application des migrations en production (job de déploiement, script SQL idempotent) : ADR-011 l'interdit à l'API, le mécanisme reste à choisir.
+- Filtrage des tools MCP par scope (annotations ou attribut dédié), avec les tools d'écriture.
 - Front Blazor : Blazor Server ou Blazor Web App en rendu interactif automatique ; projet de la solution (`src/Web/Pricely.Web`) ou application séparée.
 - API de recherche web pour l'agent de collecte (Brave, Tavily, Bing…).
 - Plusieurs conditionnements d'un même produit chez une enseigne : aujourd'hui un produit de référence par conditionnement.
