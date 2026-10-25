@@ -87,11 +87,25 @@ Chaque module déclare ses tools dans `Presentation` (comme ses endpoints) : mé
 
 Garde-fous : un tool ne contient pas de logique métier ; l'agent ne confirme jamais une offre lui-même (`OfferMatchingPolicy` ou décision humaine) ; un prix soumis par l'agent doit figurer dans une page réellement récupérée par Pricely (instantané de page).
 
+## ADR-010 — Authentification : OAuth 2.1 avec Keycloak, Pricely serveur de ressources
+
+**Statut** : acceptée (2026-10-25)
+
+Un seul système d'identité pour l'API, le serveur MCP et le front Blazor.
+
+- **Keycloak** est le serveur d'autorisation (realm `pricely`) : il gère l'enregistrement dynamique des clients (DCR) sur lequel s'appuie la spécification d'autorisation MCP, s'intègre à Aspire (`Aspire.Hosting.Keycloak`) et s'auto-héberge. Alternative managée équivalente : Auth0 (même code côté Pricely). Entra ID écarté (pas de DCR).
+- **Pricely est un serveur de ressources** : validation des JWT de Keycloak (`AddJwtBearer`, émetteur et audience), publication de `/.well-known/oauth-protected-resource` (RFC 9728) et challenge 401 conforme pour le MCP (`ModelContextProtocol.AspNetCore`). Pricely n'émet plus de jetons.
+- **Scopes** : `pricely.read` (consultation), `pricely.write` (administration, collecte), `pricely.review` (confirmation / rejet d'offres). Chaque tool et endpoint déclare le scope requis ; un client ne voit que les tools autorisés par son jeton.
+- **Module Users** : garde profils, rôles et permissions métier ; le `sub` du jeton est rattaché à un `User` et `CustomClaimsTransformation` ajoute ses permissions. `JwtTokenService`, `GenerateAccessToken` et l'option `Jwt:Secret` sont supprimés.
+- Les tools d'écriture restent soumis à approbation humaine, quel que soit le scope (ADR-008).
+- Clé d'API statique écartée : utile seulement pour Claude Code / Desktop, inutilisable pour les connecteurs Claude.ai et le front, double mécanisme à maintenir.
+
+À vérifier lors du branchement : le mode exact d'OAuth des connecteurs distants de Claude.ai (DCR ou client pré-enregistré) dans leur documentation à jour ; Keycloak couvre les deux.
+
 ## Décisions ouvertes
 
 - Démarrage de l'API : câbler `AddPricelyAsync` dans `Program.cs` et réactiver le `DbContext` Users, ou isoler Users tant qu'il n'est pas nettoyé.
 - Migrations : via l'hôte ou via des `IDesignTimeDbContextFactory` par module (skill `add-migration`).
-- Authentification du MCP HTTP : clé d'API d'abord ou OAuth directement (requis pour un connecteur Claude.ai distant).
 - Front Blazor : Blazor Server ou Blazor Web App en rendu interactif automatique ; projet de la solution (`src/Web/Pricely.Web`) ou application séparée.
 - API de recherche web pour l'agent de collecte (Brave, Tavily, Bing…).
 - Plusieurs conditionnements d'un même produit chez une enseigne : aujourd'hui un produit de référence par conditionnement.

@@ -32,7 +32,7 @@ test/Pricely.ArchitectureTests Frontières entre modules
 
 | Module | Agrégats | Rôle |
 |---|---|---|
-| Users | `User` | Comptes, rôles, permissions, JWT (hérité du template) |
+| Users | `User` | Profils, rôles, permissions métier (l'identité est portée par Keycloak, ADR-010) |
 | Catalog | `ProductCategory`, `Product` | Produits de référence (GTIN, marque, référence fabricant) et typologies (arbre de 3 niveaux max) |
 | Pricing | `Merchant`, `CollectionProfile`, `Offer`, `PriceObservation` | Enseignes, profils de collecte par typologie, offres, historique de prix, collecte |
 
@@ -98,6 +98,7 @@ Le build échoue sur le moindre avertissement (`TreatWarningsAsErrors`, `Analysi
 - Le module **AiEngine** choisit la cible par fonctionnalité (modèle ou agent), tient le catalogue des modèles et tarifs et journalise chaque appel (`LlmCalledIntegrationEvent` → `LlmCall`, coût figé).
 - **Agent** : boucle d'outils dans Pricely (`IChatClient` + `FunctionInvokingChatClient`), conversations persistées, tools d'écriture soumis à approbation, résultats typés rendus par le front Blazor.
 - **Tools** : déclarés dans la `Presentation` de chaque module, fins, via `ISender` ; exposés à l'agent interne et au **MCP HTTP** (`/mcp`). Jamais de logique métier dans un tool.
+- **Authentification** (ADR-010) : Keycloak (OAuth 2.1 / OIDC) ; Pricely valide les jetons et n'en émet pas ; scopes `pricely.read|write|review` ; permissions métier dans le module Users.
 - Référence d'implémentation : AiEngine et Common AI de ChaussonStore (patterns uniquement, pas de code métier Chausson).
 
 ## Commandes
