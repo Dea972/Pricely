@@ -10,20 +10,20 @@ Chaque étape fait l'objet d'une PR sur `main`, CI verte, revue `architecture-re
 - Authentification (ADR-010) : Keycloak dans l'AppHost (realm `pricely` importé au démarrage, scopes `pricely.read|write|review`, client du front), validation JWT Keycloak dans l'API, rattachement `sub` → `User`, suppression de `JwtTokenService` / `GenerateAccessToken` / `Jwt:Secret`.
 - Critère : l'AppHost démarre (SQL Server + Keycloak + API) ; `/api/catalog/categories` renvoie 401 sans jeton et répond avec un jeton Keycloak.
 
-## Étape 1 — Socle Common AI (ADR-007)
+## Étape 1 — Socle Common AI (ADR-007) — fait
 
 - `Common.Application.AI` : `AiFeature`, `AiProviderKeys`, `LlmTarget`, `ILlmTargetResolver`, `ILlmGateway`, `LlmClient`, `LlmServiceBase`, `LlmRequest` / `LlmResponse` / `LlmTokenUsage`, `LlmCalledIntegrationEvent`, `AddAiFeature`.
 - `Common.Infrastructure.Ai` : `LlmGateway`, `DefaultLlmTargetResolver`, `AddAiProvidersAsync` ; fournisseur Anthropic (options, `HttpClient` authentifié, secrets en user-secrets).
 - Horodatage UTC. Tests unitaires de la passerelle avec un faux fournisseur.
 
-## Étape 2 — Module AiEngine
+## Étape 2 — Module AiEngine — fait (sans agents hébergés ni recherche web des tarifs)
 
 - Skill `new-module`. Agrégats `Model` (+ `ModelPrice` datés), `FeatureSetting`, `Agent`, `Session`, `LlmCall`.
 - Consommation de `LlmCalledIntegrationEvent` (inbox) → `LlmCall` avec coût figé ; `LlmTargetResolver` qui remplace le résolveur par défaut.
 - Endpoints : modèles et tarifs, cibles des fonctionnalités, agents, statistiques (synthèse, par jour, par modèle, par fonctionnalité).
 - La recherche des tarifs sur le web est reportée.
 
-## Étape 3 — Tools et MCP HTTP (ADR-009)
+## Étape 3 — Tools et MCP HTTP (ADR-009) — fait, sauf filtrage par scope (dépend de l'étape 0)
 
 - Abstraction de tool dans `Common.Presentation` (lecture / écriture, approbation requise) ; découverte par assembly, instanciation par DI.
 - Tools de consultation : `search_products`, `get_product`, `get_category_tree`, `compare_prices`, `get_price_history`, `list_merchants`, `list_price_anomalies`, `get_collection_plan`.

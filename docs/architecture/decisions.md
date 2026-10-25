@@ -60,7 +60,7 @@ Repris de ChaussonStore. Les appels LLM passent tous par un port de `Common.Appl
 
 Le module **AiEngine** pilote et observe, il n'appelle pas les LLM pour les autres : catalogue `Model` / `ModelPrice` (tarifs datés), `FeatureSetting` (cible par fonctionnalité + cible `default`), `Agent` (agents hébergés), `Session` / `LlmCall` (journal via l'inbox, coût figé au tarif du jour), statistiques.
 
-Conséquence : aucun module ne dépend d'AiEngine ; pas de projet `Contracts`. Écarts volontaires avec ChaussonStore : horodatage en UTC (`IDateTimeProvider`), fournisseur Anthropic d'abord (Vertex AI / Foundry plus tard), recherche web des tarifs reportée.
+Conséquence : aucun module ne dépend d'AiEngine ; pas de projet `Contracts`. Écarts volontaires avec ChaussonStore : horodatage en UTC (`IDateTimeProvider`), fournisseur Anthropic d'abord (Vertex AI / Foundry plus tard), recherche web des tarifs et agents hébergés reportés (une cible = un modèle), `LlmCall.Record` regroupe les données de l'appel dans `LlmCallDetails` (pas de factory à 15 paramètres).
 
 ## ADR-008 — Agent : boucle d'outils dans Pricely
 

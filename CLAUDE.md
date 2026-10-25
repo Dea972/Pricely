@@ -21,11 +21,13 @@ aspire/                        AppHost (SQL Server) et ServiceDefaults (OpenTele
 src/API/Pricely.Api            Host HTTP
 src/Adapters/Pricely.Sdk       Composition : AddPricelyAsync() enregistre tous les modules, MapPricelyEndpoints() sous /api
 src/Common/                    Briques partagées : Domain (Entity, Result, Error, DomainEvent), Application (ICommand, IQuery,
-                               behaviors, IEventBus, IDbConnectionFactory, IDateTimeProvider), Infrastructure (outbox, inbox,
-                               auth, Quartz, MassTransit), Presentation (IEndpoint, ApiResults)
+                               behaviors, IEventBus, IDbConnectionFactory, IDateTimeProvider, AI : ILlmGateway, AiFeature),
+                               Infrastructure (outbox, inbox, auth, Quartz, MassTransit, Ai : passerelle + fournisseur Anthropic),
+                               Presentation (IEndpoint, ApiResults, Mcp : serveur MCP HTTP)
 src/Modules/<Module>/          Pricely.Modules.<Module>.{Domain,Application,Infrastructure,Presentation,IntegrationEvents}
 src/Modules/<Module>/test/     <Module>.UnitTests (domaine), <Module>.ArchitectureTests (couches, conventions)
-test/Pricely.ArchitectureTests Frontières entre modules
+test/Pricely.ArchitectureTests Frontières entre modules, découverte des tools MCP
+test/Pricely.Common.UnitTests  Passerelle LLM
 ```
 
 ## Modules
@@ -35,6 +37,7 @@ test/Pricely.ArchitectureTests Frontières entre modules
 | Users | `User` | Profils, rôles, permissions métier (l'identité est portée par Keycloak, ADR-010) |
 | Catalog | `ProductCategory`, `Product` | Produits de référence (GTIN, marque, référence fabricant) et typologies (arbre de 3 niveaux max) |
 | Pricing | `Merchant`, `CollectionProfile`, `Offer`, `PriceObservation` | Enseignes, profils de collecte par typologie, offres, historique de prix, collecte |
+| AiEngine | `Model` (+ `ModelPrice`), `FeatureSetting`, `Session`, `LlmCall` | Catalogue des modèles et tarifs, modèle ciblé par fonctionnalité IA, journal des appels LLM et coûts, statistiques d'usage |
 
 Pricing ne lit jamais Catalog : il garde des read models locaux `CatalogProduct` / `CatalogCategory`, alimentés par les événements d'intégration de Catalog (inbox, upsert idempotent sur l'identifiant source).
 
@@ -92,12 +95,14 @@ Le build échoue sur le moindre avertissement (`TreatWarningsAsErrors`, `Analysi
 - **Collecte** : `CollectProductOffersCommand` → `OfferCollectionPlanner` (produit, profil résolu, enseignes actives) → `IOfferCollector` (port) → `CollectedOfferRecorder` (une sauvegarde par offre collectée). Les offres d'enseignes non demandées sont ignorées. `CollectOffersJob` (Quartz) est désactivé par défaut (`Pricing:Collection:Enabled`).
 - L'implémentation actuelle de `IOfferCollector` est `NotConfiguredOfferCollector`, qui échoue explicitement. La cible est l'agent IA de Pricely (ADR-008), qui passe par la passerelle LLM (ADR-007) et les tools de collecte (ADR-009) ; scrapers dédiés et flux partenaires en complément. On n'utilise pas le runtime générique `Dea972/Agent`.
 
-## IA, agent et MCP (cible, voir ADR-007 à 009)
+## IA, agent et MCP (ADR-007 à 010)
 
-- **Tout appel LLM** passe par `ILlmGateway.ForFeatureAsync(feature)` (Common). Un module déclare ses `AiFeature` (code `"<module>.<usage>"`) et n'injecte jamais un fournisseur.
-- Le module **AiEngine** choisit la cible par fonctionnalité (modèle ou agent), tient le catalogue des modèles et tarifs et journalise chaque appel (`LlmCalledIntegrationEvent` → `LlmCall`, coût figé).
-- **Agent** : boucle d'outils dans Pricely (`IChatClient` + `FunctionInvokingChatClient`), conversations persistées, tools d'écriture soumis à approbation, résultats typés rendus par le front Blazor.
-- **Tools** : déclarés dans la `Presentation` de chaque module, fins, via `ISender` ; exposés à l'agent interne et au **MCP HTTP** (`/mcp`). Jamais de logique métier dans un tool.
+- **Tout appel LLM** passe par `ILlmGateway.ForFeatureAsync(feature)` puis `LlmClient.SendAsync(prompt)`. Un module déclare ses `AiFeature` (code `"<module>.<usage>"`, fournisseur par défaut) dans `Application/<Module>AiFeatures.cs` et les enregistre par `services.AddAiFeature(...)` dans `<Module>Module` (exemple : `PricingAiFeatures.OfferCollection`). Jamais d'injection directe d'un fournisseur.
+- **Fournisseurs** : `LlmServiceBase` (Common.Application.AI) ; implémentations en services à clé dans `Common.Infrastructure/Ai`, enregistrées une fois par `AddAiProviders` (Anthropic, clé `Ai:Anthropic:ApiKey` en user-secrets). Chaque appel publie `LlmCalledIntegrationEvent`.
+- **AiEngine** remplace `ILlmTargetResolver` (modèle ciblé par fonctionnalité, cible `default`), journalise les appels via son inbox (`LlmCall`, coût figé au tarif du jour UTC) et expose les statistiques (`aiengine/usage/*`). Les agents hébergés (Foundry, Anthropic Managed Agents) ne sont pas encore repris.
+- **Tools** : classes `public static` `[McpServerToolType]` dans `Presentation/Tools/` de chaque module, une méthode par tool, `[McpServerTool(Name = "snake_case", ReadOnly = ..., Destructive = ...)]` + `[Description]` en français, paramètres `ISender` et `CancellationToken` injectés, une requête ou commande par tool, `result.ValueOrToolError()`. Skill `add-agent-tool`. Jamais de logique métier dans un tool.
+- **MCP** : `AddPricelyMcpServer` (HTTP streamable, stateless) et `MapPricelyMcp` (`/mcp`, authentifié) dans `Pricely.Sdk` ; chaque module expose `ToolAssembly`.
+- **Agent interne** (`IChatClient` + `FunctionInvokingChatClient`, approbations, conversations) : à venir (étape 4 de la feuille de route).
 - **Authentification** (ADR-010) : Keycloak (OAuth 2.1 / OIDC) ; Pricely valide les jetons et n'en émet pas ; scopes `pricely.read|write|review` ; permissions métier dans le module Users.
 - Référence d'implémentation : AiEngine et Common AI de ChaussonStore (patterns uniquement, pas de code métier Chausson).
 
@@ -121,14 +126,15 @@ L'audit NuGet (transitif compris) est **bloquant** : ne jamais ajouter `NU190x` 
 ## État connu / à faire
 
 - `Program.cs` n'appelle pas encore `AddPricelyAsync` / `MapPricelyEndpoints` ; le `DbContext` du module Users est commenté dans `UsersModule`. L'API ne démarre pas en l'état.
-- Pas encore de migrations EF (Catalog, Pricing, Users).
+- Pas encore de migrations EF (Catalog, Pricing, Users, AiEngine).
+- `/mcp` est enregistré dans le SDK mais l'API ne démarre pas encore (étape 0) ; l'authentification Keycloak n'est pas en place.
 - Les tests d'intégration hérités (Users, solution) sont exclus de la solution : ils référencent un module `Ticketing` inexistant.
 - `Users/USAGE_GUIDE.md` décrit un template `dotnet new` absent du dépôt : ne pas s'y fier, utiliser le skill `new-module`.
 - Le module Users garde du SQL PostgreSQL (`::json`) dans son inbox et des permissions héritées (conversations, AI) à nettoyer.
 
 ## Méthode de travail
 
-- Utiliser les skills du dépôt : `new-module`, `new-aggregate`, `new-use-case`, `new-integration-event`, `add-migration`, `add-offer-collector`.
+- Utiliser les skills du dépôt : `new-module`, `new-aggregate`, `new-use-case`, `new-integration-event`, `add-migration`, `add-offer-collector`, `add-agent-tool`.
 - Proposer un plan court avant une tâche qui touche plusieurs projets ; attendre validation pour les décisions d'architecture et les consigner dans `docs/architecture/decisions.md`.
 - Code, commentaires, commits en anglais (Conventional Commits). Échanges et docs en français.
 - Avant de terminer : `dotnet build` + `dotnet test`, puis le sous-agent `architecture-reviewer` sur le diff.

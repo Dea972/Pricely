@@ -21,6 +21,12 @@ test/                   Solution-level architecture and integration tests
 | Users | Accounts, roles, permissions, authentication |
 | Catalog | Reference products (GTIN, brand, manufacturer reference) and product typologies (3-level tree) |
 | Pricing | Merchants, collection profiles per typology, offers (product × merchant), price observations, collection |
+| AiEngine | LLM model catalog and prices, target model per AI feature, LLM call journal and costs, usage statistics |
+
+### AI and MCP
+
+- Every LLM call goes through `ILlmGateway` (Common) for a declared `AiFeature`; providers are registered once (Anthropic: `dotnet user-secrets set "Ai:Anthropic:ApiKey" "<key>" --project src/API/Pricely.Api`).
+- MCP server over streamable HTTP on `/mcp` (authenticated) with read-only tools: `get_category_tree`, `search_products`, `get_product`, `list_merchants`, `compare_prices`, `get_price_history`, `list_price_anomalies`, `get_collection_plan`, `list_offers_pending_review`.
 
 ### Pricing in a nutshell
 
@@ -40,6 +46,6 @@ dotnet test
 ## Working with Claude Code
 
 - `CLAUDE.md`: architecture rules, conventions, analyzer pitfalls, Pricing business rules, known gaps.
-- `.claude/skills/`: `new-module`, `new-aggregate`, `new-use-case`, `new-integration-event`, `add-migration`, `add-offer-collector`.
+- `.claude/skills/`: `new-module`, `new-aggregate`, `new-use-case`, `new-integration-event`, `add-migration`, `add-offer-collector`, `add-agent-tool`.
 - `.claude/agents/architecture-reviewer.md`: review sub-agent to run on every diff.
 - `docs/architecture/`: ubiquitous language, decisions (ADR), model (Mermaid).
