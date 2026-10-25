@@ -7,7 +7,8 @@ Chaque étape fait l'objet d'une PR sur `main`, CI verte, revue `architecture-re
 - `Program.cs` : `AddPricelyAsync(connectionString, configuration)`, `MapPricelyEndpoints()`, OpenAPI en développement.
 - Module Users : réactiver l'enregistrement de `UsersDbContext`, corriger le SQL PostgreSQL (`::json`) de son inbox.
 - Migrations initiales Catalog, Pricing, Users (skill `add-migration`), base locale via l'AppHost Aspire.
-- Critère : l'AppHost démarre, `/api/catalog/categories` répond.
+- Authentification (ADR-010) : Keycloak dans l'AppHost (realm `pricely` importé au démarrage, scopes `pricely.read|write|review`, client du front), validation JWT Keycloak dans l'API, rattachement `sub` → `User`, suppression de `JwtTokenService` / `GenerateAccessToken` / `Jwt:Secret`.
+- Critère : l'AppHost démarre (SQL Server + Keycloak + API) ; `/api/catalog/categories` renvoie 401 sans jeton et répond avec un jeton Keycloak.
 
 ## Étape 1 — Socle Common AI (ADR-007)
 
@@ -26,7 +27,7 @@ Chaque étape fait l'objet d'une PR sur `main`, CI verte, revue `architecture-re
 
 - Abstraction de tool dans `Common.Presentation` (lecture / écriture, approbation requise) ; découverte par assembly, instanciation par DI.
 - Tools de consultation : `search_products`, `get_product`, `get_category_tree`, `compare_prices`, `get_price_history`, `list_merchants`, `list_price_anomalies`, `get_collection_plan`.
-- Serveur MCP en transport HTTP sur `/mcp`, authentifié ; remplace l'amorce stdio du template.
+- Serveur MCP en transport HTTP sur `/mcp`, protégé par les jetons Keycloak (ADR-010) : métadonnée `/.well-known/oauth-protected-resource`, scopes par tool ; remplace l'amorce stdio du template.
 - Critère : interroger Pricely depuis Claude Desktop / Claude Code.
 
 ## Étape 4 — Agent interne (ADR-008)
