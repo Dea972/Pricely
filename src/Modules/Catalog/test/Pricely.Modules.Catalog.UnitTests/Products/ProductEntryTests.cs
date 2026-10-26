@@ -54,6 +54,20 @@ public sealed class ProductEntryTests
         result.Value.ExistingProductId.Should().BeNull();
     }
 
+    [Theory]
+    [InlineData("Prix 12,50 € — réf. 37600 001000 — lot de 14", "3760000100014", null)]
+    [InlineData("EAN : 3 760000 100014 · 35 kg", "3760000100014", "3760000100014")]
+    [InlineData("EAN3760000100014", "3760000100014", "3760000100014")]
+    public async Task Suggest_ShouldFindTheGtin_OnlyAsOneNumberOfThePage(string pageText, string proposed, string? kept)
+    {
+        var model = new FakeModel($$"""{"name":"Ciment","brand":"CR","gtin":"{{proposed}}"}""");
+        var handler = new SuggestProductCommandHandler(new FakeWeb(pageText), new FakeGateway(model), new FakeCategories(), new FakeProducts(null));
+
+        Result<ProductSuggestionResponse> result = await handler.Handle(new SuggestProductCommand(Page), CancellationToken.None);
+
+        result.Value.Gtin.Should().Be(kept);
+    }
+
     [Fact]
     public async Task Suggest_WithoutTheModel_ShouldProposeTheTitleOfThePage()
     {
@@ -65,10 +79,10 @@ public sealed class ProductEntryTests
     private static SuggestProductCommandHandler Handler(FakeModel model, Product? existing) =>
         new(new FakeWeb(), new FakeGateway(model), new FakeCategories(), new FakeProducts(existing));
 
-    private sealed class FakeWeb : IWebPageReader
+    private sealed class FakeWeb(string text = PageText) : IWebPageReader
     {
         public Task<Result<WebPage>> ReadAsync(Uri address, CancellationToken cancellationToken = default) =>
-            Task.FromResult(Result.Success(new WebPage(address, PageText, null) { Title = "Ciment CEM II — Cimenterie du Rhône" }));
+            Task.FromResult(Result.Success(new WebPage(address, text, null) { Title = "Ciment CEM II — Cimenterie du Rhône" }));
     }
 
     private sealed class FakeModel(string? content) : LlmServiceBase(new NoEventBus(), new Clock())

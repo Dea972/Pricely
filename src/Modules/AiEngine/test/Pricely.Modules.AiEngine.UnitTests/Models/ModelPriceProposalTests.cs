@@ -41,7 +41,7 @@ public sealed class ModelPriceProposalTests
 
         var model = new FakeModel("""
             {"prices":[{"model":"claude-fable-5-1","input":5,"cachedInput":0.42,"cacheWrite":6.25,"output":25},
-                       {"model":"claude-unknown","input":7,"output":35}]}
+                       {"model":"claude-unknown","input":5,"output":0}]}
             """);
         var handler = new ProposeModelPricesCommandHandler(
             new FakeModels(known, read, invented),
@@ -64,7 +64,7 @@ public sealed class ModelPriceProposalTests
         fable.Notes.Should().Equal("ToCheck", "CachePricesMissing");
 
         ModelPriceProposalResponse unknown = proposals.Single(p => p.ProviderModelId == "claude-unknown");
-        unknown.Should().BeEquivalentTo(new { Proposed = (PriceResponse?)null, IsChanged = false }, "the page does not show $7");
+        unknown.Should().BeEquivalentTo(new { Proposed = (PriceResponse?)null, IsChanged = false }, "a free model is never taken from the page, even if $5 is on it");
         unknown.Notes.Should().Equal("NotFound");
         model.LastMessage.Should().Contain("claude-fable-5-1").And.NotContain("claude-sonnet-5-5", "LiteLLM knows it").And.NotContain("Autre ligne");
     }

@@ -18,9 +18,15 @@ internal sealed class AddMerchantToProfilesCommandHandler(
 {
     public async Task<Result> Handle(AddMerchantToProfilesCommand request, CancellationToken cancellationToken)
     {
-        if (await merchantRepository.GetAsync(request.MerchantId, cancellationToken) is null)
+        Merchant? merchant = await merchantRepository.GetAsync(request.MerchantId, cancellationToken);
+        if (merchant is null)
         {
             return Result.Failure(MerchantErrors.NotFound(request.MerchantId));
+        }
+
+        if (!merchant.IsActive)
+        {
+            return Result.Failure(MerchantErrors.Inactive(request.MerchantId));
         }
 
         foreach (Guid categoryId in request.ProductCategoryIds.Distinct())
@@ -43,35 +49,25 @@ internal sealed class AddMerchantToProfilesCommandHandler(
         }
 
         CollectionProfile? own = await collectionProfileRepository.GetByCategoryAsync(categoryId, cancellationToken);
-        IReadOnlyList<Guid> current;
-        if (own is { PreferredMerchants.Count: > 0 })
+        IReadOnlyList<Guid> inherited = [];
+        if (own is not { PreferredMerchants.Count: > 0 })
         {
-            current = [.. own.PreferredMerchants.Select(m => m.MerchantId)];
-        }
-        else
-        {
-            Result<ResolvedCollectionProfile> inherited = await CollectionProfileLookup.ResolveAsync(
+            Result<ResolvedCollectionProfile> resolved = await CollectionProfileLookup.ResolveAsync(
                 categoryId,
                 catalogCategoryRepository,
                 collectionProfileRepository,
                 cancellationToken);
-            if (inherited.IsFailure)
+            if (resolved.IsFailure)
             {
-                return inherited;
+                return resolved;
             }
 
-            current = inherited.Value.PreferredMerchantIds;
+            inherited = resolved.Value.PreferredMerchantIds;
         }
 
-        if (current.Contains(merchantId))
-        {
-            return Result.Success();
-        }
-
-        Guid[] merchants = [.. current, merchantId];
         if (own is null)
         {
-            Result<CollectionProfile> defined = CollectionProfile.Define(categoryId, merchants, instructions: null);
+            Result<CollectionProfile> defined = CollectionProfile.Define(categoryId, inherited.Contains(merchantId) ? inherited : [.. inherited, merchantId], instructions: null);
             if (defined.IsFailure)
             {
                 return defined;
@@ -81,10 +77,10 @@ internal sealed class AddMerchantToProfilesCommandHandler(
         }
         else
         {
-            Result updated = own.Update(merchants, own.Instructions);
-            if (updated.IsFailure)
+            Result added = own.AddPreferredMerchant(merchantId, inherited);
+            if (added.IsFailure)
             {
-                return updated;
+                return added;
             }
         }
 

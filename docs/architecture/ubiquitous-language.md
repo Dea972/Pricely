@@ -32,6 +32,8 @@ Le code utilise la colonne « Code » (anglais). L'interface et les échanges ut
 | `OfferMatchingPolicy` | Politique de rapprochement | Règle qui décide si une offre est confirmée sans revue. |
 | `PriceObservation` | Relevé de prix | Prix, disponibilité et date lus sur une offre. Historique séparé de l'offre. |
 | `PageSnapshot` | Instantané de page | Texte d'une page du site d'une enseigne tel que Pricely l'a lu ; un prix soumis par un agent doit y figurer (ADR-017). |
+| `Suggest…Command` | Proposition (paramétrage assisté) | Ce que l'IA propose à partir d'une page (enseigne, produit) ou d'une liste de tarifs : rien n'est enregistré avant que l'utilisateur valide (ADR-020, ADR-021). |
+| `PriceSource` | Origine d'un tarif | `Manual` (saisi), `LiteLlm` (liste publique de LiteLLM appliquée), `AiReading` (lu par l'IA sur la page du fournisseur, à vérifier). |
 | `SearchTemplate` | Page de recherche de l'enseigne | Adresse du site de l'enseigne avec `{query}`, où l'agent de collecte cherche le produit. |
 | `Money` | Prix | Montant strictement positif dans une devise ISO 4217. |
 | `Availability` | Disponibilité | `InStock`, `OutOfStock`, `Unknown`. |

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using Pricely.Common.Application.AI;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Application.Web;
@@ -11,10 +12,10 @@ namespace Pricely.Modules.Catalog.Application.Products.SuggestProduct;
 
 /// <summary>
 /// Reads the product page and lets the model of <see cref="CatalogAiFeatures.ProductEntry"/> fill the fields. What it
-/// proposes is checked: a GTIN must be valid and shown by the page, a manufacturer reference shown by the page, a typology
-/// known. A product with the same GTIN is pointed out instead of a duplicate.
+/// proposes is checked: a GTIN must be valid and shown by the page, a brand and a manufacturer reference shown by the page
+/// (together they confirm offers automatically), a typology known. A product with the same GTIN is pointed out instead of a duplicate.
 /// </summary>
-internal sealed class SuggestProductCommandHandler(
+internal sealed partial class SuggestProductCommandHandler(
     IWebPageReader webPageReader,
     ILlmGateway llmGateway,
     IProductCategoryRepository productCategoryRepository,
@@ -22,6 +23,8 @@ internal sealed class SuggestProductCommandHandler(
     : ICommandHandler<SuggestProductCommand, ProductSuggestionResponse>
 {
     private const int PageTextLength = 15_000;
+
+    private const int PackagingMaxLength = 100;
 
     private static readonly int[] GtinLengths = [8, 12, 13, 14];
 
@@ -60,11 +63,11 @@ internal sealed class SuggestProductCommandHandler(
         return new ProductSuggestionResponse(
             page.Value.Address,
             Cut(reply?.Name ?? page.Value.Title, Product.NameMaxLength),
-            Cut(reply?.Brand, Product.BrandMaxLength),
+            IsShown(reply?.Brand, page.Value.Text) ? Cut(reply!.Brand, Product.BrandMaxLength) : null,
             gtin,
             IsShown(reply?.ManufacturerReference, page.Value.Text) ? Cut(reply!.ManufacturerReference, Product.ManufacturerReferenceMaxLength) : null,
             categoryId,
-            Cut(reply?.Packaging, 100),
+            Cut(reply?.Packaging, PackagingMaxLength),
             reply?.Rationale?.Trim(),
             existing?.Id,
             existing?.Name,
@@ -115,7 +118,10 @@ internal sealed class SuggestProductCommandHandler(
         return null;
     }
 
-    /// <summary>A valid GTIN whose digits the page shows (with or without its leading zeros).</summary>
+    /// <summary>
+    /// A valid GTIN that the page shows as one number (spaces or dashes inside allowed, with or without its leading
+    /// zeros): never digits of neighbouring numbers put end to end (a price, a reference, a quantity).
+    /// </summary>
     private static string? ShownGtin(string? proposed, string pageText)
     {
         string digits = string.Concat((proposed ?? string.Empty).Where(char.IsAsciiDigit));
@@ -124,9 +130,14 @@ internal sealed class SuggestProductCommandHandler(
             return null;
         }
 
-        string pageDigits = string.Concat(pageText.Where(c => char.IsAsciiDigit(c) || c == '\n'));
+        string significant = digits.TrimStart('0');
 
-        return pageDigits.Contains(digits.TrimStart('0'), StringComparison.Ordinal) ? digits : null;
+        // Written in one block (« 3760000100014 ») or in groups (« 3 760000 100014 »).
+        return Digits().Matches(pageText).Concat(Numbers().Matches(pageText))
+            .Select(number => string.Concat(number.Value.Where(char.IsAsciiDigit)).TrimStart('0'))
+            .Any(shown => string.Equals(shown, significant, StringComparison.Ordinal))
+            ? digits
+            : null;
     }
 
     /// <summary>Compared letters and digits only, upper-cased (« CR-325R » is shown by « cr 325 r »).</summary>
@@ -168,4 +179,10 @@ internal sealed class SuggestProductCommandHandler(
 
         return string.Join(" › ", names);
     }
+
+    [GeneratedRegex(@"(?<!\d)\d[\d \-]{6,}\d(?!\d)", RegexOptions.None, 1000)]
+    private static partial Regex Numbers();
+
+    [GeneratedRegex(@"\d+", RegexOptions.None, 1000)]
+    private static partial Regex Digits();
 }

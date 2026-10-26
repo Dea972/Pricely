@@ -35,6 +35,8 @@ internal sealed class ProposeModelPricesCommandHandler(
 
     private static readonly string[] AmountFormats = ["0.##", "0.00", "0.###"];
 
+    private static readonly char[] WordSeparators = ['-', ' ', '.'];
+
     private const string Instructions = """
         Tu lis la page de tarifs d'un fournisseur de modèles de langage. Pour chaque modèle demandé, donne ses tarifs
         en dollars US par million de jetons, tels que la page les affiche. Réponds uniquement par un objet JSON :
@@ -139,13 +141,13 @@ internal sealed class ProposeModelPricesCommandHandler(
                 continue;
             }
 
-            string text = PricingLines(page.Value.Text);
+            string text = PricingLines(page.Value.Text, provider);
             PriceReadingReply? reply = await AskAsync(provider, text, cancellationToken);
 
             foreach (Model model in provider)
             {
                 ReadPrice? price = reply?.Prices?.FirstOrDefault(p => string.Equals(p.Model?.Trim(), model.ProviderModelId, StringComparison.OrdinalIgnoreCase));
-                if (price is { Input: decimal input, Output: decimal output } && Shows(text, input) && Shows(text, output))
+                if (price is { Input: > 0 and decimal input, Output: > 0 and decimal output } && Shows(text, input) && Shows(text, output))
                 {
                     read[model.Id] = price with
                     {
@@ -183,9 +185,16 @@ internal sealed class ProposeModelPricesCommandHandler(
         return response.IsSuccess ? LlmJson.Read<PriceReadingReply>(response.Value.Content) : null;
     }
 
-    /// <summary>The lines of the page that carry a price or name a model: a pricing page is long, its tables are not.</summary>
-    private static string PricingLines(string text)
+    /// <summary>
+    /// The lines of the page that carry a price or name a requested model (a word of its identifier or label): a pricing
+    /// page is long, its tables are not.
+    /// </summary>
+    private static string PricingLines(string text, IEnumerable<Model> models)
     {
+        string[] words = [.. models
+            .SelectMany(m => m.ProviderModelId.Split(WordSeparators).Concat(m.Label.Split(WordSeparators)))
+            .Where(w => w.Length >= 4 && w.Any(char.IsAsciiLetter))
+            .Distinct(StringComparer.OrdinalIgnoreCase)];
         var lines = new StringBuilder();
         foreach (string line in text.Split('\n'))
         {
@@ -194,7 +203,9 @@ internal sealed class ProposeModelPricesCommandHandler(
                 break;
             }
 
-            if (line.Contains('$', StringComparison.Ordinal) || line.Contains("Claude", StringComparison.OrdinalIgnoreCase) || line.Contains("MTok", StringComparison.OrdinalIgnoreCase))
+            if (line.Contains('$', StringComparison.Ordinal)
+                || line.Contains("MTok", StringComparison.OrdinalIgnoreCase)
+                || Array.Exists(words, w => line.Contains(w, StringComparison.OrdinalIgnoreCase)))
             {
                 lines.AppendLine(line);
             }
@@ -203,10 +214,13 @@ internal sealed class ProposeModelPricesCommandHandler(
         return lines.ToString();
     }
 
-    /// <summary>« $3 », « $3.00 », « $0.30 »: the page shows this amount in dollars.</summary>
+    /// <summary>
+    /// « $3 », « $3.00 », « $0.30 »: the page shows this amount in dollars, somewhere (not necessarily next to the model:
+    /// the proposal stays « to check »). Never a zero or negative price.
+    /// </summary>
     private static bool Shows(string text, decimal amount) =>
-        amount == 0
-        || AmountFormats
+        amount > 0
+        && AmountFormats
             .Select(format => "$" + amount.ToString(format, CultureInfo.InvariantCulture))
             .Any(written => text.Contains(written, StringComparison.Ordinal));
 

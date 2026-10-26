@@ -7,6 +7,6 @@ internal sealed class AddMerchantToProfilesCommandValidator : AbstractValidator<
     public AddMerchantToProfilesCommandValidator()
     {
         RuleFor(c => c.MerchantId).NotEmpty();
-        RuleFor(c => c.ProductCategoryIds).NotNull();
+        RuleFor(c => c.ProductCategoryIds).NotEmpty();
     }
 }

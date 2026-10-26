@@ -55,4 +55,18 @@ public sealed class CollectionProfileTests
             .Should().Equal((added, 1), (kept, 2));
         profile.Instructions.Should().BeNull();
     }
+
+    [Fact]
+    public void AddPreferredMerchant_ShouldStartFromTheInheritedMerchants_WhenTheProfileHasNone()
+    {
+        var inherited = Guid.NewGuid();
+        var added = Guid.NewGuid();
+        CollectionProfile profile = CollectionProfile.Define(Guid.NewGuid(), [], "Au sac.").Value;
+
+        profile.AddPreferredMerchant(added, [inherited]).IsSuccess.Should().BeTrue();
+        profile.AddPreferredMerchant(added, [inherited]).IsSuccess.Should().BeTrue();
+
+        profile.PreferredMerchants.Select(m => m.MerchantId).Should().Equal(inherited, added);
+        profile.Instructions.Should().Be("Au sac.");
+    }
 }

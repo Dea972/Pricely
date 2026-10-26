@@ -4,9 +4,9 @@ using System.Net.Sockets;
 namespace Pricely.Common.Infrastructure.Web;
 
 /// <summary>
-/// Connection callback of the merchant page client: the name of a merchant site must resolve to a public address. A
-/// site that points to the loopback, a private network or a cloud metadata address is refused (SSRF), at connection
-/// time, so a DNS answer that changes between two requests cannot bypass it.
+/// Connection callback of the web page client: the name of a site must resolve to a public address. A site that points
+/// to the loopback, a private network or a cloud metadata address is refused (SSRF), at connection time, so a DNS
+/// answer that changes between two requests cannot bypass it.
 /// </summary>
 internal static class PublicAddressGuard
 {

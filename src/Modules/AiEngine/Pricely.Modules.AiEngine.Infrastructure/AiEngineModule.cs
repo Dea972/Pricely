@@ -63,7 +63,12 @@ public static class AiEngineModule
 
         // Prices of the models (ADR-021): the list of LiteLLM, else the AI on the pricing page of the provider.
         services.AddSingleton(configuration.GetSection(ModelPriceOptions.SectionName).Get<ModelPriceOptions>() ?? new ModelPriceOptions());
-        services.AddHttpClient<IPublishedPriceList, LiteLlmPriceList>(client => client.Timeout = TimeSpan.FromSeconds(60));
+        // One attempt with its own timeout (3 MB): the standard resilience would retry and stop it after 10 s.
+        // RemoveAllResilienceHandlers is still an evaluation API of Microsoft.Extensions.Http.Resilience 10.2 (EXTEXP0001).
+#pragma warning disable EXTEXP0001
+        services.AddHttpClient<IPublishedPriceList, LiteLlmPriceList>(client => client.Timeout = TimeSpan.FromSeconds(60))
+            .RemoveAllResilienceHandlers();
+#pragma warning restore EXTEXP0001
         services.AddAiFeature(AiEngineAiFeatures.PriceReading);
 
         // Replaces the default resolver of Common: the target of a feature comes from the settings.
