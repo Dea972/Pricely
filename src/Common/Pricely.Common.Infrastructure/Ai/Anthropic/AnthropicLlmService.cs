@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Pricely.Common.Application.AI;
 using Pricely.Common.Application.Clock;
@@ -29,6 +30,8 @@ internal sealed class AnthropicLlmService(
     public override string ProviderName => "Anthropic";
 
     protected override string DefaultModel => options.Value.DefaultModel;
+
+    protected override IChatClient CreateChatClientCore(string model) => new AnthropicChatClient(httpClient, options, model);
 
     protected override async Task<LlmResponse> SendCoreAsync(
         LlmRequest request,

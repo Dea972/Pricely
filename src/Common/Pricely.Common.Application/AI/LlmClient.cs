@@ -1,3 +1,4 @@
+using Microsoft.Extensions.AI;
 using Pricely.Common.Domain;
 
 namespace Pricely.Common.Application.AI;
@@ -21,4 +22,11 @@ public sealed class LlmClient(LlmServiceBase service, AiFeature feature, LlmTarg
                 SessionId = prompt.SessionId ?? Guid.CreateVersion7().ToString()
             },
             cancellationToken);
+
+    /// <summary>
+    /// Chat client of the target for a multi-turn conversation with tools (ADR-008). Each call is journaled under
+    /// <paramref name="sessionId"/>.
+    /// </summary>
+    public IChatClient AsChatClient(string sessionId, string? userId = null) =>
+        service.CreateChatClient(new LlmChatContext(Feature, Target.Model, sessionId, userId));
 }
