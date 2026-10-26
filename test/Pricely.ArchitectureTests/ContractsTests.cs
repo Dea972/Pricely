@@ -4,6 +4,7 @@ using FluentAssertions;
 using Pricely.Common.Domain;
 using Pricely.Modules.Catalog.Contracts.Categories;
 using Pricely.Modules.Catalog.Infrastructure;
+using Pricely.Modules.Pricing.Infrastructure;
 
 namespace Pricely.ArchitectureTests;
 
@@ -32,7 +33,7 @@ public sealed class ContractsTests
     }
 
     [Fact]
-    public void Contracts_ShouldOnlyContain_InterfacesImmutableRecordsAndErrors()
+    public void Contracts_ShouldOnlyContain_InterfacesImmutableRecordsAndStaticClasses()
     {
         foreach (Type type in ContractAssemblies.SelectMany(a => a.GetExportedTypes()))
         {
@@ -40,7 +41,7 @@ public sealed class ContractsTests
             bool isRecord = type.GetMethod("<Clone>$") is not null;
 
             (type.IsInterface || type.IsEnum || isStaticClass || isRecord && type.IsSealed)
-                .Should().BeTrue("{0} must be an interface, an enum, a static class of errors or a sealed record", type.FullName);
+                .Should().BeTrue("{0} must be an interface, an enum, a static class or a sealed record", type.FullName);
 
             foreach (PropertyInfo property in type.GetProperties().Where(p => !type.IsInterface && p.SetMethod is not null))
             {
@@ -86,8 +87,8 @@ public sealed class ContractsTests
     }
 
     /// <summary>
-    /// The contract is read by Application (the layer that holds the use cases); Domain stays pure and Presentation goes
-    /// through Application.
+    /// The contract is read by Application (the layer that holds the use cases); Domain stays pure, Presentation goes
+    /// through Application and Infrastructure only implements its own contracts.
     /// </summary>
     [Fact]
     public void ContractConsumers_ShouldUseTheContractFromApplicationOnly()
@@ -95,7 +96,8 @@ public sealed class ContractsTests
         Assembly[] pricingDomainAndPresentation =
         [
             typeof(Modules.Pricing.Domain.Offers.Offer).Assembly,
-            Modules.Pricing.Presentation.AssemblyReference.Assembly
+            Modules.Pricing.Presentation.AssemblyReference.Assembly,
+            typeof(PricingModule).Assembly
         ];
 
         NetArchTest.Rules.TestResult result = NetArchTest.Rules.Types
