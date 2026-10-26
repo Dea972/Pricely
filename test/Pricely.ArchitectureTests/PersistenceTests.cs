@@ -1,7 +1,7 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Pricely.Agents.Core.Infrastructure;
+using Pricely.Modules.Agentic.Infrastructure.Database;
 using Pricely.Modules.AiEngine.Infrastructure.Database;
 using Pricely.Modules.Catalog.Infrastructure.Database;
 using Pricely.Modules.Pricing.Infrastructure.Database;
@@ -20,7 +20,7 @@ public sealed class PersistenceTests
         { nameof(PricingDbContext), "pricing" },
         { nameof(UsersDbContext), "users" },
         { nameof(AiEngineDbContext), "aiengine" },
-        { nameof(AgentsDbContext), "agents" }
+        { nameof(AgenticDbContext), "agentic" }
     };
 
     [Theory]
@@ -54,7 +54,7 @@ public sealed class PersistenceTests
         nameof(PricingDbContext) => new PricingDbContext(Options<PricingDbContext>()),
         nameof(UsersDbContext) => new UsersDbContext(Options<UsersDbContext>()),
         nameof(AiEngineDbContext) => new AiEngineDbContext(Options<AiEngineDbContext>()),
-        nameof(AgentsDbContext) => new AgentsDbContext(Options<AgentsDbContext>()),
+        nameof(AgenticDbContext) => new AgenticDbContext(Options<AgenticDbContext>()),
         _ => throw new ArgumentOutOfRangeException(nameof(contextName))
     };
 

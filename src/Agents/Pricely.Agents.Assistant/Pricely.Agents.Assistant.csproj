@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\Pricely.Agents.Core\Pricely.Agents.Core.csproj" />
+    <ProjectReference Include="..\..\Common\Pricely.Common.Application\Pricely.Common.Application.csproj" />
   </ItemGroup>
 
 </Project>

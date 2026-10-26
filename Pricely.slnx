@@ -14,10 +14,6 @@
 	</Folder>
 	<Folder Name="/src/Agents/">
 		<Project Path="src/Agents/Pricely.Agents.Assistant/Pricely.Agents.Assistant.csproj" />
-		<Project Path="src/Agents/Pricely.Agents.Core/Pricely.Agents.Core.csproj" />
-	</Folder>
-	<Folder Name="/src/Agents/test/">
-		<Project Path="src/Agents/test/Pricely.Agents.UnitTests/Pricely.Agents.UnitTests.csproj" />
 	</Folder>
 	<Folder Name="/src/API/">
 		<Project Path="src/API/Pricely.Api/Pricely.Api.csproj" />
@@ -29,6 +25,16 @@
 		<Project Path="src/Common/Pricely.Common.Presentation/Pricely.Common.Presentation.csproj" Id="10389c52-f0f3-44e1-abff-bb8c952dd334" />
 	</Folder>
 	<Folder Name="/src/Modules/" />
+	<Folder Name="/src/Modules/Agentic/">
+		<Project Path="src/Modules/Agentic/Pricely.Modules.Agentic.Application/Pricely.Modules.Agentic.Application.csproj" />
+		<Project Path="src/Modules/Agentic/Pricely.Modules.Agentic.Domain/Pricely.Modules.Agentic.Domain.csproj" />
+		<Project Path="src/Modules/Agentic/Pricely.Modules.Agentic.Infrastructure/Pricely.Modules.Agentic.Infrastructure.csproj" />
+		<Project Path="src/Modules/Agentic/Pricely.Modules.Agentic.Presentation/Pricely.Modules.Agentic.Presentation.csproj" />
+	</Folder>
+	<Folder Name="/src/Modules/Agentic/test/">
+		<Project Path="src/Modules/Agentic/test/Pricely.Modules.Agentic.ArchitectureTests/Pricely.Modules.Agentic.ArchitectureTests.csproj" />
+		<Project Path="src/Modules/Agentic/test/Pricely.Modules.Agentic.UnitTests/Pricely.Modules.Agentic.UnitTests.csproj" />
+	</Folder>
 	<Folder Name="/src/Modules/AiEngine/">
 		<Project Path="src/Modules/AiEngine/Pricely.Modules.AiEngine.Domain/Pricely.Modules.AiEngine.Domain.csproj" />
 		<Project Path="src/Modules/AiEngine/Pricely.Modules.AiEngine.Application/Pricely.Modules.AiEngine.Application.csproj" />

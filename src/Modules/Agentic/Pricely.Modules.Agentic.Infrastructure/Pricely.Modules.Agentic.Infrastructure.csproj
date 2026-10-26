@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pricely.Modules.Agentic.Application\Pricely.Modules.Agentic.Application.csproj" />
+    <ProjectReference Include="..\Pricely.Modules.Agentic.Presentation\Pricely.Modules.Agentic.Presentation.csproj" />
+    <ProjectReference Include="..\..\..\Common\Pricely.Common.Infrastructure\Pricely.Common.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pricely.Modules.Agentic.UnitTests" />
+  </ItemGroup>
+
+</Project>

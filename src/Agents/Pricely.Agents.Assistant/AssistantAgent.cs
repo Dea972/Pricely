@@ -1,39 +1,24 @@
-using Pricely.Agents.Core.Application;
 using Pricely.Common.Application.AI;
+using Pricely.Common.Application.AI.Agents;
 
 namespace Pricely.Agents.Assistant;
 
 /// <summary>
 /// The assistant of the Pricely front (docs/design/mockups/main.html): answers questions on products, prices and
-/// offers with the read tools, and proposes a price collection, which the user approves.
+/// offers with the read tools, and proposes a price collection, which the user approves. Run by the Agentic module.
 /// </summary>
-public sealed class AssistantAgent : IAgentDefinition
+public static class AssistantAgent
 {
-    public static readonly AiFeature AssistantFeature = new(
+    public static readonly AiFeature Feature = new(
         "agents.assistant",
         "Assistant (chat du front)",
         "Agents",
         AiProviderKeys.Anthropic);
 
-    public string Name => "assistant";
-
-    public AiFeature Feature => AssistantFeature;
-
-    public IReadOnlyCollection<string> ToolNames { get; } =
-    [
-        "search_products",
-        "get_product",
-        "get_category_tree",
-        "list_merchants",
-        "compare_prices",
-        "get_price_history",
-        "list_price_anomalies",
-        "get_collection_plan",
-        "list_offers_pending_review",
-        "collect_product_offers"
-    ];
-
-    public string Instructions => """
+    public static readonly AgentDefinition Definition = new(
+        "assistant",
+        Feature,
+        """
         Tu es l'assistant de Pricely, un comparateur et un outil de veille de prix multi-enseignes. Tu réponds en
         français, brièvement, à des acheteurs et à des responsables de catalogue.
 
@@ -51,5 +36,17 @@ public sealed class AssistantAgent : IAgentDefinition
         - collect_product_offers écrit des offres et des prix : l'appeler ne fait que proposer l'action à
           l'utilisateur, qui la valide ou la refuse. Propose-la quand les prix sont anciens ou absents, en expliquant
           son effet, puis attends sa décision ; ne la relance pas.
-        """;
+        """,
+        [
+            "search_products",
+            "get_product",
+            "get_category_tree",
+            "list_merchants",
+            "compare_prices",
+            "get_price_history",
+            "list_price_anomalies",
+            "get_collection_plan",
+            "list_offers_pending_review",
+            "collect_product_offers"
+        ]);
 }

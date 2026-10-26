@@ -27,6 +27,6 @@ public sealed class LlmClient(LlmServiceBase service, AiFeature feature, LlmTarg
     /// Chat client of the target for a multi-turn conversation with tools (ADR-008). Each call is journaled under
     /// <paramref name="sessionId"/>.
     /// </summary>
-    public IChatClient AsChatClient(string sessionId, string? userId = null) =>
-        service.CreateChatClient(new LlmChatContext(Feature, Target.Model, sessionId, userId));
+    public IChatClient AsChatClient(string sessionId, string? userId = null, string? agentName = null) =>
+        service.CreateChatClient(new LlmChatContext(Feature, Target.Model, sessionId, userId, agentName));
 }

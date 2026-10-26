@@ -17,6 +17,7 @@ public sealed class ModuleBoundaryTests
     private const string PricingNamespace = "Pricely.Modules.Pricing";
     private const string UsersNamespace = "Pricely.Modules.Users";
     private const string AiEngineNamespace = "Pricely.Modules.AiEngine";
+    private const string AgenticNamespace = "Pricely.Modules.Agentic";
 
     private static readonly Assembly[] CatalogAssemblies =
     [
@@ -48,6 +49,14 @@ public sealed class ModuleBoundaryTests
         Modules.AiEngine.Application.AssemblyReference.Assembly,
         typeof(AiEngineModule).Assembly,
         Modules.AiEngine.Presentation.AssemblyReference.Assembly
+    ];
+
+    private static readonly Assembly[] AgenticAssemblies =
+    [
+        typeof(Modules.Agentic.Domain.Conversations.AgentConversation).Assembly,
+        Modules.Agentic.Application.AssemblyReference.Assembly,
+        typeof(Modules.Agentic.Infrastructure.AgenticModule).Assembly,
+        Modules.Agentic.Presentation.AssemblyReference.Assembly
     ];
 
     private static readonly string[] CatalogInternals = Internals(CatalogNamespace);
@@ -92,13 +101,24 @@ public sealed class ModuleBoundaryTests
         AssertNoDependency(UsersAssemblies, AiEngineInternals);
     }
 
+    /// <summary>
+    /// Agentic is generic (ADR-014): it knows no other module, and no other module knows it (agents and tools are
+    /// declared through Common).
+    /// </summary>
+    [Fact]
+    public void AgenticModule_ShouldNotDependOn_OtherModules_NorBeDependedOn()
+    {
+        AssertNoDependency(AgenticAssemblies, [CatalogNamespace, PricingNamespace, UsersNamespace, AiEngineNamespace]);
+        AssertNoDependency([.. CatalogAssemblies, .. PricingAssemblies, .. UsersAssemblies, .. AiEngineAssemblies], [AgenticNamespace]);
+    }
+
     [Fact]
     public void DomainLayers_ShouldNotDependOn_PersistenceOrMessaging()
     {
-        string[] forbidden = ["Microsoft.EntityFrameworkCore", "MassTransit", "Microsoft.AspNetCore", "Dapper", "Npgsql"];
+        string[] forbidden = ["Microsoft.EntityFrameworkCore", "MassTransit", "Microsoft.AspNetCore", "Dapper", "Npgsql", "Microsoft.Extensions.AI"];
 
         TestResult result = Types
-            .InAssemblies([CatalogAssemblies[0], PricingAssemblies[0], UsersAssemblies[0], AiEngineAssemblies[0]])
+            .InAssemblies([CatalogAssemblies[0], PricingAssemblies[0], UsersAssemblies[0], AiEngineAssemblies[0], AgenticAssemblies[0]])
             .ShouldNot()
             .HaveDependencyOnAny(forbidden)
             .GetResult();

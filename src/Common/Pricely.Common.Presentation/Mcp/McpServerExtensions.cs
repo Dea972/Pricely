@@ -2,11 +2,13 @@ using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.AspNetCore.Authentication;
 using ModelContextProtocol.Authentication;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using Pricely.Common.Application.AI.Agents;
 using Pricely.Common.Application.Authorization;
 
 namespace Pricely.Common.Presentation.Mcp;
@@ -66,6 +68,14 @@ public static class McpServerExtensions
         ToolMethods(toolAssemblies).Where(method => method.GetCustomAttribute<McpServerToolAttribute>()!.ReadOnly);
 
     /// <summary>
+    /// The same tool methods as agent tools (ADR-009): every <c>[McpServerTool]</c> method, read-only or not, as an
+    /// <see cref="AIFunction"/> whose service parameters (interfaces such as <c>ISender</c>) are resolved from the services
+    /// of the call instead of being exposed to the model. <c>[ToolScope]</c> gives the approval scope of a write tool.
+    /// </summary>
+    public static IEnumerable<AgentTool> ToAgentTools(IEnumerable<Assembly> toolAssemblies) =>
+        ToolMethods(toolAssemblies).Select(ToAgentTool);
+
+    /// <summary>
     /// Static methods marked <c>[McpServerTool]</c> of the <c>[McpServerToolType]</c> classes of the assemblies.
     /// </summary>
     public static IEnumerable<MethodInfo> ToolMethods(IEnumerable<Assembly> toolAssemblies) =>
@@ -74,6 +84,31 @@ public static class McpServerExtensions
             .Where(type => type.GetCustomAttribute<McpServerToolTypeAttribute>() is not null)
             .SelectMany(type => type.GetMethods(BindingFlags.Public | BindingFlags.Static))
             .Where(method => method.GetCustomAttribute<McpServerToolAttribute>() is not null);
+
+    private static AgentTool ToAgentTool(MethodInfo method)
+    {
+        McpServerToolAttribute attribute = method.GetCustomAttribute<McpServerToolAttribute>()!;
+        string name = attribute.Name ?? method.Name;
+
+        AIFunction function = AIFunctionFactory.Create(
+            method,
+            target: null,
+            new AIFunctionFactoryOptions
+            {
+                Name = name,
+                ConfigureParameterBinding = parameter => parameter.ParameterType.IsInterface
+                    ? new AIFunctionFactoryOptions.ParameterBindingOptions
+                    {
+                        ExcludeFromSchema = true,
+                        BindParameter = (p, arguments) =>
+                            (arguments.Services ?? throw new InvalidOperationException("The tool call has no services."))
+                            .GetRequiredService(p.ParameterType)
+                    }
+                    : default
+            });
+
+        return new AgentTool(name, attribute.ReadOnly, method.GetCustomAttribute<ToolScopeAttribute>()?.Scope, function);
+    }
 
     /// <summary>
     /// Maps the MCP endpoint. Requires the <c>pricely.read</c> scope (ADR-010).

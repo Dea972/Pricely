@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.AI" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pricely.Modules.Agentic.Domain\Pricely.Modules.Agentic.Domain.csproj" />
+    <ProjectReference Include="..\..\..\Common\Pricely.Common.Application\Pricely.Common.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pricely.Modules.Agentic.Infrastructure" />
+    <InternalsVisibleTo Include="Pricely.Modules.Agentic.UnitTests" />
+  </ItemGroup>
+
+</Project>
