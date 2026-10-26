@@ -1,6 +1,4 @@
-using Pricely.Modules.AiEngine.Application.Usage;
-
-namespace Pricely.Modules.AiEngine.Infrastructure.Usage;
+namespace Pricely.Modules.AiEngine.Application.Usage;
 
 /// <summary>
 /// Shared SQL of the usage statistics, computed on the fly from <c>aiengine.llm_calls</c>.

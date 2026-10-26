@@ -5,7 +5,7 @@ description: Add a CQRS use case to a Pricely module - command or query with han
 
 # Nouveau cas d'usage
 
-Références : commande `Pricing.Application/Offers/ConfirmOffer`, commande avec résultat `Catalog.Application/Products/RegisterProduct`, requête Dapper `Pricing.Infrastructure/Offers/GetProductPriceComparisonQueryHandler.cs`, endpoint `Pricing.Presentation/Offers/ConfirmOffer.cs`.
+Références : commande `Pricing.Application/Offers/ConfirmOffer`, commande avec résultat `Catalog.Application/Products/RegisterProduct`, requête Dapper `Pricing.Application/Offers/GetProductPriceComparison/GetProductPriceComparisonQueryHandler.cs`, endpoint `Pricing.Presentation/Offers/ConfirmOffer.cs`.
 
 ## Commande
 
@@ -57,7 +57,7 @@ internal sealed class ConfirmOfferCommandHandler(
 
 - `Application/<Agrégats>/<UseCase>/<UseCase>Query.cs` : `public sealed record GetXQuery(...) : IQuery<XResponse>;`
 - Response : `sealed record` positionnel jusqu'à 7 champs, au-delà `sealed class` à propriétés `{ get; init; }` (mappée par Dapper).
-- Handler dans **Infrastructure** `/<Agrégats>/<UseCase>QueryHandler.cs` (`internal sealed`), Dapper sur `IDbConnectionFactory`, PostgreSQL (voir « PostgreSQL : pièges connus » de `CLAUDE.md`), schéma explicite (`pricing.offers`), colonnes snake_case aliasées par `nameof(XResponse.Prop)`, `new CommandDefinition(sql, request, cancellationToken: cancellationToken)`.
+- Handler dans **Application** `/<Agrégats>/<UseCase>/<UseCase>QueryHandler.cs`, à côté de la requête (`internal sealed`, jamais dans Infrastructure, ADR-023), Dapper sur `IDbConnectionFactory`, PostgreSQL (voir « PostgreSQL : pièges connus » de `CLAUDE.md`), schéma explicite (`pricing.offers`), colonnes snake_case aliasées par `nameof(XResponse.Prop)`, `new CommandDefinition(sql, request, cancellationToken: cancellationToken)`.
 - Collections : `return Result.Success<IReadOnlyCollection<XResponse>>(rows.ToList());` (la conversion implicite vers une interface ne compile pas).
 - Requête qui a besoin de règles du domaine : handler dans Application (ex. `GetEffectiveCollectionProfileQueryHandler`).
 

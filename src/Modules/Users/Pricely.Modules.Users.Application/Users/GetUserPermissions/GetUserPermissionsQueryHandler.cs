@@ -5,9 +5,8 @@ using Pricely.Common.Application.Data;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Domain;
 using Pricely.Modules.Users.Domain.Users;
-using Pricely.Modules.Users.Application.Users.GetUserPermissions;
 
-namespace Pricely.Modules.Users.Infrastructure.Users;
+namespace Pricely.Modules.Users.Application.Users.GetUserPermissions;
 
 internal sealed class GetUserPermissionsQueryHandler(IDbConnectionFactory dbConnectionFactory)
     : IQueryHandler<GetUserPermissionsQuery, PermissionsResponse>

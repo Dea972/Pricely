@@ -4,9 +4,8 @@ using Pricely.Common.Application.Data;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Domain;
 using Pricely.Modules.Catalog.Application.Products.GetProduct;
-using Pricely.Modules.Catalog.Application.Products.SearchProducts;
 
-namespace Pricely.Modules.Catalog.Infrastructure.Products;
+namespace Pricely.Modules.Catalog.Application.Products.SearchProducts;
 
 internal sealed class SearchProductsQueryHandler(IDbConnectionFactory dbConnectionFactory)
     : IQueryHandler<SearchProductsQuery, IReadOnlyCollection<ProductResponse>>

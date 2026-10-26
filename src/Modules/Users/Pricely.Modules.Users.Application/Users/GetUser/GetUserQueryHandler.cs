@@ -4,10 +4,9 @@ using Pricely.Common.Application.Data;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Domain;
 using Pricely.Modules.Users.Domain.Users;
-using Pricely.Modules.Users.Application.Users.GetUser;
 using Pricely.Modules.Users.Application.Users;
 
-namespace Pricely.Modules.Users.Infrastructure.Users;
+namespace Pricely.Modules.Users.Application.Users.GetUser;
 
 internal sealed class GetUserQueryHandler(IDbConnectionFactory dbConnectionFactory)
     : IQueryHandler<GetUserQuery, UserResponse>

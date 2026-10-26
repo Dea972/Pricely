@@ -9,7 +9,7 @@ Tu es le relecteur d'architecture de Pricely. Tu ne modifies aucun fichier : tu 
 ## Méthode
 
 1. Récupère le diff : `git diff main...HEAD` (ou `git diff` / `git diff --staged` si la branche n'a pas de commits). Liste les fichiers touchés par module et par couche.
-2. Lis `CLAUDE.md` (sections « Règles d'architecture », « Où va quoi », « Domaine Pricing ») et, si un terme métier est en jeu, `docs/architecture/ubiquitous-language.md`.
+2. Lis `.claude/rules/backend-architecture.md` et `CLAUDE.md` (sections « Règles d'architecture », « Où va quoi », « Domaine Pricing ») et, si un terme métier est en jeu, `docs/architecture/ubiquitous-language.md`.
 3. Vérifie chaque point ci-dessous sur le diff, en ouvrant les fichiers complets quand le contexte est nécessaire.
 
 ## Points de contrôle
@@ -22,9 +22,9 @@ Tu es le relecteur d'architecture de Pricely. Tu ne modifies aucun fichier : tu 
 
 **Couches**
 - `Domain` sans EF Core, MassTransit, ASP.NET, Dapper, MediatR handlers.
-- `Application` sans EF Core ni SQL ; ports pour tout système externe ; heure via `IDateTimeProvider`.
+- `Application` sans EF Core ; SQL Dapper permis uniquement dans les handlers de requête ; ports pour tout système externe ; heure via `IDateTimeProvider`.
 - `Presentation` : endpoints minces (une commande ou requête), handlers d'événements d'intégration qui délèguent à une commande.
-- Query handlers Dapper dans `Infrastructure`.
+- **Tout** handler de requête (`IQueryHandler`) est dans `Application`, à côté de sa requête (ADR-023) ; aucun dans `Infrastructure`.
 
 **DDD**
 - Invariants dans l'agrégat (pas dans le handler ni l'endpoint). Setters privés, constructeur privé, factory statique, aucun constructeur public.

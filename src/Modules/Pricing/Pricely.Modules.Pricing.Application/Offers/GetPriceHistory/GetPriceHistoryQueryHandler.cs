@@ -3,10 +3,9 @@ using Dapper;
 using Pricely.Common.Application.Data;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Domain;
-using Pricely.Modules.Pricing.Application.Offers.GetPriceHistory;
 using Pricely.Modules.Pricing.Domain.Offers;
 
-namespace Pricely.Modules.Pricing.Infrastructure.Offers;
+namespace Pricely.Modules.Pricing.Application.Offers.GetPriceHistory;
 
 internal sealed class GetPriceHistoryQueryHandler(IDbConnectionFactory dbConnectionFactory)
     : IQueryHandler<GetPriceHistoryQuery, IReadOnlyCollection<PriceHistoryEntryResponse>>

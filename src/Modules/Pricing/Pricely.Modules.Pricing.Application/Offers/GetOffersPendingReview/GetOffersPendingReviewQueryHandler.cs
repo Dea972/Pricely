@@ -3,10 +3,9 @@ using Dapper;
 using Pricely.Common.Application.Data;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Domain;
-using Pricely.Modules.Pricing.Application.Offers.GetOffersPendingReview;
 using Pricely.Modules.Pricing.Domain.Offers;
 
-namespace Pricely.Modules.Pricing.Infrastructure.Offers;
+namespace Pricely.Modules.Pricing.Application.Offers.GetOffersPendingReview;
 
 internal sealed class GetOffersPendingReviewQueryHandler(IDbConnectionFactory dbConnectionFactory)
     : IQueryHandler<GetOffersPendingReviewQuery, IReadOnlyCollection<PendingOfferResponse>>

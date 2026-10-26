@@ -3,9 +3,8 @@ using Dapper;
 using Pricely.Common.Application.Data;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Domain;
-using Pricely.Modules.Pricing.Application.Merchants.GetMerchants;
 
-namespace Pricely.Modules.Pricing.Infrastructure.Merchants;
+namespace Pricely.Modules.Pricing.Application.Merchants.GetMerchants;
 
 internal sealed class GetMerchantsQueryHandler(IDbConnectionFactory dbConnectionFactory)
     : IQueryHandler<GetMerchantsQuery, IReadOnlyCollection<MerchantResponse>>

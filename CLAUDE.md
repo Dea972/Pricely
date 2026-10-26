@@ -4,7 +4,7 @@ Comparateur et veille de prix multi-enseignes. Parti du négoce de matériaux de
 
 Principe : **une offre = un produit × une enseigne → un prix**. On compare les offres d'un même produit de référence.
 
-Lire avant de coder : `docs/architecture/ubiquitous-language.md`, `docs/architecture/decisions.md`, `docs/architecture/model.md`. Avant de toucher au front : `docs/design/README.md` (maquettes, tokens, principes de l'assistant).
+Lire avant de coder : `docs/architecture/ubiquitous-language.md`, `docs/architecture/decisions.md`, `docs/architecture/model.md`, `.claude/rules/backend-architecture.md` (couches, CQRS, contrats). Avant de toucher au front : `docs/design/README.md` (maquettes, tokens, principes de l'assistant).
 
 ## Stack
 
@@ -65,7 +65,7 @@ Pricing ne lit jamais la base de Catalog. Les **typologies** se lisent par le co
 | `Pricely.Sdk` | `Infrastructure` de chaque module |
 
 3. Besoin d'une donnée d'un autre module : lire ponctuellement → son **contrat** (`<Autre>.Contracts`, lu depuis Application) ; réagir à un changement → **événement d'intégration** ; garder une copie locale (événement + read model) seulement si on le justifie (lecture très fréquente, historisation, disponibilité). **Jamais** d'autre référence de projet, jamais de clé étrangère entre schémas (colonne `Guid` simple, commentée). Jamais d'interrogation en boucle d'un contrat pour détecter un changement.
-4. `Domain` ne dépend ni d'EF Core, ni de MassTransit, ni d'ASP.NET, ni de Dapper.
+4. `Domain` ne dépend ni d'EF Core, ni de MassTransit, ni d'ASP.NET, ni de Dapper. `Application` ne dépend pas d'EF Core (Dapper y est permis, pour les requêtes).
 5. Tout système externe passe par un port défini dans `Application` et implémenté dans `Infrastructure` (couche anti-corruption). Exemple : `IOfferCollector`.
 6. Les tests `ArchitectureTests` font foi. Un test rouge signale un problème de conception, pas un test à modifier.
 
@@ -76,7 +76,7 @@ Pricing ne lit jamais la base de Catalog. Les **typologies** se lisent par le co
 - **Value Object** : `sealed record`, constructeur privé + `static Result<T> Create(...)` qui valide (`Money`, `Gtin`). Données descriptives sans invariant : `sealed record` positionnel (`MatchEvidence`, `ProductDescription`).
 - **Événement de domaine** : `sealed class XxxDomainEvent(...) : DomainEvent`, propriétés `{ get; init; }`.
 - **Commande** : `Application/<Agrégats>/<UseCase>/` avec `<UseCase>Command` (`sealed record : ICommand` ou `ICommand<T>`), `<UseCase>CommandHandler` (`internal sealed`), `<UseCase>CommandValidator` (`internal sealed`, FluentValidation).
-- **Requête** : `<UseCase>Query` + `<X>Response` dans `Application`. Le handler est dans **Infrastructure** (`internal sealed`, Dapper + `IDbConnectionFactory`, PostgreSQL, colonnes snake_case aliasées avec `nameof`) sauf s'il a besoin de logique de domaine (alors dans Application, ex. `GetEffectiveCollectionProfileQueryHandler`).
+- **Requête** : `<UseCase>Query`, `<UseCase>QueryHandler` et `<X>Response` dans `Application/<Agrégats>/<UseCase>/`. **Le handler est toujours dans Application** (ADR-023), jamais dans Infrastructure (`QueryHandlerTests`) : `internal sealed`, Dapper + `IDbConnectionFactory` (`Common.Application`), PostgreSQL, colonnes snake_case aliasées avec `nameof` ; ou un dépôt du Domain s'il a besoin d'un agrégat (ex. `GetEffectiveCollectionProfileQueryHandler`). Pas d'EF Core dans Application.
 - **Contrat** (ADR-022) : `Pricely.Modules.<M>.Contracts/<Sujet>/` — interfaces `I<Sujet>Reader`, `sealed record` immuables, erreurs statiques ; méthodes `Task<Result<T>>` avec `CancellationToken` en dernier, volumes bornés ; aucun type du Domain. Implémentation `internal sealed` dans `<M>.Infrastructure/Contracts/<Sujet>/` (EF Core `AsNoTracking` + projection, pas de requête MediatR, pas de règle métier), enregistrée dans `<M>Module`. Exemple : `IProductCategoryReader` lu par `CollectionProfileLookup`.
 - **Publication inter-modules** : un `DomainEventHandler<T>` dans Application publie l'`IntegrationEvent` via `IEventBus`. L'outbox garantit la livraison.
 - **Consommation inter-modules** : `IntegrationEventHandler<T>` dans **Presentation** (`internal sealed`, suffixe `IntegrationEventHandler`) qui envoie une commande ; `PricingModule.ConfigureConsumers` déclare `IntegrationEventConsumer<T>` ; l'inbox du module assure l'idempotence.
@@ -160,7 +160,7 @@ L'audit NuGet (transitif compris) est **bloquant** : ne jamais ajouter `NU190x` 
 
 ## Méthode de travail
 
-- Utiliser les skills du dépôt : `new-module`, `new-aggregate`, `new-use-case`, `new-integration-event`, `add-migration`, `add-offer-collector`, `add-agent-tool`.
+- Les règles de `.claude/rules/` et les skills de `.claude/skills/` font partie du dépôt (visibles dans le dossier `.claude` de la solution). Utiliser les skills du dépôt : `new-module`, `new-aggregate`, `new-use-case`, `new-integration-event`, `add-migration`, `add-offer-collector`, `add-agent-tool`.
 - Proposer un plan court avant une tâche qui touche plusieurs projets ; attendre validation pour les décisions d'architecture et les consigner dans `docs/architecture/decisions.md`.
 - Code, commentaires, commits en anglais (Conventional Commits). Échanges et docs en français.
 - Avant de terminer : `dotnet build` + `dotnet test`, puis le sous-agent `architecture-reviewer` sur le diff.

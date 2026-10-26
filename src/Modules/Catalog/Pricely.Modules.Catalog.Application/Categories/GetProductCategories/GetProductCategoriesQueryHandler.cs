@@ -3,9 +3,8 @@ using Dapper;
 using Pricely.Common.Application.Data;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Domain;
-using Pricely.Modules.Catalog.Application.Categories.GetProductCategories;
 
-namespace Pricely.Modules.Catalog.Infrastructure.Categories;
+namespace Pricely.Modules.Catalog.Application.Categories.GetProductCategories;
 
 internal sealed class GetProductCategoriesQueryHandler(IDbConnectionFactory dbConnectionFactory)
     : IQueryHandler<GetProductCategoriesQuery, IReadOnlyCollection<ProductCategoryResponse>>

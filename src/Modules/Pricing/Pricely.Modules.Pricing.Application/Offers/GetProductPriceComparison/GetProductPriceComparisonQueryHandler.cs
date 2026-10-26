@@ -3,9 +3,8 @@ using Dapper;
 using Pricely.Common.Application.Data;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Domain;
-using Pricely.Modules.Pricing.Application.Offers.GetProductPriceComparison;
 
-namespace Pricely.Modules.Pricing.Infrastructure.Offers;
+namespace Pricely.Modules.Pricing.Application.Offers.GetProductPriceComparison;
 
 internal sealed class GetProductPriceComparisonQueryHandler(IDbConnectionFactory dbConnectionFactory)
     : IQueryHandler<GetProductPriceComparisonQuery, IReadOnlyCollection<MerchantPriceResponse>>

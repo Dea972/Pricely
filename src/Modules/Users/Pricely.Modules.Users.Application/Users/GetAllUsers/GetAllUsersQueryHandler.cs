@@ -3,9 +3,8 @@ using Dapper;
 using Pricely.Common.Application.Data;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Domain;
-using Pricely.Modules.Users.Application.Users.GetAllUsers;
 
-namespace Pricely.Modules.Users.Infrastructure.Users;
+namespace Pricely.Modules.Users.Application.Users.GetAllUsers;
 
 internal sealed class GetAllUsersQueryHandler(IDbConnectionFactory dbConnectionFactory)
     : IQueryHandler<GetAllUsersQuery, IEnumerable<UserDetailResponse>>

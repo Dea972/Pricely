@@ -4,9 +4,8 @@ using Pricely.Common.Application.Clock;
 using Pricely.Common.Application.Data;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Domain;
-using Pricely.Modules.AiEngine.Application.Models.GetModels;
 
-namespace Pricely.Modules.AiEngine.Infrastructure.Models;
+namespace Pricely.Modules.AiEngine.Application.Models.GetModels;
 
 internal sealed class GetModelsQueryHandler(IDbConnectionFactory dbConnectionFactory, IDateTimeProvider dateTimeProvider)
     : IQueryHandler<GetModelsQuery, IReadOnlyCollection<ModelResponse>>

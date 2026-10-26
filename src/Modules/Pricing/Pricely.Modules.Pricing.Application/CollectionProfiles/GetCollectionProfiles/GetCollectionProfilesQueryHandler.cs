@@ -3,9 +3,8 @@ using Dapper;
 using Pricely.Common.Application.Data;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Domain;
-using Pricely.Modules.Pricing.Application.CollectionProfiles.GetCollectionProfiles;
 
-namespace Pricely.Modules.Pricing.Infrastructure.CollectionProfiles;
+namespace Pricely.Modules.Pricing.Application.CollectionProfiles.GetCollectionProfiles;
 
 internal sealed class GetCollectionProfilesQueryHandler(IDbConnectionFactory dbConnectionFactory)
     : IQueryHandler<GetCollectionProfilesQuery, IReadOnlyCollection<CollectionProfileSummaryResponse>>

@@ -1,10 +1,41 @@
 <Solution>
+	<Folder Name="/.claude/agents/">
+		<File Path=".claude/agents/architecture-reviewer.md" />
+	</Folder>
+	<Folder Name="/.claude/rules/">
+		<File Path=".claude/rules/backend-architecture.md" />
+	</Folder>
+	<Folder Name="/.claude/">
+		<File Path=".claude/settings.json" />
+	</Folder>
+	<Folder Name="/.claude/skills/add-agent-tool/">
+		<File Path=".claude/skills/add-agent-tool/SKILL.md" />
+	</Folder>
+	<Folder Name="/.claude/skills/add-migration/">
+		<File Path=".claude/skills/add-migration/SKILL.md" />
+	</Folder>
+	<Folder Name="/.claude/skills/add-offer-collector/">
+		<File Path=".claude/skills/add-offer-collector/SKILL.md" />
+	</Folder>
+	<Folder Name="/.claude/skills/new-aggregate/">
+		<File Path=".claude/skills/new-aggregate/SKILL.md" />
+	</Folder>
+	<Folder Name="/.claude/skills/new-integration-event/">
+		<File Path=".claude/skills/new-integration-event/SKILL.md" />
+	</Folder>
+	<Folder Name="/.claude/skills/new-module/">
+		<File Path=".claude/skills/new-module/SKILL.md" />
+	</Folder>
+	<Folder Name="/.claude/skills/new-use-case/">
+		<File Path=".claude/skills/new-use-case/SKILL.md" />
+	</Folder>
 	<Folder Name="/aspire/">
 		<Project Path="aspire/Pricely.AppHost/Pricely.AppHost.csproj" />
 		<Project Path="aspire/Pricely.ServiceDefaults/Pricely.ServiceDefaults.csproj" />
 	</Folder>
 	<Folder Name="/Solution Items/">
 		<File Path=".editorconfig" />
+		<File Path="CLAUDE.md" />
 		<File Path="Directory.Build.props" />
 		<File Path="Directory.Packages.props" />
 	</Folder>

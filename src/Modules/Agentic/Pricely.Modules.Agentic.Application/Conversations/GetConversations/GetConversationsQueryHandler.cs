@@ -4,9 +4,8 @@ using Pricely.Common.Application.Data;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Domain;
 using Pricely.Modules.Agentic.Application.Agents;
-using Pricely.Modules.Agentic.Application.Conversations.GetConversations;
 
-namespace Pricely.Modules.Agentic.Infrastructure.Conversations;
+namespace Pricely.Modules.Agentic.Application.Conversations.GetConversations;
 
 internal sealed class GetConversationsQueryHandler(IDbConnectionFactory dbConnectionFactory, AgentCatalog catalog)
     : IQueryHandler<GetConversationsQuery, IReadOnlyCollection<ConversationSummaryResponse>>

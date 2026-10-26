@@ -3,10 +3,9 @@ using Dapper;
 using Pricely.Common.Application.Data;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Domain;
-using Pricely.Modules.AiEngine.Application.Usage;
 using Pricely.Modules.AiEngine.Domain.AgentActivities;
 
-namespace Pricely.Modules.AiEngine.Infrastructure.Usage;
+namespace Pricely.Modules.AiEngine.Application.Usage;
 
 internal sealed class GetUsageSummaryQueryHandler(IDbConnectionFactory dbConnectionFactory)
     : IQueryHandler<GetUsageSummaryQuery, UsageSummaryResponse>
