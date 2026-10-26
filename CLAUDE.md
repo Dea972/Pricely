@@ -4,7 +4,7 @@ Comparateur et veille de prix multi-enseignes. Parti du négoce de matériaux de
 
 Principe : **une offre = un produit × une enseigne → un prix**. On compare les offres d'un même produit de référence.
 
-Lire avant de coder : `docs/architecture/ubiquitous-language.md`, `docs/architecture/decisions.md`, `docs/architecture/model.md`.
+Lire avant de coder : `docs/architecture/ubiquitous-language.md`, `docs/architecture/decisions.md`, `docs/architecture/model.md`. Avant de toucher au front : `docs/design/README.md` (maquettes, tokens, principes de l'assistant).
 
 ## Stack
 
@@ -104,7 +104,6 @@ Le build échoue sur le moindre avertissement (`TreatWarningsAsErrors`, `Analysi
 - **MCP** : `AddPricelyMcpServer` (HTTP streamable, stateless) et `MapPricelyMcp` (`/mcp`, authentifié) dans `Pricely.Sdk` ; chaque module expose `ToolAssembly`.
 - **Agent interne** (`IChatClient` + `FunctionInvokingChatClient`, approbations, conversations) : à venir (étape 4 de la feuille de route).
 - **Authentification** (ADR-010) : Keycloak (OAuth 2.1 / OIDC) ; Pricely valide les jetons et n'en émet pas ; scopes `pricely.read|write|review` ; permissions métier dans le module Users.
-- Référence d'implémentation : AiEngine et Common AI de ChaussonStore (patterns uniquement, pas de code métier Chausson).
 
 ## Commandes
 
@@ -129,7 +128,7 @@ L'audit NuGet (transitif compris) est **bloquant** : ne jamais ajouter `NU190x` 
 - Pas encore de migrations EF (Catalog, Pricing, Users, AiEngine).
 - `/mcp` est enregistré dans le SDK mais l'API ne démarre pas encore (étape 0) ; l'authentification Keycloak n'est pas en place.
 - Les tests d'intégration hérités (Users, solution) sont exclus de la solution : ils référencent un module `Ticketing` inexistant.
-- `Users/USAGE_GUIDE.md` décrit un template `dotnet new` absent du dépôt : ne pas s'y fier, utiliser le skill `new-module`.
+- Pour créer un module, utiliser le skill `new-module` (pas de template `dotnet new`).
 - Le module Users garde du SQL PostgreSQL (`::json`) dans son inbox et des permissions héritées (conversations, AI) à nettoyer.
 
 ## Méthode de travail
