@@ -6,6 +6,8 @@ using Pricely.Common.Infrastructure.Authorization;
 using Pricely.Common.Infrastructure.Configuration;
 using Pricely.Common.Presentation.Endpoints;
 using Pricely.Common.Presentation.Mcp;
+using Pricely.Agents.Assistant;
+using Pricely.Agents.Core;
 using Pricely.Modules.AiEngine.Infrastructure;
 using Pricely.Modules.Catalog.Infrastructure;
 using Pricely.Modules.Pricing.Infrastructure;
@@ -74,8 +76,13 @@ public static class ServiceCollectionExtensions
         // Keep this section as the single place to aggregate module additions.
 
 
-        // MCP server over HTTP (/mcp): the tools declared by the modules (ADR-009).
-        services.AddPricelyMcpServer([CatalogModule.ToolAssembly, PricingModule.ToolAssembly]);
+        // MCP server over HTTP (/mcp): the read-only tools declared by the modules (ADR-009).
+        System.Reflection.Assembly[] toolAssemblies = [CatalogModule.ToolAssembly, PricingModule.ToolAssembly];
+        services.AddPricelyMcpServer(toolAssemblies);
+
+        // Agents (src/Agents, ADR-013): conversations and approvals, with the same tools, write tools included.
+        services.AddAgents(connectionString, toolAssemblies);
+        services.AddAssistantAgent();
 
         // Return the modified service collection.
         return services;

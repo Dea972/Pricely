@@ -37,6 +37,7 @@
         <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
         <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.4" />
         <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.4" />
+        <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.4" />
         <!-- Messaging -->
         <PackageVersion Include="MassTransit" Version="8.5.7" />
         <!-- CQRS & Validation -->

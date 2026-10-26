@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Pricely.Agents.Core.Infrastructure;
 using Pricely.Modules.AiEngine.Infrastructure.Database;
 using Pricely.Modules.Catalog.Infrastructure.Database;
 using Pricely.Modules.Pricing.Infrastructure.Database;
@@ -21,6 +22,7 @@ public static class MigrationExtensions
         await MigrateAsync<PricingDbContext>(scope);
         await MigrateAsync<UsersDbContext>(scope);
         await MigrateAsync<AiEngineDbContext>(scope);
+        await MigrateAsync<AgentsDbContext>(scope);
     }
 
     private static async Task MigrateAsync<TDbContext>(AsyncServiceScope scope)

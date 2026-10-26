@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <ProjectReference Include="..\..\Agents\Pricely.Agents.Core\Pricely.Agents.Core.csproj" />
+    <ProjectReference Include="..\..\Agents\Pricely.Agents.Assistant\Pricely.Agents.Assistant.csproj" />
     <ProjectReference Include="..\..\Common\Pricely.Common.Application\Pricely.Common.Application.csproj" />
     <ProjectReference Include="..\..\Common\Pricely.Common.Infrastructure\Pricely.Common.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Common\Pricely.Common.Presentation\Pricely.Common.Presentation.csproj" />
