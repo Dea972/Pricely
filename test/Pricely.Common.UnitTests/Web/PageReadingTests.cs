@@ -1,8 +1,8 @@
 using System.Net;
 using FluentAssertions;
-using Pricely.Modules.Pricing.Infrastructure.Collection;
+using Pricely.Common.Infrastructure.Web;
 
-namespace Pricely.Modules.Pricing.UnitTests.Collection;
+namespace Pricely.Common.UnitTests.Web;
 
 public sealed class PageReadingTests
 {
@@ -61,4 +61,32 @@ public sealed class PageReadingTests
             .And.Contain("9,40 €")
             .And.NotContain("9999,99").And.NotContain("color").And.NotContain("1,00");
     }
+
+    [Fact]
+    public void SearchTemplates_ShouldComeFromTheSearchAction_ThenTheGetForms()
+    {
+        const string html = """
+            <html><head><title>Comptoir du Bâtiment</title>
+              <script type="application/ld+json">{"@type":"WebSite","potentialAction":{"@type":"SearchAction",
+                "target":"https:\/\/www.comptoir.test\/recherche?q={search_term_string}","query-input":"required name=search_term_string"}}</script>
+            </head><body>
+              <form action="/catalogsearch/result/" method="get">
+                <input type="hidden" name="cat" value="all">
+                <input type="search" name="kw" placeholder="Rechercher">
+                <button type="submit">OK</button>
+              </form>
+              <form action="/newsletter" method="post"><input name="email"></form>
+              <form action="/connexion"><input name="login"><input type="password" name="password"></form>
+            </body></html>
+            """;
+
+        HtmlText.SearchTemplates(html, new Uri("https://www.comptoir.test/accueil")).Should().Equal(
+            "https://www.comptoir.test/recherche?q={query}",
+            "https://www.comptoir.test/catalogsearch/result/?cat=all&kw={query}");
+        HtmlText.Title(html).Should().Be("Comptoir du Bâtiment");
+    }
+
+    [Fact]
+    public void SearchTemplates_ShouldBeEmpty_WithoutSearchField() =>
+        HtmlText.SearchTemplates("<form><input name='email'></form>", new Uri("https://www.site.test/")).Should().BeEmpty();
 }

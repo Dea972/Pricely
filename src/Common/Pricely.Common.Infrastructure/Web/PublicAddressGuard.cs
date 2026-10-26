@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace Pricely.Modules.Pricing.Infrastructure.Collection;
+namespace Pricely.Common.Infrastructure.Web;
 
 /// <summary>
 /// Connection callback of the merchant page client: the name of a merchant site must resolve to a public address. A

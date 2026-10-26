@@ -1,23 +1,24 @@
 using System.Net;
+using System.Text.RegularExpressions;
+using Pricely.Common.Application.Web;
 using Pricely.Common.Domain;
-using Pricely.Modules.Pricing.Application.Abstractions.Collection;
-using Pricely.Modules.Pricing.Domain.PageSnapshots;
 
-namespace Pricely.Modules.Pricing.Infrastructure.Collection;
+namespace Pricely.Common.Infrastructure.Web;
 
 /// <summary>
-/// Reads a merchant page over HTTP (anti-corruption layer): no automatic redirect (the caller checks the target is on
-/// the merchant's site), public addresses only (<see cref="PublicAddressGuard"/>), 3 MB at most, its markup reduced to text (<see cref="HtmlText"/>).
+/// Reads a web page over HTTP (merchant pages, product pages, pricing pages of the LLM providers): no automatic redirect
+/// (the caller decides where it may go), public addresses only (<see cref="PublicAddressGuard"/>), 3 MB at most, its markup
+/// reduced to text (<see cref="HtmlText"/>) with the search pages it declares.
 /// </summary>
-internal sealed class HttpMerchantPageFetcher(IHttpClientFactory httpClientFactory) : IMerchantPageFetcher
+internal sealed class HttpWebPageReader(IHttpClientFactory httpClientFactory) : IWebPageReader
 {
-    public const string HttpClientName = "pricing-merchant-pages";
+    public const string HttpClientName = "pricely-web-pages";
 
     public const string UserAgent = "PricelyBot/1.0 (+https://github.com/Dea972/Pricely)";
 
     public const int MaxPageBytes = 3 * 1024 * 1024;
 
-    public async Task<Result<FetchedPage>> FetchAsync(Uri address, CancellationToken cancellationToken = default)
+    public async Task<Result<WebPage>> ReadAsync(Uri address, CancellationToken cancellationToken = default)
     {
         HttpClient http = httpClientFactory.CreateClient(HttpClientName);
 
@@ -30,35 +31,39 @@ internal sealed class HttpMerchantPageFetcher(IHttpClientFactory httpClientFacto
 
             if ((int)response.StatusCode is >= 300 and < 400 && response.Headers.Location is Uri location)
             {
-                return new FetchedPage(address, string.Empty, location.IsAbsoluteUri ? location : new Uri(address, location));
+                return new WebPage(address, string.Empty, location.IsAbsoluteUri ? location : new Uri(address, location));
             }
 
             if (!response.IsSuccessStatusCode)
             {
-                return Result.Failure<FetchedPage>(PageSnapshotErrors.Unreadable(address, $"HTTP {(int)response.StatusCode}"));
+                return Result.Failure<WebPage>(WebErrors.Unreadable(address, $"HTTP {(int)response.StatusCode}"));
             }
 
             if (response.Content.Headers.ContentLength > MaxPageBytes)
             {
-                return Result.Failure<FetchedPage>(PageSnapshotErrors.Unreadable(address, "page too large"));
+                return Result.Failure<WebPage>(WebErrors.Unreadable(address, "page too large"));
             }
 
             await response.Content.LoadIntoBufferAsync(MaxPageBytes, cancellationToken);
             string html = await response.Content.ReadAsStringAsync(cancellationToken);
 
-            return new FetchedPage(address, HtmlText.Extract(html), RedirectTo: null);
+            return new WebPage(address, HtmlText.Extract(html), RedirectTo: null)
+            {
+                Title = HtmlText.Title(html),
+                SearchTemplates = HtmlText.SearchTemplates(html, address)
+            };
         }
         catch (HttpRequestException exception)
         {
-            return Result.Failure<FetchedPage>(PageSnapshotErrors.Unreadable(address, exception.Message));
+            return Result.Failure<WebPage>(WebErrors.Unreadable(address, exception.Message));
         }
         catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return Result.Failure<FetchedPage>(PageSnapshotErrors.Unreadable(address, "timeout"));
+            return Result.Failure<WebPage>(WebErrors.Unreadable(address, "timeout"));
         }
-        catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+        catch (RegexMatchTimeoutException)
         {
-            return Result.Failure<FetchedPage>(PageSnapshotErrors.Unreadable(address, "page too complex to read"));
+            return Result.Failure<WebPage>(WebErrors.Unreadable(address, "page too complex to read"));
         }
     }
 

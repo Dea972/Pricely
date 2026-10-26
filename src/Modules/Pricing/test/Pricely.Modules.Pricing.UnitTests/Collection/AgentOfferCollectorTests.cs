@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Pricely.Common.Application.AI;
 using Pricely.Common.Application.Clock;
 using Pricely.Common.Application.EventBus;
+using Pricely.Common.Application.Web;
 using Pricely.Common.Domain;
 using Pricely.Modules.Pricing.Application.Abstractions.Collection;
 using Pricely.Modules.Pricing.Application.Abstractions.Data;
@@ -218,7 +219,7 @@ public sealed class AgentOfferCollectorTests
         }
     }
 
-    private sealed class FakeSite : IMerchantPageFetcher
+    private sealed class FakeSite : IWebPageReader
     {
         public List<Uri> Requested { get; } = [];
 
@@ -226,11 +227,11 @@ public sealed class AgentOfferCollectorTests
 
         public string Text { get; set; } = "Ciment CEM II 35 kg\n9,40 € TTC\nEn stock";
 
-        public Task<Result<FetchedPage>> FetchAsync(Uri address, CancellationToken cancellationToken = default)
+        public Task<Result<WebPage>> ReadAsync(Uri address, CancellationToken cancellationToken = default)
         {
             Requested.Add(address);
 
-            return Task.FromResult(Result.Success(new FetchedPage(address, Text, RedirectTo)));
+            return Task.FromResult(Result.Success(new WebPage(address, Text, RedirectTo)));
         }
     }
 

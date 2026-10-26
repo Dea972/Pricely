@@ -1,6 +1,6 @@
 using Pricely.Common.Application.Clock;
+using Pricely.Common.Application.Web;
 using Pricely.Common.Domain;
-using Pricely.Modules.Pricing.Application.Abstractions.Collection;
 using Pricely.Modules.Pricing.Application.Abstractions.Data;
 using Pricely.Modules.Pricing.Domain.Merchants;
 using Pricely.Modules.Pricing.Domain.PageSnapshots;
@@ -13,7 +13,7 @@ namespace Pricely.Modules.Pricing.Application.PageSnapshots;
 /// </summary>
 public sealed class MerchantPageReader(
     IMerchantRepository merchantRepository,
-    IMerchantPageFetcher pageFetcher,
+    IWebPageReader webPageReader,
     IPageSnapshotRepository pageSnapshotRepository,
     IDateTimeProvider dateTimeProvider,
     IUnitOfWork unitOfWork)
@@ -54,7 +54,7 @@ public sealed class MerchantPageReader(
                 return Result.Failure<PageSnapshot>(MerchantErrors.AddressOutsideMerchant(target));
             }
 
-            Result<FetchedPage> page = await pageFetcher.FetchAsync(target, cancellationToken);
+            Result<WebPage> page = await webPageReader.ReadAsync(target, cancellationToken);
             if (page.IsFailure)
             {
                 return Result.Failure<PageSnapshot>(page.Error);
@@ -68,14 +68,14 @@ public sealed class MerchantPageReader(
             target = next;
         }
 
-        return Result.Failure<PageSnapshot>(PageSnapshotErrors.TooManyRedirects(target));
+        return Result.Failure<PageSnapshot>(WebErrors.TooManyRedirects(target));
     }
 
     /// <summary>
     /// Saves the snapshot alone (one aggregate per save, like <c>CollectedOfferRecorder</c>): the agent reads pages
     /// during a collection, before any offer is recorded.
     /// </summary>
-    private async Task<Result<PageSnapshot>> KeepAsync(Merchant merchant, FetchedPage page, bool isSearchPage, CancellationToken cancellationToken)
+    private async Task<Result<PageSnapshot>> KeepAsync(Merchant merchant, WebPage page, bool isSearchPage, CancellationToken cancellationToken)
     {
         Result<PageSnapshot> snapshot = PageSnapshot.Capture(merchant, page.Address, page.Text, dateTimeProvider.UtcNow, isSearchPage);
         if (snapshot.IsFailure)
