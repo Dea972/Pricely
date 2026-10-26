@@ -117,6 +117,20 @@ Un seul système d'identité pour l'API, le serveur MCP et le front Blazor.
 - **Migrations** : option A du skill `add-migration`. `dotnet ef` passe par l'hôte `Pricely.Api` (`Microsoft.EntityFrameworkCore.Design`), une migration `Initial` par module, `.editorconfig` `generated_code = true` dans chaque dossier `Migrations`. En Development, l'API applique les migrations des quatre modules au démarrage (`ApplyMigrationsAsync`) ; hors Development, elles doivent être jouées par le déploiement (job ou script `dotnet ef migrations script`), jamais par l'API.
 - **Validation de l'injection de dépendances** : `ValidateScopes` et `ValidateOnBuild` activés dans tous les environnements ; `StartupCompositionTests` construit l'hôte complet sans base ni Keycloak.
 
+## ADR-012 — PostgreSQL à la place de SQL Server
+
+**Statut** : acceptée (2026-10-26), sur demande explicite du propriétaire du projet.
+
+La base est PostgreSQL (Npgsql 10 pour EF Core et Dapper, `Aspire.Hosting.PostgreSQL` dans l'AppHost, base `pricely-db`). Le reste de l'architecture est inchangé : un `DbContext` et un schéma par module, snake_case, Dapper en lecture, outbox / inbox maison. Les migrations `Initial` (non déployées) ont été régénérées, pas converties.
+
+Conséquences et choix :
+- **Casse** : PostgreSQL compare le texte en respectant la casse, SQL Server non. Les colonnes d'unicité métier (e-mail, nom d'enseigne, nom de typologie, identifiant de modèle, code de fonctionnalité) passent en `citext` pour conserver le comportement attendu ; les recherches de produits utilisent `ILIKE`.
+- **Messages outbox / inbox** : colonne `text`, pas `jsonb`. Le contenu est sérialisé par Newtonsoft avec `$type` en première propriété, que `jsonb` réordonnerait. Le lot est relu avec `FOR UPDATE SKIP LOCKED`, ce qui autorise plusieurs instances.
+- **Dates** : `timestamptz`, `Kind` UTC obligatoire à l'écriture ; une colonne `date` est convertie en `timestamp` dans les requêtes Dapper dont la réponse est un `DateTime`.
+- **Requêtes** : `TOP` → `LIMIT`, `CROSS/OUTER APPLY` → `JOIN LATERAL`, booléens natifs, paramètres nullables castés explicitement.
+- Les épingles de sécurité `System.Security.Cryptography.Pkcs` (qui venaient de `Microsoft.Data.SqlClient`) sont retirées.
+- Point de vigilance hérité, non modifié : l'index unique des typologies `(parent_id, name)` n'empêche pas deux racines de même nom (valeurs nulles distinctes, comme avec le filtre SQL Server d'origine).
+
 ## Décisions ouvertes
 
 - Application des migrations en production (job de déploiement, script SQL idempotent) : ADR-011 l'interdit à l'API, le mécanisme reste à choisir.

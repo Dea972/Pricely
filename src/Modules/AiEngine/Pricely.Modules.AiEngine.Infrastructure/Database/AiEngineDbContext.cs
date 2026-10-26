@@ -25,6 +25,9 @@ public sealed class AiEngineDbContext(DbContextOptions<AiEngineDbContext> option
     {
         modelBuilder.HasDefaultSchema(Schemas.AiEngine);
 
+        // Case-insensitive text columns (emails, names, codes): PostgreSQL text comparisons are case-sensitive (ADR-012).
+        modelBuilder.HasPostgresExtension("citext");
+
         modelBuilder.ApplyConfiguration(new InboxMessageConfiguration());
         modelBuilder.ApplyConfiguration(new InboxMessageConsumerConfiguration());
         modelBuilder.ApplyConfiguration(new ModelConfiguration());

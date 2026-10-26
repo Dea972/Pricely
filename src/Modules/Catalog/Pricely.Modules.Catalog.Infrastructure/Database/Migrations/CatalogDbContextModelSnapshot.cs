@@ -2,8 +2,8 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pricely.Modules.Catalog.Infrastructure.Database;
 
 #nullable disable
@@ -18,39 +18,39 @@ namespace Pricely.Modules.Catalog.Infrastructure.Database.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("catalog")
-                .HasAnnotation("ProductVersion", "10.0.2")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+                .HasAnnotation("ProductVersion", "10.0.4")
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "citext");
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("Pricely.Common.Infrastructure.Inbox.InboxMessage", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<string>("Content")
                         .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("content");
 
                     b.Property<string>("Error")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("error");
 
                     b.Property<DateTime>("OccurredOnUtc")
-                        .HasColumnType("datetime2")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("occurred_on_utc");
 
                     b.Property<DateTime?>("ProcessedOnUtc")
-                        .HasColumnType("datetime2")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("processed_on_utc");
 
                     b.Property<string>("Type")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("type");
 
                     b.HasKey("Id")
@@ -62,12 +62,12 @@ namespace Pricely.Modules.Catalog.Infrastructure.Database.Migrations
             modelBuilder.Entity("Pricely.Common.Infrastructure.Inbox.InboxMessageConsumer", b =>
                 {
                     b.Property<Guid>("InboxMessageId")
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("inbox_message_id");
 
                     b.Property<string>("Name")
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)")
+                        .HasColumnType("character varying(500)")
                         .HasColumnName("name");
 
                     b.HasKey("InboxMessageId", "Name")
@@ -80,30 +80,29 @@ namespace Pricely.Modules.Catalog.Infrastructure.Database.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<string>("Content")
                         .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("content");
 
                     b.Property<string>("Error")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("error");
 
                     b.Property<DateTime>("OccurredOnUtc")
-                        .HasColumnType("datetime2")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("occurred_on_utc");
 
                     b.Property<DateTime?>("ProcessedOnUtc")
-                        .HasColumnType("datetime2")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("processed_on_utc");
 
                     b.Property<string>("Type")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("type");
 
                     b.HasKey("Id")
@@ -115,12 +114,12 @@ namespace Pricely.Modules.Catalog.Infrastructure.Database.Migrations
             modelBuilder.Entity("Pricely.Common.Infrastructure.Outbox.OutboxMessageConsumer", b =>
                 {
                     b.Property<Guid>("OutboxMessageId")
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("outbox_message_id");
 
                     b.Property<string>("Name")
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)")
+                        .HasColumnType("character varying(500)")
                         .HasColumnName("name");
 
                     b.HasKey("OutboxMessageId", "Name")
@@ -133,21 +132,21 @@ namespace Pricely.Modules.Catalog.Infrastructure.Database.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<int>("Depth")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("depth");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
+                        .HasColumnType("citext")
                         .HasColumnName("name");
 
                     b.Property<Guid?>("ParentId")
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("parent_id");
 
                     b.HasKey("Id")
@@ -155,8 +154,7 @@ namespace Pricely.Modules.Catalog.Infrastructure.Database.Migrations
 
                     b.HasIndex("ParentId", "Name")
                         .IsUnique()
-                        .HasDatabaseName("ix_product_categories_parent_id_name")
-                        .HasFilter("[parent_id] IS NOT NULL");
+                        .HasDatabaseName("ix_product_categories_parent_id_name");
 
                     b.ToTable("product_categories", "catalog");
                 });
@@ -165,33 +163,33 @@ namespace Pricely.Modules.Catalog.Infrastructure.Database.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<string>("Brand")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)")
+                        .HasColumnType("character varying(150)")
                         .HasColumnName("brand");
 
                     b.Property<string>("Gtin")
                         .HasMaxLength(14)
-                        .HasColumnType("nvarchar(14)")
+                        .HasColumnType("character varying(14)")
                         .HasColumnName("gtin");
 
                     b.Property<string>("ManufacturerReference")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
+                        .HasColumnType("character varying(100)")
                         .HasColumnName("manufacturer_reference");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)")
+                        .HasColumnType("character varying(300)")
                         .HasColumnName("name");
 
                     b.Property<Guid>("ProductCategoryId")
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("product_category_id");
 
                     b.HasKey("Id")
@@ -199,8 +197,7 @@ namespace Pricely.Modules.Catalog.Infrastructure.Database.Migrations
 
                     b.HasIndex("Gtin")
                         .IsUnique()
-                        .HasDatabaseName("ix_products_gtin")
-                        .HasFilter("[gtin] IS NOT NULL");
+                        .HasDatabaseName("ix_products_gtin");
 
                     b.HasIndex("ProductCategoryId")
                         .HasDatabaseName("ix_products_product_category_id");

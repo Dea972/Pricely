@@ -30,15 +30,16 @@ internal sealed class GetProductPriceComparisonQueryHandler(IDbConnectionFactory
                  latest.is_flagged_as_anomaly AS {nameof(MerchantPriceResponse.IsFlaggedAsAnomaly)}
              FROM pricing.offers o
              INNER JOIN pricing.merchants m ON m.id = o.merchant_id
-             CROSS APPLY (
-                 SELECT TOP 1 po.price_amount, po.price_currency, po.availability, po.observed_on_utc, po.is_flagged_as_anomaly
+             JOIN LATERAL (
+                 SELECT po.price_amount, po.price_currency, po.availability, po.observed_on_utc, po.is_flagged_as_anomaly
                  FROM pricing.price_observations po
                  WHERE po.offer_id = o.id
                  ORDER BY po.observed_on_utc DESC
-             ) latest
+                 LIMIT 1
+             ) latest ON TRUE
              WHERE o.product_id = @ProductId
                AND o.status = 'Confirmed'
-               AND m.is_active = 1
+               AND m.is_active
              ORDER BY latest.price_amount
              """;
 

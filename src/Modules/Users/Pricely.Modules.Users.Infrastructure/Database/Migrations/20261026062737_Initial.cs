@@ -16,13 +16,16 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
             migrationBuilder.EnsureSchema(
                 name: "users");
 
+            migrationBuilder.AlterDatabase()
+                .Annotation("Npgsql:PostgresExtension:citext", ",,");
+
             migrationBuilder.CreateTable(
                 name: "inbox_message_consumers",
                 schema: "users",
                 columns: table => new
                 {
-                    inbox_message_id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    name = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false)
+                    inbox_message_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -34,12 +37,12 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
                 schema: "users",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    type = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    content = table.Column<string>(type: "nvarchar(max)", maxLength: 2000, nullable: false),
-                    occurred_on_utc = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    processed_on_utc = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    error = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    type = table.Column<string>(type: "text", nullable: false),
+                    content = table.Column<string>(type: "text", nullable: false),
+                    occurred_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    processed_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    error = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -51,8 +54,8 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
                 schema: "users",
                 columns: table => new
                 {
-                    outbox_message_id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    name = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false)
+                    outbox_message_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -64,12 +67,12 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
                 schema: "users",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    type = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    content = table.Column<string>(type: "nvarchar(max)", maxLength: 2000, nullable: false),
-                    occurred_on_utc = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    processed_on_utc = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    error = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    type = table.Column<string>(type: "text", nullable: false),
+                    content = table.Column<string>(type: "text", nullable: false),
+                    occurred_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    processed_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    error = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -81,8 +84,8 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
                 schema: "users",
                 columns: table => new
                 {
-                    code = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false)
+                    code = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -94,7 +97,7 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
                 schema: "users",
                 columns: table => new
                 {
-                    name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false)
+                    name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -106,11 +109,11 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
                 schema: "users",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    email = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
-                    first_name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    last_name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    identity_id = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    email = table.Column<string>(type: "citext", maxLength: 300, nullable: false),
+                    first_name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    last_name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    identity_id = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -122,8 +125,8 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
                 schema: "users",
                 columns: table => new
                 {
-                    permission_code = table.Column<string>(type: "nvarchar(100)", nullable: false),
-                    role_name = table.Column<string>(type: "nvarchar(50)", nullable: false)
+                    permission_code = table.Column<string>(type: "character varying(100)", nullable: false),
+                    role_name = table.Column<string>(type: "character varying(50)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -149,8 +152,8 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
                 schema: "users",
                 columns: table => new
                 {
-                    user_id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    permission_code = table.Column<string>(type: "nvarchar(100)", nullable: false)
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    permission_code = table.Column<string>(type: "character varying(100)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -176,8 +179,8 @@ namespace Pricely.Modules.Users.Infrastructure.Database.Migrations
                 schema: "users",
                 columns: table => new
                 {
-                    role_name = table.Column<string>(type: "nvarchar(50)", nullable: false),
-                    user_id = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    role_name = table.Column<string>(type: "character varying(50)", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {

@@ -16,7 +16,8 @@ internal sealed class ModelConfiguration : IEntityTypeConfiguration<Model>
 
         builder.Property(m => m.Provider).HasConversion<string>().HasMaxLength(30);
 
-        builder.Property(m => m.ProviderModelId).HasMaxLength(Model.ProviderModelIdMaxLength);
+        // citext: provider model ids are compared ignoring case
+        builder.Property(m => m.ProviderModelId).HasMaxLength(Model.ProviderModelIdMaxLength).HasColumnType("citext");
 
         builder.Property(m => m.Label).HasMaxLength(Model.LabelMaxLength);
 

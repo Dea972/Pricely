@@ -36,15 +36,14 @@ internal sealed class IdempotentDomainEventHandler<TDomainEvent>(
         OutboxMessageConsumer outboxMessageConsumer)
     {
         string sql;
-        // SQL Server syntax
-        sql =
+                sql =
             $"""
-                SELECT CASE WHEN EXISTS (
+                SELECT EXISTS (
                     SELECT 1
                     FROM {Schemas.Catalog}.outbox_message_consumers
                     WHERE outbox_message_id = @OutboxMessageId AND
                           name = @Name
-                ) THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END
+                )
                 """;
 
         return await dbConnection.ExecuteScalarAsync<bool>(sql, outboxMessageConsumer);

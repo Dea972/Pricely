@@ -20,12 +20,13 @@ internal sealed class PriceObservationRepository(PricingDbContext context, IDbCo
             $"""
              SELECT latest.price_amount AS {nameof(PriceRow.Amount)}, latest.price_currency AS {nameof(PriceRow.Currency)}
              FROM pricing.offers o
-             CROSS APPLY (
-                 SELECT TOP 1 po.price_amount, po.price_currency
+             JOIN LATERAL (
+                 SELECT po.price_amount, po.price_currency
                  FROM pricing.price_observations po
                  WHERE po.offer_id = o.id
                  ORDER BY po.observed_on_utc DESC
-             ) latest
+                 LIMIT 1
+             ) latest ON TRUE
              WHERE o.product_id = @ProductId
                AND o.id <> @ExcludedOfferId
                AND o.status = 'Confirmed'

@@ -14,13 +14,16 @@ namespace Pricely.Modules.AiEngine.Infrastructure.Database.Migrations
             migrationBuilder.EnsureSchema(
                 name: "aiengine");
 
+            migrationBuilder.AlterDatabase()
+                .Annotation("Npgsql:PostgresExtension:citext", ",,");
+
             migrationBuilder.CreateTable(
                 name: "inbox_message_consumers",
                 schema: "aiengine",
                 columns: table => new
                 {
-                    inbox_message_id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    name = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false)
+                    inbox_message_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -32,12 +35,12 @@ namespace Pricely.Modules.AiEngine.Infrastructure.Database.Migrations
                 schema: "aiengine",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    type = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    content = table.Column<string>(type: "nvarchar(max)", maxLength: 2000, nullable: false),
-                    occurred_on_utc = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    processed_on_utc = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    error = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    type = table.Column<string>(type: "text", nullable: false),
+                    content = table.Column<string>(type: "text", nullable: false),
+                    occurred_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    processed_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    error = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -49,28 +52,28 @@ namespace Pricely.Modules.AiEngine.Infrastructure.Database.Migrations
                 schema: "aiengine",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    session_id = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    called_on_utc = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    feature_code = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    source_module = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    user_id = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    model_provider = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    model_name = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    input_tokens = table.Column<int>(type: "int", nullable: false),
-                    input_cached_tokens = table.Column<int>(type: "int", nullable: false),
-                    input_cache_creation_tokens = table.Column<int>(type: "int", nullable: false),
-                    output_tokens = table.Column<int>(type: "int", nullable: false),
-                    output_reasoning_tokens = table.Column<int>(type: "int", nullable: false),
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    session_id = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    called_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    feature_code = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    source_module = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    user_id = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    model_provider = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    model_name = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
+                    input_tokens = table.Column<int>(type: "integer", nullable: false),
+                    input_cached_tokens = table.Column<int>(type: "integer", nullable: false),
+                    input_cache_creation_tokens = table.Column<int>(type: "integer", nullable: false),
+                    output_tokens = table.Column<int>(type: "integer", nullable: false),
+                    output_reasoning_tokens = table.Column<int>(type: "integer", nullable: false),
                     response_time_ms = table.Column<long>(type: "bigint", nullable: false),
-                    is_success = table.Column<bool>(type: "bit", nullable: false),
-                    error_message = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
-                    model_id = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    input_cost = table.Column<decimal>(type: "decimal(18,6)", precision: 18, scale: 6, nullable: true),
-                    cached_input_cost = table.Column<decimal>(type: "decimal(18,6)", precision: 18, scale: 6, nullable: true),
-                    cache_write_cost = table.Column<decimal>(type: "decimal(18,6)", precision: 18, scale: 6, nullable: true),
-                    output_cost = table.Column<decimal>(type: "decimal(18,6)", precision: 18, scale: 6, nullable: true),
-                    total_cost = table.Column<decimal>(type: "decimal(18,6)", precision: 18, scale: 6, nullable: true)
+                    is_success = table.Column<bool>(type: "boolean", nullable: false),
+                    error_message = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    model_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    input_cost = table.Column<decimal>(type: "numeric(18,6)", precision: 18, scale: 6, nullable: true),
+                    cached_input_cost = table.Column<decimal>(type: "numeric(18,6)", precision: 18, scale: 6, nullable: true),
+                    cache_write_cost = table.Column<decimal>(type: "numeric(18,6)", precision: 18, scale: 6, nullable: true),
+                    output_cost = table.Column<decimal>(type: "numeric(18,6)", precision: 18, scale: 6, nullable: true),
+                    total_cost = table.Column<decimal>(type: "numeric(18,6)", precision: 18, scale: 6, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -82,11 +85,11 @@ namespace Pricely.Modules.AiEngine.Infrastructure.Database.Migrations
                 schema: "aiengine",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    provider = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
-                    provider_model_id = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    label = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    created_on_utc = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    provider = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
+                    provider_model_id = table.Column<string>(type: "citext", maxLength: 150, nullable: false),
+                    label = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
+                    created_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -98,10 +101,10 @@ namespace Pricely.Modules.AiEngine.Infrastructure.Database.Migrations
                 schema: "aiengine",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    feature_code = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    model_id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    updated_on_utc = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    feature_code = table.Column<string>(type: "citext", maxLength: 100, nullable: false),
+                    model_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    updated_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -120,15 +123,15 @@ namespace Pricely.Modules.AiEngine.Infrastructure.Database.Migrations
                 schema: "aiengine",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    model_id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    model_id = table.Column<Guid>(type: "uuid", nullable: false),
                     valid_from = table.Column<DateOnly>(type: "date", nullable: false),
-                    input_per_million = table.Column<decimal>(type: "decimal(18,6)", precision: 18, scale: 6, nullable: false),
-                    cached_input_per_million = table.Column<decimal>(type: "decimal(18,6)", precision: 18, scale: 6, nullable: false),
-                    cache_write_per_million = table.Column<decimal>(type: "decimal(18,6)", precision: 18, scale: 6, nullable: false),
-                    output_per_million = table.Column<decimal>(type: "decimal(18,6)", precision: 18, scale: 6, nullable: false),
-                    source = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    recorded_on_utc = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    input_per_million = table.Column<decimal>(type: "numeric(18,6)", precision: 18, scale: 6, nullable: false),
+                    cached_input_per_million = table.Column<decimal>(type: "numeric(18,6)", precision: 18, scale: 6, nullable: false),
+                    cache_write_per_million = table.Column<decimal>(type: "numeric(18,6)", precision: 18, scale: 6, nullable: false),
+                    output_per_million = table.Column<decimal>(type: "numeric(18,6)", precision: 18, scale: 6, nullable: false),
+                    source = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    recorded_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {

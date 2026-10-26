@@ -3,9 +3,9 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pricely.Modules.Pricing.Infrastructure.Database;
 
 #nullable disable
@@ -13,7 +13,7 @@ using Pricely.Modules.Pricing.Infrastructure.Database;
 namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
 {
     [DbContext(typeof(PricingDbContext))]
-    [Migration("20261025205258_Initial")]
+    [Migration("20261026062728_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -22,39 +22,39 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("pricing")
-                .HasAnnotation("ProductVersion", "10.0.2")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+                .HasAnnotation("ProductVersion", "10.0.4")
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "citext");
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("Pricely.Common.Infrastructure.Inbox.InboxMessage", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<string>("Content")
                         .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("content");
 
                     b.Property<string>("Error")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("error");
 
                     b.Property<DateTime>("OccurredOnUtc")
-                        .HasColumnType("datetime2")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("occurred_on_utc");
 
                     b.Property<DateTime?>("ProcessedOnUtc")
-                        .HasColumnType("datetime2")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("processed_on_utc");
 
                     b.Property<string>("Type")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("type");
 
                     b.HasKey("Id")
@@ -66,12 +66,12 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
             modelBuilder.Entity("Pricely.Common.Infrastructure.Inbox.InboxMessageConsumer", b =>
                 {
                     b.Property<Guid>("InboxMessageId")
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("inbox_message_id");
 
                     b.Property<string>("Name")
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)")
+                        .HasColumnType("character varying(500)")
                         .HasColumnName("name");
 
                     b.HasKey("InboxMessageId", "Name")
@@ -84,30 +84,29 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<string>("Content")
                         .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("content");
 
                     b.Property<string>("Error")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("error");
 
                     b.Property<DateTime>("OccurredOnUtc")
-                        .HasColumnType("datetime2")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("occurred_on_utc");
 
                     b.Property<DateTime?>("ProcessedOnUtc")
-                        .HasColumnType("datetime2")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("processed_on_utc");
 
                     b.Property<string>("Type")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("type");
 
                     b.HasKey("Id")
@@ -119,12 +118,12 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
             modelBuilder.Entity("Pricely.Common.Infrastructure.Outbox.OutboxMessageConsumer", b =>
                 {
                     b.Property<Guid>("OutboxMessageId")
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("outbox_message_id");
 
                     b.Property<string>("Name")
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)")
+                        .HasColumnType("character varying(500)")
                         .HasColumnName("name");
 
                     b.HasKey("OutboxMessageId", "Name")
@@ -136,17 +135,17 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
             modelBuilder.Entity("Pricely.Modules.Pricing.Domain.Catalog.CatalogCategory", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
+                        .HasColumnType("character varying(200)")
                         .HasColumnName("name");
 
                     b.Property<Guid?>("ParentId")
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("parent_id");
 
                     b.HasKey("Id")
@@ -158,33 +157,33 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
             modelBuilder.Entity("Pricely.Modules.Pricing.Domain.Catalog.CatalogProduct", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<string>("Brand")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)")
+                        .HasColumnType("character varying(150)")
                         .HasColumnName("brand");
 
                     b.Property<string>("Gtin")
                         .HasMaxLength(14)
-                        .HasColumnType("nvarchar(14)")
+                        .HasColumnType("character varying(14)")
                         .HasColumnName("gtin");
 
                     b.Property<string>("ManufacturerReference")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
+                        .HasColumnType("character varying(100)")
                         .HasColumnName("manufacturer_reference");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)")
+                        .HasColumnType("character varying(300)")
                         .HasColumnName("name");
 
                     b.Property<Guid>("ProductCategoryId")
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("product_category_id");
 
                     b.HasKey("Id")
@@ -200,16 +199,16 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<string>("Instructions")
                         .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnType("character varying(4000)")
                         .HasColumnName("instructions");
 
                     b.Property<Guid>("ProductCategoryId")
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("product_category_id");
 
                     b.HasKey("Id")
@@ -226,23 +225,23 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit")
+                        .HasColumnType("boolean")
                         .HasColumnName("is_active");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)")
+                        .HasColumnType("citext")
                         .HasColumnName("name");
 
                     b.Property<string>("Website")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)")
+                        .HasColumnType("character varying(500)")
                         .HasColumnName("website");
 
                     b.HasKey("Id")
@@ -259,45 +258,45 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<string>("ConfirmationMethod")
                         .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)")
+                        .HasColumnType("character varying(30)")
                         .HasColumnName("confirmation_method");
 
                     b.Property<Guid>("MerchantId")
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("merchant_id");
 
                     b.Property<string>("MerchantProductReference")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
+                        .HasColumnType("character varying(100)")
                         .HasColumnName("merchant_product_reference");
 
                     b.Property<Guid>("ProductId")
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("product_id");
 
                     b.Property<string>("ProductPage")
                         .IsRequired()
                         .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnType("character varying(2000)")
                         .HasColumnName("product_page");
 
                     b.Property<DateTime>("ProposedOnUtc")
-                        .HasColumnType("datetime2")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("proposed_on_utc");
 
                     b.Property<DateTime?>("ReviewedOnUtc")
-                        .HasColumnType("datetime2")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("reviewed_on_utc");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
+                        .HasColumnType("character varying(20)")
                         .HasColumnName("status");
 
                     b.ComplexProperty(typeof(Dictionary<string, object>), "Evidence", "Pricely.Modules.Pricing.Domain.Offers.Offer.Evidence#MatchEvidence", b1 =>
@@ -306,22 +305,22 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
 
                             b1.Property<decimal?>("AiSimilarity")
                                 .HasPrecision(5, 4)
-                                .HasColumnType("decimal(5,4)")
+                                .HasColumnType("numeric(5,4)")
                                 .HasColumnName("evidence_ai_similarity");
 
                             b1.Property<string>("ObservedBrand")
                                 .HasMaxLength(150)
-                                .HasColumnType("nvarchar(150)")
+                                .HasColumnType("character varying(150)")
                                 .HasColumnName("evidence_observed_brand");
 
                             b1.Property<string>("ObservedGtin")
                                 .HasMaxLength(14)
-                                .HasColumnType("nvarchar(14)")
+                                .HasColumnType("character varying(14)")
                                 .HasColumnName("evidence_observed_gtin");
 
                             b1.Property<string>("ObservedManufacturerReference")
                                 .HasMaxLength(100)
-                                .HasColumnType("nvarchar(100)")
+                                .HasColumnType("character varying(100)")
                                 .HasColumnName("evidence_observed_manufacturer_reference");
                         });
 
@@ -345,25 +344,25 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<string>("Availability")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
+                        .HasColumnType("character varying(20)")
                         .HasColumnName("availability");
 
                     b.Property<bool>("IsFlaggedAsAnomaly")
-                        .HasColumnType("bit")
+                        .HasColumnType("boolean")
                         .HasColumnName("is_flagged_as_anomaly");
 
                     b.Property<DateTime>("ObservedOnUtc")
-                        .HasColumnType("datetime2")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("observed_on_utc");
 
                     b.Property<Guid>("OfferId")
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("offer_id");
 
                     b.ComplexProperty(typeof(Dictionary<string, object>), "Price", "Pricely.Modules.Pricing.Domain.Offers.PriceObservation.Price#Money", b1 =>
@@ -372,13 +371,13 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
 
                             b1.Property<decimal>("Amount")
                                 .HasPrecision(18, 2)
-                                .HasColumnType("decimal(18,2)")
+                                .HasColumnType("numeric(18,2)")
                                 .HasColumnName("price_amount");
 
                             b1.Property<string>("Currency")
                                 .IsRequired()
                                 .HasMaxLength(3)
-                                .HasColumnType("nchar(3)")
+                                .HasColumnType("character(3)")
                                 .HasColumnName("price_currency")
                                 .IsFixedLength();
                         });
@@ -398,15 +397,15 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                     b.OwnsMany("Pricely.Modules.Pricing.Domain.CollectionProfiles.PreferredMerchant", "PreferredMerchants", b1 =>
                         {
                             b1.Property<Guid>("CollectionProfileId")
-                                .HasColumnType("uniqueidentifier")
+                                .HasColumnType("uuid")
                                 .HasColumnName("collection_profile_id");
 
                             b1.Property<Guid>("MerchantId")
-                                .HasColumnType("uniqueidentifier")
+                                .HasColumnType("uuid")
                                 .HasColumnName("merchant_id");
 
                             b1.Property<int>("Priority")
-                                .HasColumnType("int")
+                                .HasColumnType("integer")
                                 .HasColumnName("priority");
 
                             b1.HasKey("CollectionProfileId", "MerchantId")
@@ -419,7 +418,7 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
 
                             b1.WithOwner()
                                 .HasForeignKey("CollectionProfileId")
-                                .HasConstraintName("fk_collection_profile_preferred_merchants_collection_profiles_collection_profile_id");
+                                .HasConstraintName("fk_collection_profile_preferred_merchants_collection_profiles_");
 
                             b1.HasOne("Pricely.Modules.Pricing.Domain.Merchants.Merchant", null)
                                 .WithMany()

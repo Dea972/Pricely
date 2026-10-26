@@ -9,7 +9,7 @@ Lire avant de coder : `docs/architecture/ubiquitous-language.md`, `docs/architec
 ## Stack
 
 - .NET 10 (`net10.0`), ASP.NET Core minimal APIs, .NET Aspire 13.6 (AppHost + ServiceDefaults)
-- SQL Server : EF Core 10 (écriture) + Dapper (lecture), un `DbContext` et un schéma par module, `UseSnakeCaseNamingConvention()`
+- PostgreSQL (Npgsql) : EF Core 10 (écriture) + Dapper (lecture), un `DbContext` et un schéma par module, `UseSnakeCaseNamingConvention()`
 - MediatR (commandes / requêtes / pipeline behaviors), FluentValidation
 - MassTransit in-memory + outbox / inbox maison (tables par module) traitées par des jobs Quartz
 - Tests : xUnit, FluentAssertions, NetArchTest.Rules, Bogus
@@ -17,7 +17,7 @@ Lire avant de coder : `docs/architecture/ubiquitous-language.md`, `docs/architec
 ## Structure
 
 ```
-aspire/                        AppHost (SQL Server) et ServiceDefaults (OpenTelemetry, health checks)
+aspire/                        AppHost (PostgreSQL, Keycloak) et ServiceDefaults (OpenTelemetry, health checks)
 src/API/Pricely.Api            Host HTTP
 src/Adapters/Pricely.Sdk       Composition : AddPricelyAsync() enregistre tous les modules, MapPricelyEndpoints() sous /api
 src/Common/                    Briques partagées : Domain (Entity, Result, Error, DomainEvent), Application (ICommand, IQuery,
@@ -67,7 +67,7 @@ Pricing ne lit jamais Catalog : il garde des read models locaux `CatalogProduct`
 - **Value Object** : `sealed record`, constructeur privé + `static Result<T> Create(...)` qui valide (`Money`, `Gtin`). Données descriptives sans invariant : `sealed record` positionnel (`MatchEvidence`, `ProductDescription`).
 - **Événement de domaine** : `sealed class XxxDomainEvent(...) : DomainEvent`, propriétés `{ get; init; }`.
 - **Commande** : `Application/<Agrégats>/<UseCase>/` avec `<UseCase>Command` (`sealed record : ICommand` ou `ICommand<T>`), `<UseCase>CommandHandler` (`internal sealed`), `<UseCase>CommandValidator` (`internal sealed`, FluentValidation).
-- **Requête** : `<UseCase>Query` + `<X>Response` dans `Application`. Le handler est dans **Infrastructure** (`internal sealed`, Dapper + `IDbConnectionFactory`, SQL Server, colonnes snake_case aliasées avec `nameof`) sauf s'il a besoin de logique de domaine (alors dans Application, ex. `GetEffectiveCollectionProfileQueryHandler`).
+- **Requête** : `<UseCase>Query` + `<X>Response` dans `Application`. Le handler est dans **Infrastructure** (`internal sealed`, Dapper + `IDbConnectionFactory`, PostgreSQL, colonnes snake_case aliasées avec `nameof`) sauf s'il a besoin de logique de domaine (alors dans Application, ex. `GetEffectiveCollectionProfileQueryHandler`).
 - **Publication inter-modules** : un `DomainEventHandler<T>` dans Application publie l'`IntegrationEvent` via `IEventBus`. L'outbox garantit la livraison.
 - **Consommation inter-modules** : `IntegrationEventHandler<T>` dans **Presentation** (`internal sealed`, suffixe `IntegrationEventHandler`) qui envoie une commande ; `PricingModule.ConfigureConsumers` déclare `IntegrationEventConsumer<T>` ; l'inbox du module assure l'idempotence.
 - **Endpoint** : une classe `internal sealed` par endpoint dans `Presentation/<Agrégats>/`, implémente `IEndpoint`, route sans préfixe `/api` (ajouté par `MapPricelyEndpoints`), `.RequireAuthorization().WithTags(Tags.X)`, accepte un `CancellationToken`, renvoie `result.Match(Results.Ok|NoContent, ApiResults.Problem)`. DTO d'entrée : classe imbriquée `Request` avec `{ get; init; }`.
@@ -86,6 +86,15 @@ Le build échoue sur le moindre avertissement (`TreatWarningsAsErrors`, `Analysi
 - Paramètres `string` nommés `*url*` / `*uri*` interdits (CA1054) : utiliser `Uri` ou un autre nom (`website`, `productPage`).
 - Toujours propager le `CancellationToken` (CA2016). Dapper : `new CommandDefinition(sql, param, cancellationToken: ct)`.
 - Comparaisons de chaînes : `StringComparison.Ordinal*`, `ToUpperInvariant()`. `List<T>.Find` plutôt que `FirstOrDefault`.
+
+## PostgreSQL : pièges connus (ADR-012)
+
+- Les comparaisons de texte sont **sensibles à la casse** (SQL Server ne l'était pas) : colonnes d'unicité « métier » (e-mail, nom d'enseigne, nom de typologie, identifiant de modèle, code de fonctionnalité) en `citext` (`HasColumnType("citext")` + `modelBuilder.HasPostgresExtension("citext")`) ; recherches en `ILIKE`.
+- `DateTime` écrit en `timestamptz` : `Kind` doit être `Utc` (`IDateTimeProvider.UtcNow`), jamais `Now` / `Unspecified`.
+- Une colonne `date` est lue par Dapper en `DateOnly` : `CAST(col AS timestamp)` dans le SQL si la réponse est un `DateTime`.
+- Paramètre nullable testé par `IS NULL` : `CAST(@p AS <type>) IS NULL` (Npgsql n'infère pas le type d'un `NULL`).
+- Pas de `TOP` / `CROSS APPLY` / `OUTER APPLY` : `LIMIT`, `JOIN LATERAL (... LIMIT 1) x ON TRUE`, `LEFT JOIN LATERAL ... ON TRUE`. Booléens : `WHERE flag`, pas `= 1`.
+- Contenu des messages outbox / inbox en `text`, pas `jsonb` (jsonb réordonne les clés, or `$type` doit rester en premier). Relecture des lots avec `FOR UPDATE SKIP LOCKED`.
 
 ## Domaine Pricing : règles métier
 
@@ -115,7 +124,7 @@ dotnet test src/Modules/Pricing/test/Pricely.Modules.Pricing.UnitTests
 dotnet test test/Pricely.ArchitectureTests
 dotnet list Pricely.slnx package --vulnerable --include-transitive
 dotnet ef migrations add <Name> -p src/Modules/<M>/Pricely.Modules.<M>.Infrastructure -s src/API/Pricely.Api -c <M>DbContext -o Database/Migrations   # avec ConnectionStrings__pricely-db défini
-dotnet run --project aspire/Pricely.AppHost   # SQL Server + Keycloak + API ; secret : Parameters:anthropic-api-key
+dotnet run --project aspire/Pricely.AppHost   # PostgreSQL + Keycloak + API ; secret : Parameters:anthropic-api-key
 ```
 
 La CI (`.github/workflows/ci.yml`) restaure, compile en Release et lance tous les projets `*.UnitTests` et `*.ArchitectureTests`. En cas d'échec, elle publie les erreurs en annotations (titres « Build errors », « Error codes », « Vulnerable packages ») et toujours un « Test summary ».
@@ -126,7 +135,7 @@ L'audit NuGet (transitif compris) est **bloquant** : ne jamais ajouter `NU190x` 
 
 ## État connu / à faire
 
-- L'API démarre (`Program.cs` : modules, authentification, `/api` et `/mcp`, validation de la DI) ; en Development elle applique les migrations des quatre modules au démarrage. L'AppHost complet (SQL Server + Keycloak + API) n'a pas encore été exécuté de bout en bout dans un environnement avec conteneurs : le faire avant de s'appuyer dessus.
+- L'API démarre (`Program.cs` : modules, authentification, `/api` et `/mcp`, validation de la DI) ; en Development elle applique les migrations des quatre modules au démarrage. L'AppHost lui-même (conteneurs Aspire) n'a pas encore été lancé ; la chaîne PostgreSQL 16 + Keycloak 26.6 + API, elle, a été exécutée à la main (migrations, jeton, endpoints, 9 tools MCP, outbox → inbox).
 - Migrations `Initial` de Catalog, Pricing, Users et AiEngine en place (`Database/Migrations`, `generated_code = true`). Hors Development, aucun mécanisme n'applique les migrations (décision ouverte).
 - Seul `/mcp` exige un scope (`pricely.read`). Les endpoints existants sont seulement « authentifié » : un jeton en lecture seule peut donc appeler les endpoints de mutation (écart assumé, ADR-011) ; poser `PricelyScopes.Write` / `Review` sur les mutations avant tout déploiement, puis filtrer les tools par scope.
 - Les tests d'intégration hérités (Users, solution) sont exclus de la solution : ils référencent un module `Ticketing` inexistant.

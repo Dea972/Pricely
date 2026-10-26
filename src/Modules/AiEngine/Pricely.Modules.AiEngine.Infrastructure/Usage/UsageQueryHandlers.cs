@@ -93,7 +93,7 @@ internal sealed class GetDailyUsageQueryHandler(IDbConnectionFactory dbConnectio
         const string sql =
             $"""
              SELECT
-                 CAST(CAST(c.called_on_utc AS date) AS datetime2) AS {nameof(DailyUsageResponse.Day)},
+                 CAST(CAST(c.called_on_utc AS date) AS timestamp) AS {nameof(DailyUsageResponse.Day)},
                  {UsageSql.Totals}
              FROM aiengine.llm_calls c
              WHERE {UsageSql.PeriodFilter}

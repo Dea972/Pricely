@@ -14,13 +14,16 @@ namespace Pricely.Modules.Catalog.Infrastructure.Database.Migrations
             migrationBuilder.EnsureSchema(
                 name: "catalog");
 
+            migrationBuilder.AlterDatabase()
+                .Annotation("Npgsql:PostgresExtension:citext", ",,");
+
             migrationBuilder.CreateTable(
                 name: "inbox_message_consumers",
                 schema: "catalog",
                 columns: table => new
                 {
-                    inbox_message_id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    name = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false)
+                    inbox_message_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -32,12 +35,12 @@ namespace Pricely.Modules.Catalog.Infrastructure.Database.Migrations
                 schema: "catalog",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    type = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    content = table.Column<string>(type: "nvarchar(max)", maxLength: 2000, nullable: false),
-                    occurred_on_utc = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    processed_on_utc = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    error = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    type = table.Column<string>(type: "text", nullable: false),
+                    content = table.Column<string>(type: "text", nullable: false),
+                    occurred_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    processed_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    error = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -49,8 +52,8 @@ namespace Pricely.Modules.Catalog.Infrastructure.Database.Migrations
                 schema: "catalog",
                 columns: table => new
                 {
-                    outbox_message_id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    name = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false)
+                    outbox_message_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -62,12 +65,12 @@ namespace Pricely.Modules.Catalog.Infrastructure.Database.Migrations
                 schema: "catalog",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    type = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    content = table.Column<string>(type: "nvarchar(max)", maxLength: 2000, nullable: false),
-                    occurred_on_utc = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    processed_on_utc = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    error = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    type = table.Column<string>(type: "text", nullable: false),
+                    content = table.Column<string>(type: "text", nullable: false),
+                    occurred_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    processed_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    error = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -79,10 +82,10 @@ namespace Pricely.Modules.Catalog.Infrastructure.Database.Migrations
                 schema: "catalog",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    parent_id = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    depth = table.Column<int>(type: "int", nullable: false)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name = table.Column<string>(type: "citext", maxLength: 200, nullable: false),
+                    parent_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    depth = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -101,12 +104,12 @@ namespace Pricely.Modules.Catalog.Infrastructure.Database.Migrations
                 schema: "catalog",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    name = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
-                    brand = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    gtin = table.Column<string>(type: "nvarchar(14)", maxLength: 14, nullable: true),
-                    manufacturer_reference = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    product_category_id = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
+                    brand = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
+                    gtin = table.Column<string>(type: "character varying(14)", maxLength: 14, nullable: true),
+                    manufacturer_reference = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    product_category_id = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -125,16 +128,14 @@ namespace Pricely.Modules.Catalog.Infrastructure.Database.Migrations
                 schema: "catalog",
                 table: "product_categories",
                 columns: new[] { "parent_id", "name" },
-                unique: true,
-                filter: "[parent_id] IS NOT NULL");
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "ix_products_gtin",
                 schema: "catalog",
                 table: "products",
                 column: "gtin",
-                unique: true,
-                filter: "[gtin] IS NOT NULL");
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "ix_products_product_category_id",

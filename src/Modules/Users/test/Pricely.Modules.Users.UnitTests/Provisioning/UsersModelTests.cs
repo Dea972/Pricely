@@ -12,7 +12,7 @@ public class UsersModelTests
     public void RolePermissions_ShouldBeLoadedThroughTheRolePermissionsJoinTable_AndNotThroughAColumnOfPermissions()
     {
         using var context = new UsersDbContext(
-            new DbContextOptionsBuilder<UsersDbContext>().UseSqlServer("Server=localhost").Options);
+            new DbContextOptionsBuilder<UsersDbContext>().UseNpgsql("Host=localhost").Options);
 
         IEntityType role = context.Model.FindEntityType(typeof(Role))!;
         IEntityType permission = context.Model.FindEntityType(typeof(Permission))!;

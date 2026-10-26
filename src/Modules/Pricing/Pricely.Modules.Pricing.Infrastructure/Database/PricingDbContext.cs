@@ -31,6 +31,9 @@ public sealed class PricingDbContext(DbContextOptions<PricingDbContext> options)
     {
         modelBuilder.HasDefaultSchema(Schemas.Pricing);
 
+        // Case-insensitive text columns (emails, names, codes): PostgreSQL text comparisons are case-sensitive (ADR-012).
+        modelBuilder.HasPostgresExtension("citext");
+
         modelBuilder.ApplyConfiguration(new OutboxMessageConfiguration());
         modelBuilder.ApplyConfiguration(new OutboxMessageConsumerConfiguration());
         modelBuilder.ApplyConfiguration(new InboxMessageConfiguration());

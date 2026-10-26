@@ -13,7 +13,6 @@ public sealed class OutboxMessageConfiguration : IEntityTypeConfiguration<Outbox
         builder.HasKey(o => o.Id);
 
         builder.Property(o => o.Content)
-               .HasMaxLength(2000) // ou retire si tu veux "nvarchar(max)"
-               .HasColumnType("nvarchar(max)"); // SQL Server ne supporte pas "jsonb"
+               .HasColumnType("text"); // not jsonb: the serialized event starts with its $type, which jsonb would reorder
     }
 }

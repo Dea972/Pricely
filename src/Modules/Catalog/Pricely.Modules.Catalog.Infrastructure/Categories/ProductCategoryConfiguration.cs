@@ -14,7 +14,8 @@ internal sealed class ProductCategoryConfiguration : IEntityTypeConfiguration<Pr
 
         builder.Ignore(c => c.DomainEvents);
 
-        builder.Property(c => c.Name).HasMaxLength(ProductCategory.NameMaxLength);
+        // citext: category names are unique ignoring case
+        builder.Property(c => c.Name).HasMaxLength(ProductCategory.NameMaxLength).HasColumnType("citext");
 
         builder.HasOne<ProductCategory>()
             .WithMany()

@@ -14,14 +14,17 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
             migrationBuilder.EnsureSchema(
                 name: "pricing");
 
+            migrationBuilder.AlterDatabase()
+                .Annotation("Npgsql:PostgresExtension:citext", ",,");
+
             migrationBuilder.CreateTable(
                 name: "catalog_categories",
                 schema: "pricing",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    parent_id = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    parent_id = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -33,12 +36,12 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                 schema: "pricing",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    name = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
-                    brand = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    gtin = table.Column<string>(type: "nvarchar(14)", maxLength: 14, nullable: true),
-                    manufacturer_reference = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    product_category_id = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
+                    brand = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
+                    gtin = table.Column<string>(type: "character varying(14)", maxLength: 14, nullable: true),
+                    manufacturer_reference = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    product_category_id = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -50,9 +53,9 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                 schema: "pricing",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    product_category_id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    instructions = table.Column<string>(type: "nvarchar(4000)", maxLength: 4000, nullable: true)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    product_category_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    instructions = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -64,8 +67,8 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                 schema: "pricing",
                 columns: table => new
                 {
-                    inbox_message_id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    name = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false)
+                    inbox_message_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -77,12 +80,12 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                 schema: "pricing",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    type = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    content = table.Column<string>(type: "nvarchar(max)", maxLength: 2000, nullable: false),
-                    occurred_on_utc = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    processed_on_utc = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    error = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    type = table.Column<string>(type: "text", nullable: false),
+                    content = table.Column<string>(type: "text", nullable: false),
+                    occurred_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    processed_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    error = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -94,10 +97,10 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                 schema: "pricing",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    name = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    website = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    is_active = table.Column<bool>(type: "bit", nullable: false)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name = table.Column<string>(type: "citext", maxLength: 150, nullable: false),
+                    website = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    is_active = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -109,8 +112,8 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                 schema: "pricing",
                 columns: table => new
                 {
-                    outbox_message_id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    name = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false)
+                    outbox_message_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -122,12 +125,12 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                 schema: "pricing",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    type = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    content = table.Column<string>(type: "nvarchar(max)", maxLength: 2000, nullable: false),
-                    occurred_on_utc = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    processed_on_utc = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    error = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    type = table.Column<string>(type: "text", nullable: false),
+                    content = table.Column<string>(type: "text", nullable: false),
+                    occurred_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    processed_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    error = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -139,15 +142,15 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                 schema: "pricing",
                 columns: table => new
                 {
-                    merchant_id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    collection_profile_id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    priority = table.Column<int>(type: "int", nullable: false)
+                    merchant_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    collection_profile_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    priority = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("pk_collection_profile_preferred_merchants", x => new { x.collection_profile_id, x.merchant_id });
                     table.ForeignKey(
-                        name: "fk_collection_profile_preferred_merchants_collection_profiles_collection_profile_id",
+                        name: "fk_collection_profile_preferred_merchants_collection_profiles_",
                         column: x => x.collection_profile_id,
                         principalSchema: "pricing",
                         principalTable: "collection_profiles",
@@ -167,19 +170,19 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                 schema: "pricing",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    product_id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    merchant_id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    product_page = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
-                    merchant_product_reference = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    confirmation_method = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: true),
-                    proposed_on_utc = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    reviewed_on_utc = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    evidence_ai_similarity = table.Column<decimal>(type: "decimal(5,4)", precision: 5, scale: 4, nullable: true),
-                    evidence_observed_brand = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
-                    evidence_observed_gtin = table.Column<string>(type: "nvarchar(14)", maxLength: 14, nullable: true),
-                    evidence_observed_manufacturer_reference = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    product_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    merchant_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    product_page = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
+                    merchant_product_reference = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    confirmation_method = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: true),
+                    proposed_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    reviewed_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    evidence_ai_similarity = table.Column<decimal>(type: "numeric(5,4)", precision: 5, scale: 4, nullable: true),
+                    evidence_observed_brand = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: true),
+                    evidence_observed_gtin = table.Column<string>(type: "character varying(14)", maxLength: 14, nullable: true),
+                    evidence_observed_manufacturer_reference = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -198,13 +201,13 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                 schema: "pricing",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    offer_id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    availability = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    observed_on_utc = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    is_flagged_as_anomaly = table.Column<bool>(type: "bit", nullable: false),
-                    price_amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    price_currency = table.Column<string>(type: "nchar(3)", fixedLength: true, maxLength: 3, nullable: false)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    offer_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    availability = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    observed_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    is_flagged_as_anomaly = table.Column<bool>(type: "boolean", nullable: false),
+                    price_amount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    price_currency = table.Column<string>(type: "character(3)", fixedLength: true, maxLength: 3, nullable: false)
                 },
                 constraints: table =>
                 {

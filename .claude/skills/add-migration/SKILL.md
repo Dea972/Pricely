@@ -12,7 +12,7 @@ Chaque module a son `DbContext` (`CatalogDbContext`, `PricingDbContext`, `UsersD
 L'option A du choix initial est en place (ADR-011) : `dotnet ef` construit l'hôte `Pricely.Api` (`Program.cs` + `Microsoft.EntityFrameworkCore.Design`). Il faut définir une chaîne de connexion SQL Server, même factice, rien ne s'y connecte pour ajouter une migration :
 
 ```bash
-export "ConnectionStrings__pricely-db=Server=localhost;Database=pricely-db;TrustServerCertificate=true"
+export "ConnectionStrings__pricely-db=Host=localhost;Database=pricely-db;Username=postgres;Password=x"
 ```
 
 Dans un shell qui refuse les tirets dans les noms de variables, passer par `env "ConnectionStrings__pricely-db=..." dotnet ef ...`.
@@ -40,7 +40,7 @@ dotnet ef migrations add <Name> \
 dotnet ef database update -p src/Modules/<M>/Pricely.Modules.<M>.Infrastructure -s src/API/Pricely.Api -c <M>DbContext
 ```
 
-Localement, l'AppHost Aspire démarre SQL Server (`pricely-db`) et l'API applique elle-même les migrations des quatre modules au démarrage, en Development uniquement (`MigrationExtensions.ApplyMigrationsAsync` dans `Pricely.Sdk`). Un nouveau module doit y être ajouté.
+Localement, l'AppHost Aspire démarre PostgreSQL (`pricely-db`) et l'API applique elle-même les migrations des quatre modules au démarrage, en Development uniquement (`MigrationExtensions.ApplyMigrationsAsync` dans `Pricely.Sdk`). Un nouveau module doit y être ajouté.
 
 ## Requêtes Dapper
 

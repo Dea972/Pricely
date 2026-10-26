@@ -45,7 +45,7 @@ dotnet user-secrets set "Parameters:anthropic-api-key" "<key>" --project aspire/
 dotnet run --project aspire/Pricely.AppHost
 ```
 
-The AppHost starts SQL Server (`pricely-db`), Keycloak (http://localhost:8080, realm `pricely` imported from `aspire/Pricely.AppHost/Realms/pricely-realm.json`) and the API (http://localhost:5136). In Development the API applies the EF Core migrations of every module at startup. The Keycloak admin credentials are the generated Aspire parameters (dashboard).
+The AppHost starts PostgreSQL (`pricely-db`), Keycloak (http://localhost:8080, realm `pricely` imported from `aspire/Pricely.AppHost/Realms/pricely-realm.json`) and the API (http://localhost:5136). In Development the API applies the EF Core migrations of every module at startup. The Keycloak admin credentials are the generated Aspire parameters (dashboard).
 
 ## Authentication
 
@@ -96,7 +96,7 @@ dotnet test
 dotnet ef migrations add <Name> -p src/Modules/<M>/Pricely.Modules.<M>.Infrastructure -s src/API/Pricely.Api -c <M>DbContext -o Database/Migrations
 ```
 
-`dotnet ef` builds the API host: set `ConnectionStrings__pricely-db` (any SQL Server connection string; nothing connects when adding a migration).
+`dotnet ef` builds the API host: set `ConnectionStrings__pricely-db` (any PostgreSQL connection string, e.g. `Host=localhost;Database=pricely-db;Username=postgres;Password=x`; nothing connects when adding a migration).
 
 ## Working with Claude Code
 

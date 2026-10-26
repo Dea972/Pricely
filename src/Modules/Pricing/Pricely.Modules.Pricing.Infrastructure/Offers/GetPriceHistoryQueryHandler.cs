@@ -19,7 +19,7 @@ internal sealed class GetPriceHistoryQueryHandler(IDbConnectionFactory dbConnect
 
         const string sql =
             $"""
-             SELECT TOP (@Limit)
+             SELECT
                  o.id AS {nameof(PriceHistoryEntryResponse.OfferId)},
                  m.id AS {nameof(PriceHistoryEntryResponse.MerchantId)},
                  m.name AS {nameof(PriceHistoryEntryResponse.MerchantName)},
@@ -33,9 +33,10 @@ internal sealed class GetPriceHistoryQueryHandler(IDbConnectionFactory dbConnect
              INNER JOIN pricing.merchants m ON m.id = o.merchant_id
              WHERE o.product_id = @ProductId
                AND o.status = @ConfirmedStatus
-               AND (@FromUtc IS NULL OR po.observed_on_utc >= @FromUtc)
-               AND (@ToUtc IS NULL OR po.observed_on_utc < @ToUtc)
+               AND (CAST(@FromUtc AS timestamptz) IS NULL OR po.observed_on_utc >= @FromUtc)
+               AND (CAST(@ToUtc AS timestamptz) IS NULL OR po.observed_on_utc < @ToUtc)
              ORDER BY po.observed_on_utc DESC
+             LIMIT @Limit
              """;
 
         IEnumerable<PriceHistoryEntryResponse> entries = await connection.QueryAsync<PriceHistoryEntryResponse>(

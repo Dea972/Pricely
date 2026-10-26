@@ -12,7 +12,8 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.HasKey(u => u.Id);
 
-        builder.Property(u => u.Email).HasMaxLength(300);
+        // citext: emails are unique ignoring case
+        builder.Property(u => u.Email).HasMaxLength(300).HasColumnType("citext");
         builder.HasIndex(u => u.Email).IsUnique();
 
         builder.Property(u => u.FirstName).HasMaxLength(200);

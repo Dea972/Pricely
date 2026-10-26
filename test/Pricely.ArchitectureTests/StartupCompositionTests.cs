@@ -43,7 +43,7 @@ public sealed class StartupCompositionTests
         });
 
         await builder.Services.AddPricelyAsync(
-            "Server=localhost;Database=pricely-db;TrustServerCertificate=true",
+            "Host=localhost;Database=pricely-db",
             builder.Configuration);
 
         Action build = () =>

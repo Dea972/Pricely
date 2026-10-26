@@ -54,9 +54,9 @@ public static class UsersModule
     {
         services.AddDbContext<UsersDbContext>((serviceProvider, options) =>
             options
-                .UseSqlServer(
+                .UseNpgsql(
                     connectionString,
-                    sqlServerOptions => sqlServerOptions.MigrationsHistoryTable(
+                    npgsqlOptions => npgsqlOptions.MigrationsHistoryTable(
                         HistoryRepository.DefaultTableName,
                         Schemas.Users))
                 .UseSnakeCaseNamingConvention()

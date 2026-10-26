@@ -54,9 +54,9 @@ public static class PricingModule
     {
         services.AddDbContext<PricingDbContext>((serviceProvider, options) =>
             options
-                .UseSqlServer(
+                .UseNpgsql(
                     connectionString,
-                    sqlServerOptions => sqlServerOptions.MigrationsHistoryTable(
+                    npgsqlOptions => npgsqlOptions.MigrationsHistoryTable(
                         HistoryRepository.DefaultTableName,
                         Schemas.Pricing))
                 .UseSnakeCaseNamingConvention()

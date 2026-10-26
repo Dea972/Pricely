@@ -8,8 +8,8 @@ Chaque étape fait l'objet d'une PR sur `main`, CI verte, revue `architecture-re
 - Module Users : réactiver l'enregistrement de `UsersDbContext`, corriger le SQL PostgreSQL (`::json`) de son inbox.
 - Migrations initiales Catalog, Pricing, Users (skill `add-migration`), base locale via l'AppHost Aspire.
 - Authentification (ADR-010) : Keycloak dans l'AppHost (realm `pricely` importé au démarrage, scopes `pricely.read|write|review`, client du front), validation JWT Keycloak dans l'API, rattachement `sub` → `User`, suppression de `JwtTokenService` / `GenerateAccessToken` / `Jwt:Secret`.
-- Critère : l'AppHost démarre (SQL Server + Keycloak + API) ; `/api/catalog/categories` renvoie 401 sans jeton et répond avec un jeton Keycloak.
-- Fait : AppHost avec Keycloak et realm importé, validation JWT, politiques par scope, `sub` → `User` à la première requête, migrations `Initial` des quatre modules appliquées par l'API en Development, `/mcp` en `pricely.read` avec sa métadonnée OAuth. À vérifier avec un démon de conteneurs : l'AppHost complet (SQL Server, application des migrations, `/api/catalog/categories` en 200) n'a pas été exécuté faute de Docker ; le realm (import, jeton, enregistrement dynamique) et l'API sans base l'ont été (401, métadonnée, `tools/list` avec jeton, 403 sans `pricely.read`).
+- Critère : l'AppHost démarre (PostgreSQL + Keycloak + API) ; `/api/catalog/categories` renvoie 401 sans jeton et répond avec un jeton Keycloak.
+- Fait : AppHost avec Keycloak et realm importé, validation JWT, politiques par scope, `sub` → `User` à la première requête, migrations `Initial` des quatre modules appliquées par l'API en Development, `/mcp` en `pricely.read` avec sa métadonnée OAuth. À vérifier avec un démon de conteneurs : le lancement par l'AppHost lui-même (Aspire n'a pas pu tourner faute de Docker). Vérifié à la main sur PostgreSQL 16 + Keycloak 26.6 + l'API : migrations appliquées, 401 sans jeton / 200 avec jeton Keycloak, provisionnement de l'utilisateur, 9 tools MCP, requêtes Dapper, outbox → inbox.
 
 ## Étape 1 — Socle Common AI (ADR-007) — fait
 

@@ -2,9 +2,9 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pricely.Modules.AiEngine.Infrastructure.Database;
 
 #nullable disable
@@ -12,7 +12,7 @@ using Pricely.Modules.AiEngine.Infrastructure.Database;
 namespace Pricely.Modules.AiEngine.Infrastructure.Database.Migrations
 {
     [DbContext(typeof(AiEngineDbContext))]
-    [Migration("20261025205348_Initial")]
+    [Migration("20261026062747_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -21,39 +21,39 @@ namespace Pricely.Modules.AiEngine.Infrastructure.Database.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("aiengine")
-                .HasAnnotation("ProductVersion", "10.0.2")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+                .HasAnnotation("ProductVersion", "10.0.4")
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "citext");
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("Pricely.Common.Infrastructure.Inbox.InboxMessage", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<string>("Content")
                         .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("content");
 
                     b.Property<string>("Error")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("error");
 
                     b.Property<DateTime>("OccurredOnUtc")
-                        .HasColumnType("datetime2")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("occurred_on_utc");
 
                     b.Property<DateTime?>("ProcessedOnUtc")
-                        .HasColumnType("datetime2")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("processed_on_utc");
 
                     b.Property<string>("Type")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("type");
 
                     b.HasKey("Id")
@@ -65,12 +65,12 @@ namespace Pricely.Modules.AiEngine.Infrastructure.Database.Migrations
             modelBuilder.Entity("Pricely.Common.Infrastructure.Inbox.InboxMessageConsumer", b =>
                 {
                     b.Property<Guid>("InboxMessageId")
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("inbox_message_id");
 
                     b.Property<string>("Name")
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)")
+                        .HasColumnType("character varying(500)")
                         .HasColumnName("name");
 
                     b.HasKey("InboxMessageId", "Name")
@@ -83,21 +83,21 @@ namespace Pricely.Modules.AiEngine.Infrastructure.Database.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<string>("FeatureCode")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
+                        .HasColumnType("citext")
                         .HasColumnName("feature_code");
 
                     b.Property<Guid>("ModelId")
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("model_id");
 
                     b.Property<DateTime>("UpdatedOnUtc")
-                        .HasColumnType("datetime2")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_on_utc");
 
                     b.HasKey("Id")
@@ -117,82 +117,82 @@ namespace Pricely.Modules.AiEngine.Infrastructure.Database.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<decimal?>("CacheWriteCost")
                         .HasPrecision(18, 6)
-                        .HasColumnType("decimal(18,6)")
+                        .HasColumnType("numeric(18,6)")
                         .HasColumnName("cache_write_cost");
 
                     b.Property<decimal?>("CachedInputCost")
                         .HasPrecision(18, 6)
-                        .HasColumnType("decimal(18,6)")
+                        .HasColumnType("numeric(18,6)")
                         .HasColumnName("cached_input_cost");
 
                     b.Property<DateTime>("CalledOnUtc")
-                        .HasColumnType("datetime2")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("called_on_utc");
 
                     b.Property<string>("ErrorMessage")
                         .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnType("character varying(2000)")
                         .HasColumnName("error_message");
 
                     b.Property<string>("FeatureCode")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
+                        .HasColumnType("character varying(100)")
                         .HasColumnName("feature_code");
 
                     b.Property<int>("InputCacheCreationTokens")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("input_cache_creation_tokens");
 
                     b.Property<int>("InputCachedTokens")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("input_cached_tokens");
 
                     b.Property<decimal?>("InputCost")
                         .HasPrecision(18, 6)
-                        .HasColumnType("decimal(18,6)")
+                        .HasColumnType("numeric(18,6)")
                         .HasColumnName("input_cost");
 
                     b.Property<int>("InputTokens")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("input_tokens");
 
                     b.Property<bool>("IsSuccess")
-                        .HasColumnType("bit")
+                        .HasColumnType("boolean")
                         .HasColumnName("is_success");
 
                     b.Property<Guid?>("ModelId")
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("model_id");
 
                     b.Property<string>("ModelName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)")
+                        .HasColumnType("character varying(150)")
                         .HasColumnName("model_name");
 
                     b.Property<string>("ModelProvider")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
+                        .HasColumnType("character varying(50)")
                         .HasColumnName("model_provider");
 
                     b.Property<decimal?>("OutputCost")
                         .HasPrecision(18, 6)
-                        .HasColumnType("decimal(18,6)")
+                        .HasColumnType("numeric(18,6)")
                         .HasColumnName("output_cost");
 
                     b.Property<int>("OutputReasoningTokens")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("output_reasoning_tokens");
 
                     b.Property<int>("OutputTokens")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("output_tokens");
 
                     b.Property<long>("ResponseTimeMs")
@@ -202,23 +202,23 @@ namespace Pricely.Modules.AiEngine.Infrastructure.Database.Migrations
                     b.Property<string>("SessionId")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
+                        .HasColumnType("character varying(100)")
                         .HasColumnName("session_id");
 
                     b.Property<string>("SourceModule")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
+                        .HasColumnType("character varying(50)")
                         .HasColumnName("source_module");
 
                     b.Property<decimal?>("TotalCost")
                         .HasPrecision(18, 6)
-                        .HasColumnType("decimal(18,6)")
+                        .HasColumnType("numeric(18,6)")
                         .HasColumnName("total_cost");
 
                     b.Property<string>("UserId")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
+                        .HasColumnType("character varying(100)")
                         .HasColumnName("user_id");
 
                     b.HasKey("Id")
@@ -240,29 +240,29 @@ namespace Pricely.Modules.AiEngine.Infrastructure.Database.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<DateTime>("CreatedOnUtc")
-                        .HasColumnType("datetime2")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_on_utc");
 
                     b.Property<string>("Label")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)")
+                        .HasColumnType("character varying(150)")
                         .HasColumnName("label");
 
                     b.Property<string>("Provider")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)")
+                        .HasColumnType("character varying(30)")
                         .HasColumnName("provider");
 
                     b.Property<string>("ProviderModelId")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)")
+                        .HasColumnType("citext")
                         .HasColumnName("provider_model_id");
 
                     b.HasKey("Id")
@@ -278,41 +278,41 @@ namespace Pricely.Modules.AiEngine.Infrastructure.Database.Migrations
             modelBuilder.Entity("Pricely.Modules.AiEngine.Domain.Models.ModelPrice", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<decimal>("CacheWritePerMillion")
                         .HasPrecision(18, 6)
-                        .HasColumnType("decimal(18,6)")
+                        .HasColumnType("numeric(18,6)")
                         .HasColumnName("cache_write_per_million");
 
                     b.Property<decimal>("CachedInputPerMillion")
                         .HasPrecision(18, 6)
-                        .HasColumnType("decimal(18,6)")
+                        .HasColumnType("numeric(18,6)")
                         .HasColumnName("cached_input_per_million");
 
                     b.Property<decimal>("InputPerMillion")
                         .HasPrecision(18, 6)
-                        .HasColumnType("decimal(18,6)")
+                        .HasColumnType("numeric(18,6)")
                         .HasColumnName("input_per_million");
 
                     b.Property<Guid>("ModelId")
-                        .HasColumnType("uniqueidentifier")
+                        .HasColumnType("uuid")
                         .HasColumnName("model_id");
 
                     b.Property<decimal>("OutputPerMillion")
                         .HasPrecision(18, 6)
-                        .HasColumnType("decimal(18,6)")
+                        .HasColumnType("numeric(18,6)")
                         .HasColumnName("output_per_million");
 
                     b.Property<DateTime>("RecordedOnUtc")
-                        .HasColumnType("datetime2")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("recorded_on_utc");
 
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
+                        .HasColumnType("character varying(20)")
                         .HasColumnName("source");
 
                     b.Property<DateOnly>("ValidFrom")

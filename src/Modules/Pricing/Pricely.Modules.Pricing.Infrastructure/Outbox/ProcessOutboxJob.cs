@@ -99,10 +99,11 @@ internal sealed class ProcessOutboxJob(
                 SELECT
                    id AS  {nameof(OutboxMessageResponse.Id)},
                    content AS {nameof(OutboxMessageResponse.Content)}
-                FROM {Schemas.Pricing}.outbox_messages WITH (UPDLOCK, ROWLOCK)
+                FROM {Schemas.Pricing}.outbox_messages
                 WHERE processed_on_utc IS NULL
                 ORDER BY occurred_on_utc
-                OFFSET 0 ROWS FETCH NEXT {outboxOptions.Value.BatchSize} ROWS ONLY
+                LIMIT {outboxOptions.Value.BatchSize}
+                FOR UPDATE SKIP LOCKED
                 """;
 
 

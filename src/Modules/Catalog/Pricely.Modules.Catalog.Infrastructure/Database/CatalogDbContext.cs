@@ -19,6 +19,9 @@ public sealed class CatalogDbContext(DbContextOptions<CatalogDbContext> options)
     {
         modelBuilder.HasDefaultSchema(Schemas.Catalog);
 
+        // Case-insensitive text columns (emails, names, codes): PostgreSQL text comparisons are case-sensitive (ADR-012).
+        modelBuilder.HasPostgresExtension("citext");
+
         modelBuilder.ApplyConfiguration(new OutboxMessageConfiguration());
         modelBuilder.ApplyConfiguration(new OutboxMessageConsumerConfiguration());
         modelBuilder.ApplyConfiguration(new InboxMessageConfiguration());

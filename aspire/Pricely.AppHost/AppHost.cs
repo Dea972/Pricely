@@ -1,9 +1,9 @@
 IDistributedApplicationBuilder builder = DistributedApplication.CreateBuilder(args);
 
-IResourceBuilder<SqlServerServerResource> mssql = builder.AddSqlServer("mssql")
+IResourceBuilder<PostgresServerResource> postgres = builder.AddPostgres("postgres")
     .WithLifetime(ContainerLifetime.Persistent);
 
-IResourceBuilder<SqlServerDatabaseResource> db = mssql.AddDatabase("pricely-db");
+IResourceBuilder<PostgresDatabaseResource> db = postgres.AddDatabase("pricely-db");
 
 // Fixed port so that the issuer of the tokens (http://localhost:8080/realms/pricely) is stable (ADR-010).
 // Not persistent: the realm is imported only on the first start of a container, so each run re-imports the versioned file.

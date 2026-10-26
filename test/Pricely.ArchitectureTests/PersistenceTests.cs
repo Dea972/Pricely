@@ -57,5 +57,5 @@ public sealed class PersistenceTests
 
     private static DbContextOptions<TContext> Options<TContext>()
         where TContext : DbContext =>
-        new DbContextOptionsBuilder<TContext>().UseSqlServer("Server=localhost").Options;
+        new DbContextOptionsBuilder<TContext>().UseNpgsql("Host=localhost").Options;
 }

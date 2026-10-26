@@ -19,7 +19,7 @@ internal sealed class SearchProductsQueryHandler(IDbConnectionFactory dbConnecti
 
         const string sql =
             $"""
-             SELECT TOP (@Limit)
+             SELECT
                  id AS {nameof(ProductResponse.Id)},
                  name AS {nameof(ProductResponse.Name)},
                  brand AS {nameof(ProductResponse.Brand)},
@@ -27,13 +27,14 @@ internal sealed class SearchProductsQueryHandler(IDbConnectionFactory dbConnecti
                  manufacturer_reference AS {nameof(ProductResponse.ManufacturerReference)},
                  product_category_id AS {nameof(ProductResponse.ProductCategoryId)}
              FROM catalog.products
-             WHERE (@Pattern IS NULL
-                    OR name LIKE @Pattern ESCAPE '\'
-                    OR brand LIKE @Pattern ESCAPE '\'
-                    OR manufacturer_reference LIKE @Pattern ESCAPE '\'
+             WHERE (CAST(@Pattern AS text) IS NULL
+                    OR name ILIKE @Pattern ESCAPE '\'
+                    OR brand ILIKE @Pattern ESCAPE '\'
+                    OR manufacturer_reference ILIKE @Pattern ESCAPE '\'
                     OR gtin = @Text)
-               AND (@ProductCategoryId IS NULL OR product_category_id = @ProductCategoryId)
+               AND (CAST(@ProductCategoryId AS uuid) IS NULL OR product_category_id = @ProductCategoryId)
              ORDER BY name
+             LIMIT @Limit
              """;
 
         string? text = string.IsNullOrWhiteSpace(request.Text) ? null : request.Text.Trim();
