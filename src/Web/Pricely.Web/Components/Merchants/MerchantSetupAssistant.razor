@@ -103,6 +103,7 @@
         try
         {
             _suggestion = await CallAsync(() => Api.SuggestMerchantAsync(_website.Trim(), string.IsNullOrWhiteSpace(_name) ? null : _name.Trim(), CancellationToken.None));
+            ExplainUnreadablePage();
             if (_suggestion is not null)
             {
                 _proposedName = _suggestion.Name;

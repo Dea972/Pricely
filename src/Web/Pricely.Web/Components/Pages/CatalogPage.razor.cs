@@ -158,6 +158,7 @@ public partial class CatalogPage
         {
             string productPage = _productPage.Trim();
             _suggestion = await CallAsync(() => Api.SuggestProductAsync(productPage, CancellationToken.None));
+            ExplainUnreadablePage();
             if (_suggestion is not null)
             {
                 _product = new ProductForm

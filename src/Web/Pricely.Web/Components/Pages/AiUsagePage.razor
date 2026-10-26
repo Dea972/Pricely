@@ -93,7 +93,72 @@
     </div>
 
     <div class="card">
-        <div class="card-header"><div class="eyebrow">Catalogue des modèles</div></div>
+        <div class="card-header">
+            <div>
+                <div class="eyebrow">Catalogue des modèles</div>
+                <div class="small muted">Tarifs en dollars par million de jetons. « Rechercher les tarifs » lit la liste publique de LiteLLM, puis, pour un modèle qu'elle ne connaît pas, la page de tarifs du fournisseur avec l'IA.</div>
+            </div>
+            <button type="button" class="btn btn-secondary" disabled="@_saving" @onclick="ProposePricesAsync">@(_proposing ? "Recherche des tarifs…" : "Rechercher les tarifs")</button>
+        </div>
+        @if (_proposals is not null)
+        {
+            <div class="card-body proposals">
+                @if (_proposals.Count == 0)
+                {
+                    <p class="muted" style="margin: 0">Aucun modèle au catalogue : ajoute-en un ci-dessous.</p>
+                }
+                else
+                {
+                    <div class="table-scroll">
+                        <table class="data">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Modèle</th>
+                                    <th scope="col">En vigueur</th>
+                                    <th scope="col">Trouvé</th>
+                                    <th scope="col"><span class="visually-hidden">Appliquer</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (ModelPriceProposalDto proposal in _proposals)
+                                {
+                                    <tr>
+                                        <td class="mono">@proposal.ProviderModelId</td>
+                                        <td class="small">@PriceText(proposal.Current)</td>
+                                        <td class="small">
+                                            @PriceText(proposal.Proposed)
+                                            @if (proposal.Source is not null)
+                                            {
+                                                <div><span class="@(proposal.Notes.Contains(ToCheck) ? "badge badge-pending" : "badge badge-confirmed")">@SourceLabel(proposal)</span></div>
+                                            }
+                                            @foreach (string note in proposal.Notes.Where(n => n != ToCheck))
+                                            {
+                                                <div class="muted">@NoteLabel(note)</div>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (proposal.IsChanged && proposal.Proposed is not null)
+                                            {
+                                                <button type="button" class="btn btn-primary btn-small" disabled="@_saving" @onclick="() => ApplyAsync(proposal)">Appliquer</button>
+                                            }
+                                            else if (proposal.Proposed is not null)
+                                            {
+                                                <span class="small muted">À jour</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    @if (_proposals.Count(p => p.IsChanged && p.Proposed is not null) > 1)
+                    {
+                        <div><button type="button" class="btn btn-primary" disabled="@_saving" @onclick="ApplyAllAsync">Appliquer tous les tarifs trouvés</button></div>
+                    }
+                    <p class="small muted" style="margin: 0">Un tarif appliqué vaut à partir d'aujourd'hui (UTC) ; le coût des appels passés ne change pas.</p>
+                }
+            </div>
+        }
         <div class="table-scroll">
             <table class="data">
                 <thead>
@@ -126,6 +191,20 @@
                 </tbody>
             </table>
         </div>
+        <form class="card-body price-form" @onsubmit="RegisterModelAsync" aria-labelledby="new-model">
+            <div class="small" id="new-model"><strong>Ajouter un modèle</strong> <span class="muted">(identifiant du fournisseur, par exemple claude-sonnet-5-5)</span></div>
+            <div class="price-fields">
+                <label>
+                    Fournisseur
+                    <select class="field" @bind="_newModel.Provider">
+                        <option value="Anthropic">Anthropic</option>
+                    </select>
+                </label>
+                <label>Identifiant <input class="field mono" maxlength="150" required @bind="_newModel.ProviderModelId" /></label>
+                <label>Libellé <input class="field" maxlength="150" @bind="_newModel.DisplayName" /></label>
+            </div>
+            <div><button type="submit" class="btn btn-secondary" disabled="@_saving">Ajouter le modèle</button></div>
+        </form>
         @if (_priceModel is not null)
         {
             <form class="card-body price-form" @onsubmit="SavePriceAsync">

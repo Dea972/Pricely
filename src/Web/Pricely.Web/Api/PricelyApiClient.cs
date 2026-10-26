@@ -91,6 +91,13 @@ internal sealed class PricelyApiClient(HttpClient http, AccessTokenProvider toke
     public Task<IReadOnlyList<AiModelDto>> GetModelsAsync(CancellationToken cancellationToken) =>
         GetAsync<IReadOnlyList<AiModelDto>>("aiengine/models", cancellationToken);
 
+    /// <summary>Reads LiteLLM, and the pricing pages for the others: as long as a collection command.</summary>
+    public Task<IReadOnlyList<ModelPriceProposalDto>> ProposeModelPricesAsync(CancellationToken cancellationToken) =>
+        SendAsync<IReadOnlyList<ModelPriceProposalDto>>(HttpMethod.Post, "aiengine/models/price-proposals", cancellationToken);
+
+    public Task<Guid> RegisterModelAsync(string provider, string providerModelId, string label, CancellationToken cancellationToken) =>
+        SendAsync<Guid>(HttpMethod.Post, "aiengine/models", new { provider, providerModelId, label }, cancellationToken);
+
     public Task SetModelPriceAsync(Guid modelId, ModelPriceRequest price, CancellationToken cancellationToken) =>
         SendAsync(HttpMethod.Post, $"aiengine/models/{modelId}/prices", price, cancellationToken);
 

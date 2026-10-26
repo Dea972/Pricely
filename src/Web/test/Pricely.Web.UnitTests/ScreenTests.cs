@@ -157,6 +157,42 @@ public sealed class ScreenTests : BunitContext
         api.Bodies[put].Should().Be($$"""{"modelId":"{{Haiku}}"}""");
     }
 
+    [Fact]
+    public void AiUsage_ShouldProposeThePrices_AndApplyOneWithItsSource()
+    {
+        FakeServer api = Api(request => (request.Method.Method, request.RequestUri!.AbsolutePath) switch
+        {
+            ("GET", "/api/aiengine/features") => Responses.Json(Features),
+            ("GET", "/api/aiengine/models") => Responses.Json(Models),
+            ("GET", var path) when path.StartsWith("/api/aiengine/usage/summary", StringComparison.Ordinal) => Responses.Json("""{"calls":0,"cost":0}"""),
+            ("GET", _) => Responses.Json("[]"),
+            ("POST", "/api/aiengine/models/price-proposals") => Responses.Json($$"""
+                [{"modelId":"{{Haiku}}","provider":"Anthropic","providerModelId":"claude-haiku-5-5",
+                  "current":{"inputPerMillion":1,"cachedInputPerMillion":0.1,"cacheWritePerMillion":1.25,"outputPerMillion":5,"validFrom":"2026-10-01","source":"Manual"},
+                  "proposed":{"inputPerMillion":0.8,"cachedInputPerMillion":0.08,"cacheWritePerMillion":1,"outputPerMillion":4},
+                  "source":"LiteLlm","isChanged":true,"notes":[]},
+                 {"modelId":"{{Guid.NewGuid()}}","provider":"Anthropic","providerModelId":"claude-opus-5-5","current":null,
+                  "proposed":{"inputPerMillion":5,"cachedInputPerMillion":5,"cacheWritePerMillion":6.25,"outputPerMillion":25},
+                  "source":"AiReading","isChanged":true,"notes":["ToCheck","CachePricesMissing"]}]
+                """),
+            ("POST", _) => new HttpResponseMessage(HttpStatusCode.NoContent),
+            _ => new HttpResponseMessage(HttpStatusCode.NotFound)
+        });
+
+        IRenderedComponent<AiUsagePage> page = Render<AiUsagePage>();
+        page.WaitForAssertion(() => page.Markup.Should().Contain("claude-haiku-5-5"));
+        page.FindAll("button").Single(b => b.TextContent == "Rechercher les tarifs").Click();
+
+        page.WaitForAssertion(() => page.Markup.Should().Contain("LiteLLM").And.Contain("Lu par l'IA · à vérifier")
+            .And.Contain("Pas de tarif de cache publié : le tarif d'entrée est proposé."));
+
+        page.FindAll(".proposals button").First(b => b.TextContent == "Appliquer").Click();
+
+        page.WaitForAssertion(() => api.Requests.Should().Contain(r => r.RequestUri!.AbsolutePath == $"/api/aiengine/models/{Haiku}/prices"));
+        int applied = api.Requests.FindIndex(r => r.RequestUri!.AbsolutePath == $"/api/aiengine/models/{Haiku}/prices");
+        api.Bodies[applied].Should().Be("""{"validFrom":"2026-10-26","inputPerMillion":0.8,"cachedInputPerMillion":0.08,"cacheWritePerMillion":1,"outputPerMillion":4,"source":"LiteLlm"}""");
+    }
+
     protected override void Dispose(bool disposing)
     {
         if (disposing)

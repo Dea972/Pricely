@@ -217,6 +217,31 @@ Conséquences et choix :
 - La collecte suit la même règle : l'agent ne transmet pas un autre conditionnement (consigne de son prompt), et le garde-fou de prix (ADR-005, `PriceAnomalyPolicy`) signale ce qui lui échapperait.
 - Pas de prix unitaire calculé ni de facteur de conversion entre conditionnements pour l'instant.
 
+## ADR-020 — Paramétrage assisté par l'IA : enseignes et produits
+
+**Statut** : acceptée (2026-10-26), décisions du propriétaire du projet (« site → fiche complète », « produit depuis une page produit »).
+
+- **Principe** : l'IA propose, l'utilisateur valide. Une proposition n'enregistre rien ; l'enregistrement passe par les commandes existantes (`RegisterMerchant`, `RegisterProduct`) et leurs règles. Ce que le modèle avance est vérifié par du code, jamais repris tel quel.
+- **Lecture des pages partagée** : `IWebPageReader` (Common.Application) et `HttpWebPageReader` (Common.Infrastructure) remplacent le lecteur propre à Pricing (ADR-017 inchangé : adresses publiques vérifiées à la connexion, sans proxy, une tentative, 3 Mo). Le lecteur ne suit jamais une redirection lui-même ; `ReadFollowingAsync` la suit si l'appelant l'accepte (le site de l'enseigne pour Pricing). Il extrait aussi le titre et les pages de recherche que le site déclare (`SearchAction` des données structurées, formulaires GET avec un champ de recherche).
+- **Enseigne** (Pricing, fonctionnalité `pricing.merchant-setup`) : `POST pricing/merchants/suggestions` lit la page d'accueil (redirections suivies, l'adresse finale devient le site), donne au modèle le texte, les pages de recherche déclarées et les typologies, puis :
+  - ne garde qu'une page de recherche sur le site (`Merchant.BelongsToSite`), sinon la première déclarée ;
+  - la teste par une vraie recherche (mot proposé par le modèle) : la page répond-elle, le mot y figure-t-il ;
+  - ne garde que des typologies connues.
+  Sans modèle (échec, pas de clé), la proposition vient du site seul (titre, page déclarée). `POST pricing/merchants/{id}/profiles` ajoute ensuite l'enseigne aux profils choisis : une typologie qui héritait ses enseignes reçoit sa propre liste (les héritées, puis la nouvelle), un profil par sauvegarde.
+- **Produit** (Catalog, fonctionnalité `catalog.product-entry`) : `POST catalog/products/suggestions` lit une page produit (fabricant ou enseigne) ; le GTIN n'est gardé que s'il est valide et figure dans la page (avec ou sans ses zéros de tête), la référence fabricant que si elle y figure, la typologie que si elle existe. Un produit au même GTIN est signalé (recherché sous ses longueurs 8, 12, 13 et 14). Un GTIN seul ne suffit pas : sans API de recherche (ADR-017), il faut l'adresse d'une page.
+- **Front** : `/merchants` (« Ajouter une enseigne avec l'IA » : proposition modifiable, état du test de recherche, typologies à cocher) et `/catalog` (« Pré-remplir avec l'IA » dans le formulaire produit). Scope `pricely.write`.
+
+## ADR-021 — Tarifs des modèles : LiteLLM, l'IA en secours, appliqués par l'utilisateur
+
+**Statut** : acceptée (2026-10-26), décisions du propriétaire du projet (« LiteLLM, IA en secours », « proposés, tu valides »).
+
+- `POST aiengine/models/price-proposals` cherche le tarif de chaque modèle du catalogue et le présente à côté du tarif en vigueur ; rien n'est enregistré.
+  1. **LiteLLM** (`IPublishedPriceList`, `LiteLlmPriceList`) : la liste publique `model_prices_and_context_window.json` (adresse dans `AiEngine:Prices:LiteLlmPriceList`), entrée `identifiant` ou `fournisseur/identifiant`, fournisseur vérifié (`litellm_provider`), prix par jeton × 1 000 000. Lue par le client HTTP standard (proxy et résilience des ServiceDefaults) : c'est une source fixe, pas une adresse donnée par un utilisateur.
+  2. **IA en secours** (fonctionnalité `aiengine.price-reading`), pour les modèles que LiteLLM ne connaît pas : la page de tarifs du fournisseur (`AiEngine:Prices:PricingPages:<Fournisseur>`, Anthropic : `https://platform.claude.com/docs/en/about-claude/pricing`) est lue par `IWebPageReader`, réduite aux lignes de prix, et le modèle extrait les tarifs. Un tarif n'est gardé que si la page l'affiche (« $3 », « $3.75 ») ; il est marqué « à vérifier ».
+  3. Sans tarif de cache publié, le tarif d'entrée est proposé (signalé). Sans source, le modèle reste à saisir à la main.
+- **Application** : l'utilisateur applique une proposition (ou toutes) dans `/ai` ; `SetModelPriceCommand` reçoit sa source (`PriceSource.LiteLlm`, `AiReading`, `Manual` par défaut), le tarif vaut à partir du jour (UTC) et le coût des appels passés ne change pas (tarif figé, ADR-007). Pas d'import automatique planifié.
+- `/ai` permet aussi d'ajouter un modèle au catalogue (`POST aiengine/models`).
+
 ## Compléments du 2026-10-26 (étapes 5b et 6)
 
 - **Jetons du front sur plusieurs instances** (complète l'ADR-015) : `ServerTokenStore` écrit dans `IDistributedCache` (mémoire par défaut, `AddDistributedMemoryCache`), jetons chiffrés par la protection des données (`SetApplicationName("Pricely.Web")`). Plusieurs instances : brancher un cache partagé (Redis…) et des clés de protection partagées, sans changer le code. Le verrou de rafraîchissement reste local à l'instance (64 verrous répartis par session, sans fuite) ; deux instances peuvent rafraîchir la même session en même temps, Keycloak refusant alors le refresh token déjà utilisé si la rotation est active (session close, reconnexion).

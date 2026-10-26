@@ -29,6 +29,11 @@ public partial class AiUsagePage
     private AiModelDto? _priceModel;
     private PriceForm _price = new();
     private bool _saving;
+    private bool _proposing;
+    private IReadOnlyList<ModelPriceProposalDto>? _proposals;
+    private ModelForm _newModel = new();
+
+    private const string ToCheck = "ToCheck";
 
     [Inject]
     private PricelyApiClient Api { get; set; } = default!;
@@ -167,6 +172,128 @@ public partial class AiUsagePage
         {
             _saving = false;
         }
+    }
+
+    private async Task ProposePricesAsync()
+    {
+        if (_saving)
+        {
+            return;
+        }
+
+        _saving = true;
+        _proposing = true;
+        Problem = null;
+
+        try
+        {
+            _proposals = await CallAsync(() => Api.ProposeModelPricesAsync(CancellationToken.None));
+        }
+        finally
+        {
+            _saving = false;
+            _proposing = false;
+        }
+    }
+
+    private Task ApplyAsync(ModelPriceProposalDto proposal) => ApplyManyAsync([proposal]);
+
+    private Task ApplyAllAsync() => ApplyManyAsync([.. _proposals!.Where(p => p.IsChanged && p.Proposed is not null)]);
+
+    /// <summary>From today (UTC), with the source of the proposal; the proposals are then looked up again.</summary>
+    private async Task ApplyManyAsync(IReadOnlyList<ModelPriceProposalDto> proposals)
+    {
+        if (_saving)
+        {
+            return;
+        }
+
+        _saving = true;
+        Problem = null;
+        var today = DateOnly.FromDateTime(Clock.GetUtcNow().UtcDateTime);
+
+        try
+        {
+            bool applied = await CallAsync(async () =>
+            {
+                foreach (ModelPriceProposalDto proposal in proposals)
+                {
+                    PriceDto price = proposal.Proposed!;
+                    await Api.SetModelPriceAsync(
+                        proposal.ModelId,
+                        new ModelPriceRequest(today, price.InputPerMillion, price.CachedInputPerMillion, price.CacheWritePerMillion, price.OutputPerMillion, proposal.Source),
+                        CancellationToken.None);
+                }
+
+                return proposals;
+            }) is not null;
+
+            if (applied)
+            {
+                await LoadCatalogAsync();
+                _proposals = [.. _proposals!.Select(p => proposals.Contains(p) ? p with { IsChanged = false, Current = p.Proposed } : p)];
+            }
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task RegisterModelAsync()
+    {
+        if (_saving || string.IsNullOrWhiteSpace(_newModel.ProviderModelId))
+        {
+            return;
+        }
+
+        _saving = true;
+        Problem = null;
+
+        try
+        {
+            string id = _newModel.ProviderModelId.Trim();
+            string label = string.IsNullOrWhiteSpace(_newModel.DisplayName) ? id : _newModel.DisplayName.Trim();
+            if (await CallAsync(async () => { await Api.RegisterModelAsync(_newModel.Provider, id, label, CancellationToken.None); return id; }) is not null)
+            {
+                _newModel = new ModelForm();
+                await LoadCatalogAsync();
+            }
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private static string PriceText(PriceDto? price) =>
+        price is null
+            ? "—"
+            : $"entrée {Format.Usd(price.InputPerMillion)} · sortie {Format.Usd(price.OutputPerMillion)} · cache {Format.Usd(price.CachedInputPerMillion)} / {Format.Usd(price.CacheWritePerMillion)}";
+
+    private static string SourceLabel(ModelPriceProposalDto proposal) =>
+        proposal.Source switch
+        {
+            "LiteLlm" => "LiteLLM",
+            _ => "Lu par l'IA · à vérifier"
+        };
+
+    private static string NoteLabel(string note) =>
+        note switch
+        {
+            "NotFound" => "Ni LiteLLM ni la page de tarifs ne donnent ce modèle : saisis son tarif à la main.",
+            "PriceListUnavailable" => "La liste de LiteLLM n'a pas pu être lue.",
+            "CachePricesMissing" => "Pas de tarif de cache publié : le tarif d'entrée est proposé.",
+            _ => note
+        };
+
+    private sealed class ModelForm
+    {
+        public string Provider { get; set; } = "Anthropic";
+
+        public string ProviderModelId { get; set; } = string.Empty;
+
+        public string? DisplayName { get; set; }
     }
 
     private sealed class PriceForm

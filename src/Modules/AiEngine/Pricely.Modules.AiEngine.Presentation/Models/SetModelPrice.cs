@@ -25,7 +25,8 @@ internal sealed class SetModelPrice : IEndpoint
                         request.InputPerMillion,
                         request.CachedInputPerMillion,
                         request.CacheWritePerMillion,
-                        request.OutputPerMillion),
+                        request.OutputPerMillion)
+                    { Source = request.Source },
                     cancellationToken);
 
                 return result.Match(Results.NoContent, ApiResults.Problem);
@@ -46,5 +47,8 @@ internal sealed class SetModelPrice : IEndpoint
         public decimal CacheWritePerMillion { get; init; }
 
         public decimal OutputPerMillion { get; init; }
+
+        /// <summary><c>Manual</c> (default), <c>LiteLlm</c> or <c>AiReading</c>: the proposal that was applied.</summary>
+        public string? Source { get; init; }
     }
 }

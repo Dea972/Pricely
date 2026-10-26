@@ -27,7 +27,7 @@ internal sealed class SetModelPriceCommandHandler(
                 request.CachedInputPerMillion,
                 request.CacheWritePerMillion,
                 request.OutputPerMillion),
-            PriceSource.Manual,
+            Enum.TryParse(request.Source, ignoreCase: true, out PriceSource source) ? source : PriceSource.Manual,
             dateTimeProvider.UtcNow);
         if (result.IsFailure)
         {

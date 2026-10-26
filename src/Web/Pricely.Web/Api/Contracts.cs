@@ -260,7 +260,21 @@ public sealed record AiModelDto
     public decimal? OutputPerMillion { get; init; }
 }
 
-public sealed record ModelPriceRequest(DateOnly ValidFrom, decimal InputPerMillion, decimal CachedInputPerMillion, decimal CacheWritePerMillion, decimal OutputPerMillion);
+/// <param name="Source"><c>Manual</c>, or the proposal applied: <c>LiteLlm</c>, <c>AiReading</c>.</param>
+public sealed record ModelPriceRequest(DateOnly ValidFrom, decimal InputPerMillion, decimal CachedInputPerMillion, decimal CacheWritePerMillion, decimal OutputPerMillion, string? Source = null);
+
+/// <summary>A price found for a model of the catalogue (<c>aiengine/models/price-proposals</c>), nothing saved yet.</summary>
+public sealed record ModelPriceProposalDto(
+    Guid ModelId,
+    string Provider,
+    string ProviderModelId,
+    PriceDto? Current,
+    PriceDto? Proposed,
+    string? Source,
+    bool IsChanged,
+    IReadOnlyList<string> Notes);
+
+public sealed record PriceDto(decimal InputPerMillion, decimal CachedInputPerMillion, decimal CacheWritePerMillion, decimal OutputPerMillion, DateOnly? ValidFrom, string? Source);
 
 public sealed record CollectionProfileSummaryDto(Guid ProductCategoryId, string? CategoryName, int PreferredMerchantCount, bool HasInstructions);
 

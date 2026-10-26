@@ -1,3 +1,6 @@
+using Pricely.Modules.AiEngine.Infrastructure.Prices;
+using Pricely.Modules.AiEngine.Application.Abstractions.Prices;
+using Pricely.Modules.AiEngine.Application;
 using System.Reflection;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
@@ -57,6 +60,11 @@ public static class AiEngineModule
         services.AddScoped<IFeatureSettingRepository, FeatureSettingRepository>();
         services.AddScoped<ILlmCallRepository, LlmCallRepository>();
         services.AddScoped<IAgentActivityRepository, AgentActivityRepository>();
+
+        // Prices of the models (ADR-021): the list of LiteLLM, else the AI on the pricing page of the provider.
+        services.AddSingleton(configuration.GetSection(ModelPriceOptions.SectionName).Get<ModelPriceOptions>() ?? new ModelPriceOptions());
+        services.AddHttpClient<IPublishedPriceList, LiteLlmPriceList>(client => client.Timeout = TimeSpan.FromSeconds(60));
+        services.AddAiFeature(AiEngineAiFeatures.PriceReading);
 
         // Replaces the default resolver of Common: the target of a feature comes from the settings.
         services.Replace(ServiceDescriptor.Scoped<ILlmTargetResolver, LlmTargetResolver>());
