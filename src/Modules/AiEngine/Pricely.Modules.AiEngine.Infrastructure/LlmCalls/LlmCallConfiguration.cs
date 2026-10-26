@@ -22,6 +22,7 @@ internal sealed class LlmCallConfiguration : IEntityTypeConfiguration<LlmCall>
         builder.Property(c => c.FeatureCode).HasMaxLength(LlmCall.FeatureCodeMaxLength);
         builder.Property(c => c.SourceModule).HasMaxLength(LlmCall.SourceModuleMaxLength);
         builder.Property(c => c.UserId).HasMaxLength(LlmCall.UserIdMaxLength);
+        builder.Property(c => c.AgentName).HasMaxLength(LlmCall.AgentNameMaxLength);
         builder.Property(c => c.ModelProvider).HasMaxLength(LlmCall.ModelProviderMaxLength);
         builder.Property(c => c.ModelName).HasMaxLength(LlmCall.ModelNameMaxLength);
         builder.Property(c => c.ErrorMessage).HasMaxLength(LlmCall.ErrorMessageMaxLength);

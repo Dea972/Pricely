@@ -10,11 +10,13 @@ using Pricely.Common.Application.EventBus;
 using Pricely.Common.Presentation.Endpoints;
 using Pricely.Modules.AiEngine.Application.Abstractions.Data;
 using Pricely.Modules.AiEngine.Domain.Features;
+using Pricely.Modules.AiEngine.Domain.AgentActivities;
 using Pricely.Modules.AiEngine.Domain.LlmCalls;
 using Pricely.Modules.AiEngine.Domain.Models;
 using Pricely.Modules.AiEngine.Infrastructure.Database;
 using Pricely.Modules.AiEngine.Infrastructure.Features;
 using Pricely.Modules.AiEngine.Infrastructure.Inbox;
+using Pricely.Modules.AiEngine.Infrastructure.AgentActivities;
 using Pricely.Modules.AiEngine.Infrastructure.LlmCalls;
 using Pricely.Modules.AiEngine.Infrastructure.Models;
 
@@ -54,6 +56,7 @@ public static class AiEngineModule
         services.AddScoped<IModelRepository, ModelRepository>();
         services.AddScoped<IFeatureSettingRepository, FeatureSettingRepository>();
         services.AddScoped<ILlmCallRepository, LlmCallRepository>();
+        services.AddScoped<IAgentActivityRepository, AgentActivityRepository>();
 
         // Replaces the default resolver of Common: the target of a feature comes from the settings.
         services.Replace(ServiceDescriptor.Scoped<ILlmTargetResolver, LlmTargetResolver>());
@@ -71,8 +74,12 @@ public static class AiEngineModule
     /// <summary>
     /// Integration events consumed by the module (stored in its inbox, then handled by Presentation handlers).
     /// </summary>
-    public static void ConfigureConsumers(IRegistrationConfigurator registrationConfigurator) =>
+    public static void ConfigureConsumers(IRegistrationConfigurator registrationConfigurator)
+    {
         registrationConfigurator.AddConsumer<IntegrationEventConsumer<LlmCalledIntegrationEvent>>();
+        registrationConfigurator.AddConsumer<IntegrationEventConsumer<AiToolInvokedIntegrationEvent>>();
+        registrationConfigurator.AddConsumer<IntegrationEventConsumer<AiActionDecidedIntegrationEvent>>();
+    }
 
     private static void AddIntegrationEventHandlers(this IServiceCollection services)
     {

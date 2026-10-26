@@ -16,6 +16,8 @@ public sealed class LlmCall : Entity
 
     public const int UserIdMaxLength = 100;
 
+    public const int AgentNameMaxLength = 50;
+
     public const int ModelProviderMaxLength = 50;
 
     public const int ModelNameMaxLength = 150;
@@ -38,6 +40,9 @@ public sealed class LlmCall : Entity
     public string SourceModule { get; private set; }
 
     public string? UserId { get; private set; }
+
+    /// <summary>Agent on whose behalf the call was made (Agentic module), if any.</summary>
+    public string? AgentName { get; private set; }
 
     public string ModelProvider { get; private set; }
 
@@ -89,6 +94,7 @@ public sealed class LlmCall : Entity
             FeatureCode = Truncate(details.FeatureCode, FeatureCodeMaxLength),
             SourceModule = Truncate(details.SourceModule, SourceModuleMaxLength),
             UserId = details.UserId is null ? null : Truncate(details.UserId, UserIdMaxLength),
+            AgentName = details.AgentName is null ? null : Truncate(details.AgentName, AgentNameMaxLength),
             ModelProvider = Truncate(details.ModelProvider, ModelProviderMaxLength),
             ModelName = Truncate(details.ModelName, ModelNameMaxLength),
             InputTokens = details.TokenUsage.InputTokens,
