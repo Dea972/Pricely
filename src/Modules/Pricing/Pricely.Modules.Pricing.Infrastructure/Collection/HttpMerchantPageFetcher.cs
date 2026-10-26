@@ -62,10 +62,14 @@ internal sealed class HttpMerchantPageFetcher(IHttpClientFactory httpClientFacto
         }
     }
 
-    /// <summary>The primary handler of the client: redirects and connections under Pricely's control.</summary>
+    /// <summary>
+    /// The primary handler of the client: redirects and connections under Pricely's control. No proxy: through a proxy,
+    /// the guard would see the address of the proxy instead of the one of the merchant site.
+    /// </summary>
     public static SocketsHttpHandler CreateHandler() =>
         new()
         {
+            UseProxy = false,
             AllowAutoRedirect = false,
             AutomaticDecompression = DecompressionMethods.All,
             ConnectCallback = PublicAddressGuard.ConnectAsync,

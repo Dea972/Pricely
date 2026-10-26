@@ -43,6 +43,9 @@ classDiagram
         string Name
         Uri Website
         bool IsActive
+        string? SearchTemplate
+        +ConfigureSearch(template)
+        +Owns(address)
     }
     class CollectionProfile {
         Guid Id
@@ -77,6 +80,15 @@ classDiagram
         bool IsFlaggedAsAnomaly
         +Record(offer, price, availability, observedOn, referencePrices)
     }
+    class PageSnapshot {
+        Guid Id
+        Guid MerchantId
+        Uri Address
+        string Content
+        DateTime FetchedOnUtc
+        +Capture(merchant, address, content, now)
+        +ShowsPrice(amount)
+    }
     class CatalogProduct {
         <<read model>>
     }
@@ -87,6 +99,7 @@ classDiagram
     PreferredMerchant --> Merchant
     Offer --> Merchant
     PriceObservation --> Offer
+    PageSnapshot --> Merchant
     Offer ..> CatalogProduct : ProductId
     CollectionProfile ..> CatalogCategory : ProductCategoryId
 ```

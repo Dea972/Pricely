@@ -180,11 +180,52 @@ Conséquences et choix :
 - **Style** : CSS maison à partir des tokens de `docs/design` (`wwwroot/app.css`), IBM Plex depuis Google Fonts, aucune bibliothèque de composants. Accessibilité : focus visible, `aria-current`, cibles de 44 px, une couleur n'est jamais le seul signal.
 - **Découpage** : 5a (socle, Assistant, fiche produit, recherche) ; 5b (offres à valider, profils de collecte, IA et coûts, finitions mobile).
 
+## ADR-016 — Tools MCP selon le scope du jeton
+
+**Statut** : acceptée (2026-10-26), décision du propriétaire du projet (« écriture selon le scope »). Remplace la règle « `/mcp` n'expose que les tools en lecture » des ADR-013 et ADR-014 ; complète l'ADR-009.
+
+- Chaque tool exige un scope : `pricely.read` pour un tool `ReadOnly`, sinon celui de son `[ToolScope]`, sinon `pricely.write` (`McpServerExtensions.RequiredScope`, la règle d'approbation de l'agent interne). Aujourd'hui : lecture (dont `fetch_merchant_page`) → `pricely.read` ; `collect_product_offers`, `submit_collected_offer` → `pricely.write` ; `confirm_offer`, `reject_offer` → `pricely.review`.
+- `tools/list` ne renvoie que les tools autorisés par les scopes du jeton (filtre de requêtes du SDK MCP). Chaque appel revérifie le scope (`ScopedMcpServerTool`) : un client peut appeler un tool par son nom sans l'avoir listé ; le refus est une erreur de tool (« Le scope « pricely.review » est requis pour ce tool. »), pas une exception.
+- Pas de file d'approbation côté MCP : les annotations (`ReadOnly = false`, `Destructive` pour `reject_offer`) font demander confirmation à l'utilisateur par le client MCP, et le scope du jeton est le consentement. L'agent interne, lui, garde ses actions en attente (ADR-013).
+- Les prompts MCP des modules sont publiés (`WithPromptsFromAssembly`) : `collect_product_prices` donne la procédure de collecte de l'ADR-017.
+
+## ADR-017 — Collecte par l'agent sur le site de l'enseigne
+
+**Statut** : acceptée (2026-10-26), décision du propriétaire du projet (« recherche du site enseigne »). Met en œuvre les ADR-008 et ADR-009 pour la collecte.
+
+- **Pas d'API de recherche web externe.** Une enseigne peut déclarer sa page de recherche (`Merchant.SearchTemplate`, adresse de son site contenant `{query}`, `PUT pricing/merchants/{id}/search`) ; l'agent y cherche le produit puis ouvre la page produit. Sans gabarit, il ne peut lire qu'une adresse du site (fournie par le modèle).
+- **Lecture d'une page** (`MerchantPageReader`, tool `fetch_merchant_page`) : l'adresse et chaque redirection (3 au plus, jamais suivies automatiquement) doivent appartenir au site de l'enseigne active (`Merchant.Owns` : http(s), même hôte ou sous-domaine, `www.` ignoré, pas d'identifiants dans l'adresse, port par défaut ou celui du site). Le port `IMerchantPageFetcher` (`HttpMerchantPageFetcher`) ne se connecte qu'à des adresses publiques, vérifiées **à la connexion** (`PublicAddressGuard` : ni boucle locale, ni réseau privé, ni lien local, ni métadonnées cloud), sans proxy (derrière un proxy, le garde-fou verrait l'adresse du proxy), 3 Mo au plus, 20 s. Le HTML est réduit à un texte : données structurées (JSON-LD, méta produit et prix, microdonnées) puis texte visible.
+- **Instantané** : chaque page lue est gardée (`PageSnapshot`, table `pricing.page_snapshots`, 200 000 caractères au plus) ; le modèle en reçoit les 20 000 premiers caractères et l'identifiant.
+- **Soumission** (`submit_collected_offer`, ou `submit_offer` pour l'agent interne de collecte) : l'offre cite un instantané ; son prix doit figurer dans le texte de la page (écritures française et anglaise, séparateurs de milliers), sinon `PageSnapshots.PriceNotShown`. L'adresse et la date de l'offre sont celles de l'instantané, jamais celles du modèle. L'enseigne doit être dans le plan de collecte du produit. Ce que la page montre (titre, GTIN, marque, référence) est recopié dans `MatchEvidence` avec la similarité et la justification du modèle (`ObservedTitle`, `AiRationale`), pour l'écran de revue.
+- **L'agent ne confirme jamais** : l'offre passe par `OfferMatchingPolicy` comme toute offre collectée ; le reste attend la revue humaine (`confirm_offer` / `reject_offer`, scope `pricely.review`).
+- **`IOfferCollector` = `AgentOfferCollector`** (remplace `NotConfiguredOfferCollector`) : fonctionnalité `pricing.offer-collection`, agent `pricing-collector`, session `collection:{produit}:{guid}` dans le journal AiEngine, tools limités aux enseignes de la demande et aux instantanés du passage, une offre par enseigne (la dernière transmise), au plus 6 allers-retours par enseigne (40 en tout). Une panne du modèle avant toute offre est un échec (`Collection.AgentFailed`) ; après, les offres déjà vérifiées sont gardées. `CollectOffersJob` reste désactivé par défaut.
+- **Limites connues** : un site qui ne rend son contenu qu'en JavaScript n'expose pas son prix dans le HTML (le JSON-LD le porte souvent) ; la vérification du prix prouve qu'il figure dans la page, pas qu'il s'agit du bon produit (rôle de la revue) ; un très petit prix (« 1 ») est plus facile à retrouver par hasard.
+
+## ADR-018 — Migrations appliquées par un service dédié
+
+**Statut** : acceptée (2026-10-26), décision du propriétaire du projet (« service de migration »). Remplace la règle de l'ADR-011 « l'API applique les migrations en Development ».
+
+- `src/API/Pricely.MigrationService` (worker) compose les modules comme l'API (`AddPricelyAsync`), applique les migrations des cinq modules (`ApplyMigrationsAsync`) puis s'arrête. L'hôte n'est jamais démarré : aucun job (outbox, inbox, collecte) n'y tourne. La validation complète du conteneur reste celle de l'API (les services HTTP de la composition n'ont pas de routage dans un worker).
+- L'AppHost lance `pricely-migrations` après PostgreSQL et ne démarre l'API qu'une fois le service terminé (`WaitForCompletion`). L'API n'applique plus aucune migration, quel que soit l'environnement.
+- Hors AppHost (déploiement, poste sans Aspire) : lancer le service avec la même chaîne `ConnectionStrings__pricely-db`, avant l'API. Un échec de migration fait échouer le service (code de sortie non nul) et l'API n'est pas démarrée par l'AppHost.
+
+## ADR-019 — Un produit de référence par conditionnement
+
+**Statut** : acceptée (2026-10-26), décision du propriétaire du projet. Clôt la décision ouverte sur les conditionnements.
+
+- Un sac de 25 kg et un sac de 35 kg, un lot de 10 et l'unité sont des produits de référence distincts (GTIN différents en général). Une offre rapproche une page d'un seul produit ; une enseigne qui vend plusieurs conditionnements a une offre par produit.
+- La collecte suit la même règle : l'agent ne transmet pas un autre conditionnement (consigne de son prompt), et le garde-fou de prix (ADR-005, `PriceAnomalyPolicy`) signale ce qui lui échapperait.
+- Pas de prix unitaire calculé ni de facteur de conversion entre conditionnements pour l'instant.
+
+## Compléments du 2026-10-26 (étapes 5b et 6)
+
+- **Jetons du front sur plusieurs instances** (complète l'ADR-015) : `ServerTokenStore` écrit dans `IDistributedCache` (mémoire par défaut, `AddDistributedMemoryCache`), jetons chiffrés par la protection des données (`SetApplicationName("Pricely.Web")`). Plusieurs instances : brancher un cache partagé (Redis…) et des clés de protection partagées, sans changer le code. Le verrou de rafraîchissement reste local à l'instance (64 verrous répartis par session, sans fuite) ; deux instances peuvent rafraîchir la même session en même temps, Keycloak refusant alors le refresh token déjà utilisé si la rotation est active (session close, reconnexion).
+- **Consommation par conversation** : AiEngine expose `aiengine/usage/sessions/{sessionId}` ; l'identifiant de session d'un tour d'agent est l'identifiant de la conversation. Le panneau de l'assistant affiche la conversation en cours et le total du jour de l'agent ; le journal étant alimenté par l'inbox, il se met à jour quelques secondes après le tour.
+- **Streaming réel** : le chat client Anthropic lit la réponse en SSE (`stream: true`) ; le texte arrive au fil de l'eau, chaque appel de tool à la fin de son bloc, l'usage à la fin du message. Un événement `error` du flux est un échec de l'appel.
+- **Tests d'intégration hérités** (`Pricely.Modules.Users.IntegrationTests`, `Pricely.IntegrationTests`) supprimés : ils visaient un module `Ticketing` du template et ne compilaient plus.
+
 ## Décisions ouvertes
 
-- Application des migrations en production (job de déploiement, script SQL idempotent) : ADR-011 l'interdit à l'API, le mécanisme reste à choisir.
-- Filtrage des tools MCP par scope (annotations ou attribut dédié) et approbation côté client MCP : aujourd'hui `/mcp` n'expose que les tools en lecture (ADR-013).
-- Front sur plusieurs instances : cache partagé des jetons (Redis…) et clés de protection des données partagées (ADR-015).
-- Consommation affichée par conversation : AiEngine ne donne aujourd'hui l'usage que par agent, fonctionnalité, modèle ou jour ; le panneau de l'assistant montre l'usage du jour de l'agent.
-- API de recherche web pour l'agent de collecte (Brave, Tavily, Bing…).
-- Plusieurs conditionnements d'un même produit chez une enseigne : aujourd'hui un produit de référence par conditionnement.
+- Conservation des instantanés de pages (`pricing.page_snapshots`) : rien ne les purge aujourd'hui ; une durée de rétention est à fixer avant d'activer la collecte planifiée.
+- Sites rendus en JavaScript : un navigateur sans tête (Playwright) derrière le même port `IMerchantPageFetcher`, si le HTML et le JSON-LD ne suffisent pas.
+- Proxy sortant obligatoire en production : la lecture des pages se connecte en direct (ADR-017) ; un proxy demanderait de vérifier l'adresse côté proxy.

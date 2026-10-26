@@ -40,7 +40,7 @@ dotnet ef migrations add <Name> \
 dotnet ef database update -p src/Modules/<M>/Pricely.Modules.<M>.Infrastructure -s src/API/Pricely.Api -c <M>DbContext
 ```
 
-Localement, l'AppHost Aspire démarre PostgreSQL (`pricely-db`) et l'API applique elle-même les migrations des quatre modules au démarrage, en Development uniquement (`MigrationExtensions.ApplyMigrationsAsync` dans `Pricely.Sdk`). Un nouveau module doit y être ajouté.
+Localement, l'AppHost Aspire démarre PostgreSQL (`pricely-db`) puis `Pricely.MigrationService`, qui applique les migrations de tous les modules (`MigrationExtensions.ApplyMigrationsAsync` dans `Pricely.Sdk`) avant que l'API ne démarre (ADR-018). L'API n'applique aucune migration. Un nouveau module doit être ajouté à `ApplyMigrationsAsync`.
 
 ## Requêtes Dapper
 

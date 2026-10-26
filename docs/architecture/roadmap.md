@@ -24,27 +24,28 @@ Chaque étape fait l'objet d'une PR sur `main`, CI verte, revue `architecture-re
 - Endpoints : modèles et tarifs, cibles des fonctionnalités, agents, statistiques (synthèse, par jour, par modèle, par fonctionnalité).
 - La recherche des tarifs sur le web est reportée.
 
-## Étape 3 — Tools et MCP HTTP (ADR-009) — fait, sauf le filtrage des tools par scope (`/mcp` exige `pricely.read`)
+## Étape 3 — Tools et MCP HTTP (ADR-009) — fait ; tools listés selon le scope du jeton (ADR-016)
 
 - Abstraction de tool dans `Common.Presentation` (lecture / écriture, approbation requise) ; découverte par assembly, instanciation par DI.
 - Tools de consultation : `search_products`, `get_product`, `get_category_tree`, `compare_prices`, `get_price_history`, `list_merchants`, `list_price_anomalies`, `get_collection_plan`.
 - Serveur MCP en transport HTTP sur `/mcp`, protégé par les jetons Keycloak (ADR-010) : métadonnée `/.well-known/oauth-protected-resource`, scopes par tool ; remplace l'amorce stdio du template.
 - Critère : interroger Pricely depuis Claude Desktop / Claude Code.
 
-## Étape 4 — Agent interne (ADR-008, ADR-013) — fait, sans streaming des jetons
+## Étape 4 — Agent interne (ADR-008, ADR-013) — fait ; streaming réel du fournisseur Anthropic depuis l'étape 6
 
 - Passerelle : `IChatClient` par fonctionnalité, `FunctionInvokingChatClient`, journalisation `LlmCalled` conservée.
 - `AgentConversation` (messages, appels d'outils, résultats), actions en attente pour les tools soumis à approbation.
 - Fonctionnalité `pricing.assistant` ; endpoint de conversation en streaming.
 - Fait : module générique `Agentic` (ADR-014) et agent `assistant` dans `src/Agents` (fonctionnalité `agents.assistant`), journal des tools et décisions dans AiEngine, chat client Anthropic avec tools, actions en attente et validation, endpoint SSE, conversations persistées (schéma `agentic`), tool d'écriture `collect_product_offers`, endpoints de lecture des écrans (offres d'un produit, historique, anomalies, plan de collecte, recherche), scopes sur tous les endpoints.
 
-## Étape 5 — Front Blazor (ADR-015)
+## Étape 5 — Front Blazor (ADR-015) — fait
 
 - Chat en streaming ; composants de réponse typés (comparatif de prix, offres à valider, plan de collecte, anomalies, historique) ; boutons d'action qui appellent directement les commandes ; validation des actions en attente.
 - 5a — fait : `src/Web/Pricely.Web` (Interactive Server, OIDC côté serveur avec `pricely-web`, jetons gardés sur le serveur), lancé par l'AppHost ; Assistant (événements SSE, pastilles d'outils, composants typés, carte « Action proposée » avec validation / refus, conversations, panneau de contexte) ; fiche produit (offres, médiane, historique sur 1 mois / 3 mois / 1 an, prix signalés, collecte) ; recherche de produits.
-- 5b : offres à valider (référence vs page observée, confirmer / rejeter), profils de collecte, IA et coûts, finitions mobile (badge « Offres à valider », comparatif compacté).
+- 5b — fait : offres à valider (référence vs page observée avec la comparaison de `OfferMatchingPolicy`, avis de l'agent, confirmer / rejeter en `pricely.review`), profils de collecte (arbre, enseignes héritées ou propres, instructions, prompt effectif bloc par bloc), IA et coûts (synthèse, coût par jour, cibles des fonctionnalités, tarifs des modèles), finitions mobile (badge et raccourci « Offres à valider », comparatif en liste), consommation de la conversation dans l'assistant.
 
-## Étape 6 — Collecte par l'agent
+## Étape 6 — Collecte par l'agent (ADR-017) — fait
 
 - Tools `fetch_merchant_page` (domaine de l'enseigne uniquement, instantané conservé), `submit_collected_offer` (exige un instantané, prix vérifié dans la page), `list_offers_pending_review`, `confirm_offer`, `reject_offer` ; prompt MCP `collect_product_prices`.
 - `IOfferCollector` réel (agent autonome via la passerelle et les mêmes tools) pour `CollectOffersJob`.
+- Fait : recherche sur le site de l'enseigne (`SearchTemplate`), lecture des pages limitée au site de l'enseigne et aux adresses publiques, instantanés `page_snapshots`, prix vérifié dans l'instantané, `AgentOfferCollector` (fonctionnalité `pricing.offer-collection`), tools `fetch_merchant_page`, `submit_collected_offer`, `confirm_offer`, `reject_offer`, prompt `collect_product_prices`. Avec : service de migration (ADR-018), conditionnement (ADR-019), jetons du front en cache distribué, consommation par conversation, suppression des tests d'intégration hérités.

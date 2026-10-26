@@ -31,6 +31,8 @@ Le code utilise la colonne « Code » (anglais). L'interface et les échanges ut
 | `OfferConfirmationMethod` | Mode de confirmation | `Gtin`, `ManufacturerReference` (automatiques) ou `Manual` (validé par une personne). |
 | `OfferMatchingPolicy` | Politique de rapprochement | Règle qui décide si une offre est confirmée sans revue. |
 | `PriceObservation` | Relevé de prix | Prix, disponibilité et date lus sur une offre. Historique séparé de l'offre. |
+| `PageSnapshot` | Instantané de page | Texte d'une page du site d'une enseigne tel que Pricely l'a lu ; un prix soumis par un agent doit y figurer (ADR-017). |
+| `SearchTemplate` | Page de recherche de l'enseigne | Adresse du site de l'enseigne avec `{query}`, où l'agent de collecte cherche le produit. |
 | `Money` | Prix | Montant strictement positif dans une devise ISO 4217. |
 | `Availability` | Disponibilité | `InStock`, `OutOfStock`, `Unknown`. |
 | `PriceAnomalyPolicy` | Garde-fou prix | Signale un relevé qui s'écarte de plus de 40 % de la médiane des autres offres confirmées. |
