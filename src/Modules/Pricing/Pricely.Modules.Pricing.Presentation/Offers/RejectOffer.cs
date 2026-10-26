@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Pricely.Common.Application.Authorization;
 using Pricely.Common.Domain;
 using Pricely.Common.Presentation.ApiResults;
 using Pricely.Common.Presentation.Endpoints;
@@ -21,7 +22,7 @@ internal sealed class RejectOffer : IEndpoint
 
                 return result.Match(Results.NoContent, ApiResults.Problem);
             })
-        .RequireAuthorization()
+        .RequireAuthorization(PricelyScopes.Review)
         .WithTags(Tags.Offers);
     }
 }
