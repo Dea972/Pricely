@@ -7,8 +7,15 @@ IResourceBuilder<PostgresDatabaseResource> db = postgres.AddDatabase("pricely-db
 
 // Fixed port so that the issuer of the tokens (http://localhost:8080/realms/pricely) is stable (ADR-010).
 // Not persistent: the realm is imported only on the first start of a container, so each run re-imports the versioned file.
+// Plain HTTP: with a trusted developer certificate, Aspire would switch the endpoint to https while Keycloak still
+// answers HTTP on 8080 (the front and the API then fail to read https://localhost:8080/.../openid-configuration), and
+// the issuer would no longer be the one of the MCP clients.
+// WithoutHttpsCertificate is still an evaluation API of Aspire 13.6 (ASPIRECERTIFICATES001).
+#pragma warning disable ASPIRECERTIFICATES001
 IResourceBuilder<KeycloakResource> keycloak = builder.AddKeycloak("keycloak", 8080)
+    .WithoutHttpsCertificate()
     .WithRealmImport("./Realms");
+#pragma warning restore ASPIRECERTIFICATES001
 
 IResourceBuilder<ProjectResource> api = builder.AddProject<Projects.Pricely_Api>("Pricely-api")
     .WithReference(db)
