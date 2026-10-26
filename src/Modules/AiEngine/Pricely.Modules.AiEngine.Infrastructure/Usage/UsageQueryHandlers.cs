@@ -4,6 +4,7 @@ using Pricely.Common.Application.Data;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Domain;
 using Pricely.Modules.AiEngine.Application.Usage;
+using Pricely.Modules.AiEngine.Domain.AgentActivities;
 
 namespace Pricely.Modules.AiEngine.Infrastructure.Usage;
 
@@ -150,14 +151,14 @@ internal sealed class GetUsageByToolQueryHandler(IDbConnectionFactory dbConnecti
                  a.agent_name AS {nameof(ToolUsageResponse.AgentName)},
                  a.tool_name AS {nameof(ToolUsageResponse.ToolName)},
                  BOOL_OR(a.is_read_only_tool) AS {nameof(ToolUsageResponse.IsReadOnly)},
-                 COUNT(*) FILTER (WHERE a.kind = 'ToolInvoked') AS {nameof(ToolUsageResponse.Calls)},
-                 COUNT(*) FILTER (WHERE a.kind = 'ToolInvoked' AND NOT a.is_success) AS {nameof(ToolUsageResponse.FailedCalls)},
-                 COALESCE(AVG(CAST(a.duration_ms AS double precision)) FILTER (WHERE a.kind = 'ToolInvoked'), 0)
+                 COUNT(*) FILTER (WHERE a.kind = '{nameof(AgentActivityKind.ToolInvoked)}') AS {nameof(ToolUsageResponse.Calls)},
+                 COUNT(*) FILTER (WHERE a.kind = '{nameof(AgentActivityKind.ToolInvoked)}' AND NOT a.is_success) AS {nameof(ToolUsageResponse.FailedCalls)},
+                 COALESCE(AVG(CAST(a.duration_ms AS double precision)) FILTER (WHERE a.kind = '{nameof(AgentActivityKind.ToolInvoked)}'), 0)
                      AS {nameof(ToolUsageResponse.AverageDurationMs)},
-                 COUNT(*) FILTER (WHERE a.decision = 'Executed') AS {nameof(ToolUsageResponse.Executed)},
-                 COUNT(*) FILTER (WHERE a.decision = 'Failed') AS {nameof(ToolUsageResponse.FailedAfterApproval)},
-                 COUNT(*) FILTER (WHERE a.decision = 'Rejected') AS {nameof(ToolUsageResponse.Rejected)},
-                 COALESCE(AVG(CAST(a.decision_delay_ms AS double precision)) FILTER (WHERE a.kind = 'ActionDecided'), 0)
+                 COUNT(*) FILTER (WHERE a.decision = '{nameof(AgentActionDecision.Executed)}') AS {nameof(ToolUsageResponse.Executed)},
+                 COUNT(*) FILTER (WHERE a.decision = '{nameof(AgentActionDecision.Failed)}') AS {nameof(ToolUsageResponse.FailedAfterApproval)},
+                 COUNT(*) FILTER (WHERE a.decision = '{nameof(AgentActionDecision.Rejected)}') AS {nameof(ToolUsageResponse.Rejected)},
+                 COALESCE(AVG(CAST(a.decision_delay_ms AS double precision)) FILTER (WHERE a.kind = '{nameof(AgentActivityKind.ActionDecided)}'), 0)
                      AS {nameof(ToolUsageResponse.AverageDecisionDelayMs)}
              FROM aiengine.agent_activities a
              WHERE (CAST(@FromUtc AS timestamptz) IS NULL OR a.occurred_on_utc >= @FromUtc)

@@ -47,6 +47,15 @@ public static class TestTools
 
         return new WriteResult(productId, 3);
     }
+
+    [McpServerTool(Name = "fail_thing", ReadOnly = false)]
+    [Description("Échoue.")]
+    public static string FailThing(IToolProbe probe, [Description("Texte.")] string text)
+    {
+        probe.Calls.Add("fail:" + text);
+
+        throw new InvalidOperationException("The merchant page could not be read.");
+    }
 }
 
 public sealed record WriteResult(Guid ProductId, int Offers);
@@ -57,7 +66,7 @@ internal static class TestAgent
         "test",
         new AiFeature("agents.test", "Test", "Agents", "fake"),
         "Tu es un agent de test.",
-        ["read_thing", "write_thing", "unknown_tool"]);
+        ["read_thing", "write_thing", "fail_thing"]);
 }
 
 internal sealed class FakeCurrentUser : ICurrentUser

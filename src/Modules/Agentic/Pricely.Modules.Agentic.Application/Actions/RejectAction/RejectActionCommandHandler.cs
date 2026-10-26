@@ -3,15 +3,12 @@ using Pricely.Common.Application.Clock;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Domain;
 using Pricely.Modules.Agentic.Application.Abstractions.Data;
-using Pricely.Modules.Agentic.Application.Conversations;
 using Pricely.Modules.Agentic.Domain.Actions;
-using Pricely.Modules.Agentic.Domain.Conversations;
 
 namespace Pricely.Modules.Agentic.Application.Actions.RejectAction;
 
 internal sealed class RejectActionCommandHandler(
     IPendingActionRepository pendingActions,
-    IAgentConversationRepository conversations,
     IUnitOfWork unitOfWork,
     ICurrentUser currentUser,
     IDateTimeProvider dateTimeProvider)
@@ -30,9 +27,6 @@ internal sealed class RejectActionCommandHandler(
         {
             return Result.Failure<PendingActionResponse>(rejected.Error);
         }
-
-        AgentConversation? conversation = await conversations.GetAsync(action.ConversationId, cancellationToken);
-        conversation?.AppendNote($"L'utilisateur a refusé l'action {action.Id} ({action.ToolName}) : rien n'a été modifié.", dateTimeProvider.UtcNow);
 
         try
         {

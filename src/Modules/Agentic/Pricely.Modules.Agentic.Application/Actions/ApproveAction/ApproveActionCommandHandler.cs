@@ -11,17 +11,16 @@ using Pricely.Modules.Agentic.Application.Agents;
 using Pricely.Modules.Agentic.Application.Conversations;
 using Pricely.Modules.Agentic.Application.Tools;
 using Pricely.Modules.Agentic.Domain.Actions;
-using Pricely.Modules.Agentic.Domain.Conversations;
 
 namespace Pricely.Modules.Agentic.Application.Actions.ApproveAction;
 
 /// <summary>
 /// Saves the approval first (under optimistic concurrency: a second approval fails), then runs the tool directly with the
-/// stored arguments, without going back to the model, and notes the outcome in the conversation for the next turn.
+/// stored arguments, without going back to the model, and saves the outcome. Only the action is written: the next turn
+/// replays the decision to the model (see <c>ConversationNotes</c>), the outbox publishes it to the AiEngine journal.
 /// </summary>
 internal sealed class ApproveActionCommandHandler(
     IPendingActionRepository pendingActions,
-    IAgentConversationRepository conversations,
     IUnitOfWork unitOfWork,
     AgentCatalog catalog,
     ToolInvocationJournal journal,
@@ -34,8 +33,9 @@ internal sealed class ApproveActionCommandHandler(
     public async Task<Result<PendingActionResponse>> Handle(ApproveActionCommand request, CancellationToken cancellationToken)
     {
         PendingAction? action = await pendingActions.GetAsync(request.ActionId, cancellationToken);
-        if (action is null || currentUser.UserId is not Guid userId)
+        if (action is null || currentUser.UserId is not Guid userId || action.UserId != userId)
         {
+            // Not the owner: the action does not exist for this caller.
             return Result.Failure<PendingActionResponse>(PendingActionErrors.NotFound(request.ActionId));
         }
 
@@ -66,26 +66,18 @@ internal sealed class ApproveActionCommandHandler(
             .ToDictionary(a => a.Key, a => (object?)a.Value, StringComparer.Ordinal);
         var context = new ToolCallContext(agent.Feature, agent.Name, action.ConversationId.ToString(), userId.ToString(), WasApproved: true);
 
-        string note;
         try
         {
             object? result = await journal.InvokeAsync(tool, new AIFunctionArguments(arguments) { Services = services }, context, CancellationToken.None);
             action.MarkExecuted(ChatMessageSerializer.SerializeValue(result));
-            note = $"L'utilisateur a validé l'action {action.Id} ({action.ToolName}) ; elle a été exécutée. Résultat : {action.Result}";
         }
         catch (Exception exception)
         {
             logger.LogWarning(exception, "The approved action {ActionId} ({ToolName}) failed", action.Id, action.ToolName);
             action.MarkFailed(exception.Message);
-
-            // The error text may come from outside (a merchant page, a provider): it is not passed to the model.
-            note = $"L'utilisateur a validé l'action {action.Id} ({action.ToolName}), mais elle a échoué.";
         }
 
-        AgentConversation? conversation = await conversations.GetAsync(action.ConversationId, CancellationToken.None);
-        conversation?.AppendNote(note, dateTimeProvider.UtcNow);
-
-        // The tool has run: its outcome is saved even if the caller went away.
+        // The tool has run: its outcome is saved even if the caller went away. Nobody else writes an approved action.
         await unitOfWork.SaveChangesAsync(CancellationToken.None);
 
         return PendingActionResponse.From(action);

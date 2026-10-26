@@ -102,13 +102,13 @@ public sealed class ModuleBoundaryTests
     }
 
     /// <summary>
-    /// Agentic is generic (ADR-014): it knows no other module, and no other module knows it (agents and tools are
+    /// Agentic is generic (ADR-014): it knows no other module nor the agents, and no other module knows it (agents and tools are
     /// declared through Common).
     /// </summary>
     [Fact]
     public void AgenticModule_ShouldNotDependOn_OtherModules_NorBeDependedOn()
     {
-        AssertNoDependency(AgenticAssemblies, [CatalogNamespace, PricingNamespace, UsersNamespace, AiEngineNamespace]);
+        AssertNoDependency(AgenticAssemblies, [CatalogNamespace, PricingNamespace, UsersNamespace, AiEngineNamespace, "Pricely.Agents"]);
         AssertNoDependency([.. CatalogAssemblies, .. PricingAssemblies, .. UsersAssemblies, .. AiEngineAssemblies], [AgenticNamespace]);
     }
 

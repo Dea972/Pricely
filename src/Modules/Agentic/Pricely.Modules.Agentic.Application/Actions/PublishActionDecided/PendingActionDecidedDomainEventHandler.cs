@@ -29,7 +29,8 @@ internal sealed class PendingActionDecidedDomainEventHandler(
             {
                 ActionId = action.Id,
                 SessionId = action.ConversationId.ToString(),
-                FeatureCode = agent?.Feature.Code ?? string.Empty,
+                FeatureCode = agent?.Feature.Code ?? $"agents.{action.AgentName}",
+                SourceModule = agent?.Feature.SourceModule,
                 AgentName = action.AgentName,
                 ToolName = action.ToolName,
                 Decision = action.Status switch
@@ -39,7 +40,8 @@ internal sealed class PendingActionDecidedDomainEventHandler(
                     _ => AiActionDecidedIntegrationEvent.Rejected
                 },
                 UserId = action.UserId.ToString(),
-                ProposedOnUtc = action.ProposedOnUtc
+                ProposedOnUtc = action.ProposedOnUtc,
+                DecidedOnUtc = action.DecidedOnUtc
             },
             cancellationToken);
     }

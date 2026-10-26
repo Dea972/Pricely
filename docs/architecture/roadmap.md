@@ -36,7 +36,7 @@ Chaque étape fait l'objet d'une PR sur `main`, CI verte, revue `architecture-re
 - Passerelle : `IChatClient` par fonctionnalité, `FunctionInvokingChatClient`, journalisation `LlmCalled` conservée.
 - `AgentConversation` (messages, appels d'outils, résultats), actions en attente pour les tools soumis à approbation.
 - Fonctionnalité `pricing.assistant` ; endpoint de conversation en streaming.
-- Fait : module générique `Agentic` (ADR-014) et agent `assistant` dans `src/Agents` (fonctionnalité `agents.assistant`), journal des tools et décisions dans AiEngine, chat client Anthropic avec tools, actions en attente et validation, endpoint SSE, conversations persistées (schéma `agents`), tool d'écriture `collect_product_offers`, endpoints de lecture des écrans (offres d'un produit, historique, anomalies, plan de collecte, recherche), scopes sur tous les endpoints.
+- Fait : module générique `Agentic` (ADR-014) et agent `assistant` dans `src/Agents` (fonctionnalité `agents.assistant`), journal des tools et décisions dans AiEngine, chat client Anthropic avec tools, actions en attente et validation, endpoint SSE, conversations persistées (schéma `agentic`), tool d'écriture `collect_product_offers`, endpoints de lecture des écrans (offres d'un produit, historique, anomalies, plan de collecte, recherche), scopes sur tous les endpoints.
 
 ## Étape 5 — Front Blazor
 

@@ -7,5 +7,5 @@ namespace Pricely.Modules.AiEngine.Application.AgentActivities.RecordActionDecis
 public sealed record RecordActionDecisionCommand(
     AgentActivityDetails Details,
     Guid ActionId,
-    string Decision,
+    AgentActionDecision Decision,
     DateTime ProposedOnUtc) : ICommand;

@@ -38,7 +38,7 @@ internal sealed class SendMessage : IEndpoint
                     ? ApiResults.Problem(started)
                     : TypedResults.ServerSentEvents(Stream(sender, new RunTurnStreamRequest(started.Value.ConversationId, request.Message), cancellationToken));
             })
-        .RequireAuthorization(PricelyScopes.Read)
+        .RequireAgenticAccess(app)
         .WithTags(Tags.Agents);
     }
 

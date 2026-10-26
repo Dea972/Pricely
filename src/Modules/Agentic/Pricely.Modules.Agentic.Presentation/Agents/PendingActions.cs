@@ -9,6 +9,7 @@ using Pricely.Common.Presentation.Endpoints;
 using Pricely.Modules.Agentic.Application.Actions;
 using Pricely.Modules.Agentic.Application.Actions.ApproveAction;
 using Pricely.Modules.Agentic.Application.Actions.RejectAction;
+using Pricely.Modules.Agentic.Domain.Actions;
 
 namespace Pricely.Modules.Agentic.Presentation.Agents;
 
@@ -30,11 +31,11 @@ internal sealed class ApproveAction : IEndpoint
 
                 Result<PendingActionResponse> result = await sender.Send(new ApproveActionCommand(actionId), cancellationToken);
 
-                return result.IsFailure && result.Error.Code == "Actions.MissingScope"
+                return result.IsFailure && result.Error.Code == PendingActionErrors.MissingScopeCode
                     ? Results.Forbid()
                     : result.Match(Results.Ok, ApiResults.Problem);
             })
-        .RequireAuthorization(PricelyScopes.Read)
+        .RequireAgenticAccess(app)
         .WithTags(Tags.Agents);
     }
 }
@@ -59,7 +60,7 @@ internal sealed class RejectAction : IEndpoint
 
                 return result.Match(Results.Ok, ApiResults.Problem);
             })
-        .RequireAuthorization(PricelyScopes.Read)
+        .RequireAgenticAccess(app)
         .WithTags(Tags.Agents);
     }
 }

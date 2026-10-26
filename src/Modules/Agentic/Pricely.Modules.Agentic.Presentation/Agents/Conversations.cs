@@ -30,7 +30,7 @@ internal sealed class GetConversations : IEndpoint
 
                 return result.Match(Results.Ok, ApiResults.Problem);
             })
-        .RequireAuthorization(PricelyScopes.Read)
+        .RequireAgenticAccess(app)
         .WithTags(Tags.Agents);
     }
 }
@@ -52,7 +52,7 @@ internal sealed class GetConversation : IEndpoint
 
                 return result.Match(Results.Ok, ApiResults.Problem);
             })
-        .RequireAuthorization(PricelyScopes.Read)
+        .RequireAgenticAccess(app)
         .WithTags(Tags.Agents);
     }
 }

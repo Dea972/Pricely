@@ -5,10 +5,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Pricely.Common.Application.AI;
+using Pricely.Common.Application.AI.Agents;
 using Pricely.Common.Domain;
+using Pricely.Common.Presentation.Mcp;
+using Pricely.Modules.Agentic.Application;
 using Pricely.Modules.Agentic.Application.Actions;
 using Pricely.Modules.Agentic.Application.Actions.ApproveAction;
+using Pricely.Modules.Agentic.Application.Actions.PublishActionDecided;
 using Pricely.Modules.Agentic.Application.Actions.RejectAction;
+using Pricely.Modules.Agentic.Application.Agents;
 using Pricely.Modules.Agentic.Application.Conversations;
 using Pricely.Modules.Agentic.Application.Conversations.RunTurn;
 using Pricely.Modules.Agentic.Application.Conversations.StartTurn;
@@ -180,6 +185,77 @@ public sealed class AgentTurnTests
         (await SendStartAsync(services, null, "Salut")).Error.Code.Should().Be("Conversations.UnknownUser");
     }
 
+    [Fact]
+    public async Task Approve_ShouldRecordTheFailure_WhenTheToolFails()
+    {
+        var probe = new ToolProbe();
+        var eventBus = new RecordingEventBus();
+        FakeCurrentUser user = Owner();
+        user.Scopes = new HashSet<string> { TestServices.WriteScope };
+        using var chat = new ScriptedChatClient();
+        await using ServiceProvider services = TestServices.Build(chat, eventBus, probe, user);
+        Guid actionId = await InsertActionAsync(services, "fail_thing", """{"text":"x"}""");
+
+        Result<PendingActionResponse> approved = await SendAsync(services, new ApproveActionCommand(actionId));
+
+        approved.Value.Status.Should().Be(nameof(PendingActionStatus.Failed));
+        probe.Calls.Should().Equal("fail:x");
+        AiToolInvokedIntegrationEvent invoked = eventBus.Published.OfType<AiToolInvokedIntegrationEvent>().Should().ContainSingle().Subject;
+        invoked.IsSuccess.Should().BeFalse();
+        invoked.WasApproved.Should().BeTrue();
+        (await SendAsync(services, new ApproveActionCommand(actionId))).Error.Code.Should().Be("Actions.AlreadyDecided");
+    }
+
+    [Fact]
+    public async Task Approve_ShouldRefuse_AReadOnlyTool()
+    {
+        var probe = new ToolProbe();
+        FakeCurrentUser user = Owner();
+        user.Scopes = new HashSet<string> { TestServices.WriteScope };
+        using var chat = new ScriptedChatClient();
+        await using ServiceProvider services = TestServices.Build(chat, new RecordingEventBus(), probe, user);
+        Guid actionId = await InsertActionAsync(services, "read_thing", """{"text":"x"}""");
+
+        (await SendAsync(services, new ApproveActionCommand(actionId))).Error.Code.Should().Be("Actions.UnknownTool");
+        probe.Calls.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Decision_ShouldBePublishedToTheAiEngineJournal()
+    {
+        var eventBus = new RecordingEventBus();
+        using var chat = new ScriptedChatClient();
+        await using ServiceProvider services = TestServices.Build(chat, eventBus, new ToolProbe(), Owner());
+        Guid actionId = await InsertActionAsync(services, "write_thing", "{}");
+        await SendAsync(services, new RejectActionCommand(actionId));
+
+        using (IServiceScope scope = services.CreateScope())
+        {
+            await ActivatorUtilities.CreateInstance<PendingActionDecidedDomainEventHandler>(scope.ServiceProvider)
+                .Handle(new PendingActionDecidedDomainEvent(actionId));
+        }
+
+        AiActionDecidedIntegrationEvent decided = eventBus.Published.OfType<AiActionDecidedIntegrationEvent>().Should().ContainSingle().Subject;
+        decided.ActionId.Should().Be(actionId);
+        decided.Decision.Should().Be(AiActionDecidedIntegrationEvent.Rejected);
+        decided.AgentName.Should().Be("test");
+        decided.FeatureCode.Should().Be("agents.test");
+        decided.SourceModule.Should().Be("Agents");
+        decided.ToolName.Should().Be("write_thing");
+        decided.UserId.Should().Be(UserId.ToString());
+        decided.DecidedOnUtc.Should().Be(new FixedClock().UtcNow);
+    }
+
+    [Fact]
+    public void Catalog_ShouldRefuse_AnAgentNamingAnUnknownTool()
+    {
+        AgentDefinition agent = TestAgent.Definition with { ToolNames = ["read_thing", "unknown_tool"] };
+
+        Func<AgentCatalog> build = () => new AgentCatalog([agent], McpServerExtensions.ToAgentTools([typeof(TestTools).Assembly]), new AgenticOptions());
+
+        build.Should().Throw<InvalidOperationException>().WithMessage("*test/unknown_tool*");
+    }
+
     private static FakeCurrentUser Owner() => new() { UserId = UserId };
 
     private static ChatResponse ToolCalls() =>
@@ -200,6 +276,17 @@ public sealed class AgentTurnTests
         using IServiceScope scope = services.CreateScope();
 
         return scope.ServiceProvider.GetRequiredService<AgenticDbContext>().Conversations.Single().Id;
+    }
+
+    private static async Task<Guid> InsertActionAsync(ServiceProvider services, string toolName, string arguments)
+    {
+        using IServiceScope scope = services.CreateScope();
+        AgenticDbContext dbContext = scope.ServiceProvider.GetRequiredService<AgenticDbContext>();
+        var action = PendingAction.Propose(Guid.NewGuid(), UserId, "test", toolName, arguments, TestServices.WriteScope, DateTime.UtcNow);
+        dbContext.PendingActions.Add(action);
+        await dbContext.SaveChangesAsync();
+
+        return action.Id;
     }
 
     private static async Task<AgentConversation> LoadConversationAsync(ServiceProvider services)

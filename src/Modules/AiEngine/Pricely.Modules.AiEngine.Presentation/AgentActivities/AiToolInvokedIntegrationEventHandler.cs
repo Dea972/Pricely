@@ -16,6 +16,7 @@ internal sealed class AiToolInvokedIntegrationEventHandler(ISender sender)
         Result result = await sender.Send(
             new RecordToolInvocationCommand(
                 new AgentActivityDetails(
+                    integrationEvent.Id,
                     integrationEvent.OccurredOnUtc,
                     integrationEvent.SessionId,
                     integrationEvent.FeatureCode,

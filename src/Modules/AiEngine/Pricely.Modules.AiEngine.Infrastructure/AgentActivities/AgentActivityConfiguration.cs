@@ -11,6 +11,9 @@ internal sealed class AgentActivityConfiguration : IEntityTypeConfiguration<Agen
         builder.ToTable("agent_activities");
 
         builder.HasKey(a => a.Id);
+
+        // Id of the reported event: a replayed event fails on the key instead of being recorded twice.
+        builder.Property(a => a.Id).ValueGeneratedNever();
         builder.Ignore(a => a.DomainEvents);
 
         builder.Property(a => a.Kind).HasConversion<string>().HasMaxLength(20);
@@ -19,7 +22,7 @@ internal sealed class AgentActivityConfiguration : IEntityTypeConfiguration<Agen
         builder.Property(a => a.AgentName).HasMaxLength(AgentActivity.AgentNameMaxLength);
         builder.Property(a => a.ToolName).HasMaxLength(AgentActivity.ToolNameMaxLength);
         builder.Property(a => a.UserId).HasMaxLength(AgentActivity.UserIdMaxLength);
-        builder.Property(a => a.Decision).HasMaxLength(AgentActivity.DecisionMaxLength);
+        builder.Property(a => a.Decision).HasConversion<string>().HasMaxLength(20);
         builder.Property(a => a.ErrorMessage).HasMaxLength(AgentActivity.ErrorMessageMaxLength);
 
         builder.HasIndex(a => a.OccurredOnUtc);

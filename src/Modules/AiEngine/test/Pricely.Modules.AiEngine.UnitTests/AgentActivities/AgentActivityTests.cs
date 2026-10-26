@@ -7,7 +7,7 @@ public class AgentActivityTests
 {
     private static readonly DateTime Now = new(2026, 10, 26, 10, 0, 0, DateTimeKind.Utc);
 
-    private static AgentActivityDetails Details => new(Now, "conversation-1", "agents.assistant", "assistant", "collect_product_offers", "user-1");
+    private static AgentActivityDetails Details => new(Guid.NewGuid(), Now, "conversation-1", "agents.assistant", "assistant", "collect_product_offers", "user-1");
 
     [Fact]
     public void ToolInvocation_ShouldRecordItsOutcome()
@@ -22,10 +22,10 @@ public class AgentActivityTests
     }
 
     [Theory]
-    [InlineData("Executed", true, true)]
-    [InlineData("Failed", true, false)]
-    [InlineData("Rejected", false, true)]
-    public void Decision_ShouldRecordTheApprovalAndTheDelay(string decision, bool approved, bool success)
+    [InlineData(AgentActionDecision.Executed, true, true)]
+    [InlineData(AgentActionDecision.Failed, true, false)]
+    [InlineData(AgentActionDecision.Rejected, false, true)]
+    public void Decision_ShouldRecordTheApprovalAndTheDelay(AgentActionDecision decision, bool approved, bool success)
     {
         var actionId = Guid.NewGuid();
 

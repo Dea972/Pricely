@@ -79,7 +79,6 @@ namespace Pricely.Modules.AiEngine.Infrastructure.Database.Migrations
             modelBuilder.Entity("Pricely.Modules.AiEngine.Domain.AgentActivities.AgentActivity", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 

@@ -14,6 +14,14 @@ public static class AgentConversationErrors
         "Conversations.UnknownUser",
         "The caller is not a known user of the application.");
 
+    public static readonly Error ModelFailed = Error.Failure(
+        "Conversations.ModelFailed",
+        "Le modèle n'a pas pu répondre. Réessaie dans un instant.");
+
+    public static readonly Error ConcurrentTurn = Error.Conflict(
+        "Conversations.ConcurrentTurn",
+        "La conversation a été modifiée en même temps ailleurs : ce tour n'a pas été enregistré.");
+
     public static Error UnknownAgent(string agentName) =>
         Error.NotFound("Conversations.UnknownAgent", $"There is no agent named '{agentName}'.");
 

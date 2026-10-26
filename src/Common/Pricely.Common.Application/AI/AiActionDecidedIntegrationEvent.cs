@@ -23,6 +23,8 @@ public sealed class AiActionDecidedIntegrationEvent : IntegrationEvent
 
     public required string FeatureCode { get; init; }
 
+    public string? SourceModule { get; init; }
+
     public required string AgentName { get; init; }
 
     public required string ToolName { get; init; }
@@ -33,4 +35,7 @@ public sealed class AiActionDecidedIntegrationEvent : IntegrationEvent
     public string? UserId { get; init; }
 
     public required DateTime ProposedOnUtc { get; init; }
+
+    /// <summary>When the person decided (before the tool ran, for an approval).</summary>
+    public DateTime? DecidedOnUtc { get; init; }
 }

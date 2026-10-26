@@ -7,6 +7,7 @@ using Pricely.Common.Application.AI;
 using Pricely.Common.Application.AI.Agents;
 using Pricely.Common.Application.Authorization;
 using Pricely.Common.Application.Clock;
+using Pricely.Common.Domain;
 using Pricely.Modules.Agentic.Application.Abstractions.Data;
 using Pricely.Modules.Agentic.Application.Agents;
 using Pricely.Modules.Agentic.Application.Tools;
@@ -17,8 +18,8 @@ namespace Pricely.Modules.Agentic.Application.Conversations.RunTurn;
 
 /// <summary>
 /// One turn: the user message, then the model with its tools until it answers (ADR-008). Read-only tools run right away
-/// (journaled for AiEngine); write tools become pending actions, saved as soon as they are proposed. The turn is saved
-/// at the end, even if the client went away.
+/// (journaled for AiEngine); write tools become pending actions, each saved alone as soon as it is proposed. The
+/// conversation is written once, at the end of the turn, even if the client went away (ADR-014).
 /// </summary>
 internal sealed class RunTurnStreamRequestHandler(
     AgentCatalog catalog,
@@ -45,16 +46,23 @@ internal sealed class RunTurnStreamRequestHandler(
 
         if (conversation is null || agent is null || currentUser.UserId != conversation.UserId)
         {
-            yield return new AgentEvent(AgentEvent.Error, new { code = "Conversations.NotFound", message = "Conversation introuvable." });
+            yield return ErrorEvent(AgentConversationErrors.NotFound(request.ConversationId));
+            yield break;
+        }
+
+        Result validation = AgentConversation.ValidateUserMessage(request.Message);
+        if (validation.IsFailure)
+        {
+            yield return ErrorEvent(validation.Error);
             yield break;
         }
 
         yield return new AgentEvent(AgentEvent.Conversation, new { conversationId = conversation.Id, title = conversation.Title });
 
-        List<ChatMessage> history = [.. conversation.Messages.OrderBy(m => m.Sequence).Select(m => ChatMessageSerializer.Deserialize(m.Content))];
         var userMessage = new ChatMessage(ChatRole.User, request.Message.Trim());
+        DateTime userMessageOnUtc = dateTimeProvider.UtcNow;
+        List<ChatMessage> history = await HistoryAsync(conversation, cancellationToken);
         history.Add(userMessage);
-        conversation.Append(AgentMessageRole.User, ChatMessageSerializer.Serialize(userMessage), dateTimeProvider.UtcNow);
 
         string userId = conversation.UserId.ToString();
         var context = new ToolCallContext(agent.Feature, agent.Name, conversation.Id.ToString(), userId, WasApproved: false);
@@ -75,68 +83,120 @@ internal sealed class RunTurnStreamRequestHandler(
         var chatOptions = new ChatOptions { Instructions = agent.Instructions, Tools = tools };
         var updates = new List<ChatResponseUpdate>();
         var callNames = new Dictionary<string, string>(StringComparer.Ordinal);
-        string? failure = null;
+        Error? failure = null;
+        bool saveAttempted = false;
 
-        await using (IAsyncEnumerator<ChatResponseUpdate> stream = chatClient
-            .GetStreamingResponseAsync(history, chatOptions, cancellationToken)
-            .GetAsyncEnumerator(cancellationToken))
+        try
         {
-            while (true)
+            await using (IAsyncEnumerator<ChatResponseUpdate> stream = chatClient
+                .GetStreamingResponseAsync(history, chatOptions, cancellationToken)
+                .GetAsyncEnumerator(cancellationToken))
             {
-                ChatResponseUpdate update;
-                try
+                while (true)
                 {
-                    if (!await stream.MoveNextAsync())
+                    ChatResponseUpdate update;
+                    try
                     {
+                        if (!await stream.MoveNextAsync())
+                        {
+                            break;
+                        }
+
+                        update = stream.Current;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // The client went away: the turn stops, what it did is still saved (finally).
+                        break;
+                    }
+                    catch (Exception exception)
+                    {
+                        _logger.LogWarning(exception, "The turn of conversation {ConversationId} failed", conversation.Id);
+                        failure = AgentConversationErrors.ModelFailed;
                         break;
                     }
 
-                    update = stream.Current;
-                }
-                catch (Exception exception) when (exception is not OperationCanceledException)
-                {
-                    _logger.LogWarning(exception, "The turn of conversation {ConversationId} failed", conversation.Id);
-                    failure = "Le modèle n'a pas pu répondre. Réessaie dans un instant.";
-                    break;
-                }
+                    updates.Add(update);
 
-                updates.Add(update);
-
-                foreach (AgentEvent agentEvent in ToEvents(update, callNames, proposals))
-                {
-                    yield return agentEvent;
+                    foreach (AgentEvent agentEvent in ToEvents(update, callNames, proposals))
+                    {
+                        yield return agentEvent;
+                    }
                 }
             }
-        }
 
-        if (failure is not null)
-        {
-            yield return new AgentEvent(AgentEvent.Error, new { code = "Agents.ModelFailed", message = failure });
+            if (failure is not null)
+            {
+                yield return ErrorEvent(failure);
+            }
+
+            saveAttempted = true;
+
+            if (!await SaveTurnAsync(conversation, userMessage, userMessageOnUtc, updates))
+            {
+                yield return ErrorEvent(AgentConversationErrors.ConcurrentTurn);
+            }
+
+            yield return new AgentEvent(AgentEvent.Done, new { conversationId = conversation.Id });
         }
+        finally
+        {
+            // Also reached when the client stops reading: the tools have run and the model calls are billed.
+            if (!saveAttempted)
+            {
+                await SaveTurnAsync(conversation, userMessage, userMessageOnUtc, updates);
+            }
+        }
+    }
+
+    private static AgentEvent ErrorEvent(Error error) =>
+        new(AgentEvent.Error, new { code = error.Code, message = error.Description });
+
+    /// <summary>
+    /// The messages of the conversation and, at the time of each decision, a note on the decided actions.
+    /// </summary>
+    private async Task<List<ChatMessage>> HistoryAsync(AgentConversation conversation, CancellationToken cancellationToken)
+    {
+        IReadOnlyCollection<PendingAction> decided = await pendingActions.GetDecidedAsync(conversation.Id, cancellationToken);
+
+        return conversation.Messages
+            .Select(m => (At: m.CreatedOnUtc, Order: m.Sequence, Message: ChatMessageSerializer.Deserialize(m.Content)))
+            .Concat(decided.Select(a => (At: a.DecidedOnUtc!.Value, Order: int.MaxValue, Message: ConversationNotes.ForDecision(a))))
+            .OrderBy(m => m.At)
+            .ThenBy(m => m.Order)
+            .Select(m => m.Message)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Appends the user message and what the model produced, then saves the conversation (the only aggregate written
+    /// at the end of a turn). False when another turn saved the conversation in the meantime.
+    /// </summary>
+    private async Task<bool> SaveTurnAsync(
+        AgentConversation conversation,
+        ChatMessage userMessage,
+        DateTime userMessageOnUtc,
+        List<ChatResponseUpdate> updates)
+    {
+        conversation.Append(AgentMessageRole.User, ChatMessageSerializer.Serialize(userMessage), userMessageOnUtc);
 
         foreach (ChatMessage produced in CloseUnansweredToolCalls(updates.ToChatResponse().Messages))
         {
             conversation.Append(ChatMessageSerializer.ToRole(produced.Role), ChatMessageSerializer.Serialize(produced), dateTimeProvider.UtcNow);
         }
 
-        string? saveFailure = null;
         try
         {
-            // Saved even if the client went away: the tools have run and the model calls are billed.
             await unitOfWork.SaveChangesAsync(CancellationToken.None);
+
+            return true;
         }
         catch (ConcurrentUpdateException exception)
         {
             _logger.LogWarning(exception, "The turn of conversation {ConversationId} could not be saved", conversation.Id);
-            saveFailure = "La conversation a été modifiée en même temps ailleurs : ce tour n'a pas été enregistré.";
-        }
 
-        if (saveFailure is not null)
-        {
-            yield return new AgentEvent(AgentEvent.Error, new { code = "Conversations.Concurrent", message = saveFailure });
+            return false;
         }
-
-        yield return new AgentEvent(AgentEvent.Done, new { conversationId = conversation.Id });
     }
 
     /// <summary>
@@ -173,10 +233,11 @@ internal sealed class RunTurnStreamRequestHandler(
             dateTimeProvider.UtcNow);
 
         pendingActions.Insert(action);
-        proposals[FunctionInvokingChatClient.CurrentContext?.CallContent.CallId ?? action.Id.ToString()] = action;
 
-        // Saved now (with the conversation and its first messages): the user can approve it as soon as it is announced.
+        // Saved now, alone (the conversation is only written at the end of the turn): the user can approve it as soon as
+        // it is announced, and it is announced only once saved.
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        proposals[FunctionInvokingChatClient.CurrentContext?.CallContent.CallId ?? action.Id.ToString()] = action;
 
         return action;
     }

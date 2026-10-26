@@ -12,7 +12,7 @@ using Pricely.Modules.AiEngine.Infrastructure.Database;
 namespace Pricely.Modules.AiEngine.Infrastructure.Database.Migrations
 {
     [DbContext(typeof(AiEngineDbContext))]
-    [Migration("20261026110125_AddAgentActivity")]
+    [Migration("20261026111643_AddAgentActivity")]
     partial class AddAgentActivity
     {
         /// <inheritdoc />
@@ -82,7 +82,6 @@ namespace Pricely.Modules.AiEngine.Infrastructure.Database.Migrations
             modelBuilder.Entity("Pricely.Modules.AiEngine.Domain.AgentActivities.AgentActivity", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 

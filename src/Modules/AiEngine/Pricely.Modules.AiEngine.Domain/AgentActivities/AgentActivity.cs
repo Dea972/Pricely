@@ -18,8 +18,6 @@ public sealed class AgentActivity : Entity
 
     public const int UserIdMaxLength = 100;
 
-    public const int DecisionMaxLength = 20;
-
     public const int ErrorMessageMaxLength = 2000;
 
     private AgentActivity()
@@ -54,19 +52,18 @@ public sealed class AgentActivity : Entity
 
     public string? ErrorMessage { get; private set; }
 
-    /// <summary>For a decision: <c>Executed</c>, <c>Failed</c> or <c>Rejected</c>.</summary>
-    public string? Decision { get; private set; }
+    public AgentActionDecision? Decision { get; private set; }
 
     /// <summary>For a decision: the action of the Agentic module (plain identifier, no foreign key across schemas).</summary>
     public Guid? ActionId { get; private set; }
 
-    /// <summary>For a decision: time between the proposal and the decision.</summary>
+    /// <summary>For a decision: time between the proposal and the person's decision (the tool run is not included).</summary>
     public long? DecisionDelayMs { get; private set; }
 
     public static AgentActivity RecordToolInvocation(AgentActivityDetails details, bool isReadOnly, bool wasApproved, long durationMs, string? errorMessage) =>
         new()
         {
-            Id = Guid.CreateVersion7(),
+            Id = details.Id,
             Kind = AgentActivityKind.ToolInvoked,
             OccurredOnUtc = details.OccurredOnUtc,
             SessionId = Truncate(details.SessionId, SessionIdMaxLength),
@@ -81,10 +78,10 @@ public sealed class AgentActivity : Entity
             ErrorMessage = errorMessage is null ? null : Truncate(errorMessage, ErrorMessageMaxLength)
         };
 
-    public static AgentActivity RecordDecision(AgentActivityDetails details, Guid actionId, string decision, DateTime proposedOnUtc) =>
+    public static AgentActivity RecordDecision(AgentActivityDetails details, Guid actionId, AgentActionDecision decision, DateTime proposedOnUtc) =>
         new()
         {
-            Id = Guid.CreateVersion7(),
+            Id = details.Id,
             Kind = AgentActivityKind.ActionDecided,
             OccurredOnUtc = details.OccurredOnUtc,
             SessionId = Truncate(details.SessionId, SessionIdMaxLength),
@@ -92,9 +89,9 @@ public sealed class AgentActivity : Entity
             AgentName = Truncate(details.AgentName, AgentNameMaxLength),
             ToolName = Truncate(details.ToolName, ToolNameMaxLength),
             UserId = details.UserId is null ? null : Truncate(details.UserId, UserIdMaxLength),
-            WasApproved = !string.Equals(decision, "Rejected", StringComparison.Ordinal),
-            IsSuccess = !string.Equals(decision, "Failed", StringComparison.Ordinal),
-            Decision = Truncate(decision, DecisionMaxLength),
+            WasApproved = decision != AgentActionDecision.Rejected,
+            IsSuccess = decision != AgentActionDecision.Failed,
+            Decision = decision,
             ActionId = actionId,
             DecisionDelayMs = Math.Max(0, (long)(details.OccurredOnUtc - proposedOnUtc).TotalMilliseconds)
         };
