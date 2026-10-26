@@ -4,7 +4,7 @@ Comparateur et veille de prix multi-enseignes. Parti du négoce de matériaux de
 
 Principe : **une offre = un produit × une enseigne → un prix**. On compare les offres d'un même produit de référence.
 
-Lire avant de coder : `docs/architecture/ubiquitous-language.md`, `docs/architecture/decisions.md`, `docs/architecture/model.md`.
+Lire avant de coder : `docs/architecture/ubiquitous-language.md`, `docs/architecture/decisions.md`, `docs/architecture/model.md`. Avant de toucher au front : `docs/design/README.md` (maquettes, tokens, principes de l'assistant).
 
 ## Stack
 
@@ -113,7 +113,6 @@ Le build échoue sur le moindre avertissement (`TreatWarningsAsErrors`, `Analysi
 - **MCP** : `AddPricelyMcpServer` (HTTP streamable, stateless) et `MapPricelyMcp` (`/mcp`, authentifié) dans `Pricely.Sdk` ; chaque module expose `ToolAssembly`.
 - **Agent interne** (`IChatClient` + `FunctionInvokingChatClient`, approbations, conversations) : à venir (étape 4 de la feuille de route).
 - **Authentification** (ADR-010, ADR-011) : Keycloak (OAuth 2.1 / OIDC, realm `pricely` importé par l'AppHost) ; Pricely valide les jetons (`AddJwtBearer`, `Authentication:Authority` / `Audience`) et n'en émet pas. Scopes `pricely.read|write|review` = politiques d'autorisation du même nom (`PricelyScopes`, `.RequireAuthorization(PricelyScopes.Read)`) ; `/mcp` exige `pricely.read`. `sub` = `User.IdentityId`, le `User` est créé (rôle `Member`) à la première requête authentifiée (`ProvisionUserCommand`) ; `CustomClaimsTransformation` ajoute `pricely_user_id` et les permissions métier du module Users.
-- Référence d'implémentation : AiEngine et Common AI de ChaussonStore (patterns uniquement, pas de code métier Chausson).
 
 ## Commandes
 
@@ -139,8 +138,7 @@ L'audit NuGet (transitif compris) est **bloquant** : ne jamais ajouter `NU190x` 
 - Migrations `Initial` de Catalog, Pricing, Users et AiEngine en place (`Database/Migrations`, `generated_code = true`). Hors Development, aucun mécanisme n'applique les migrations (décision ouverte).
 - Seul `/mcp` exige un scope (`pricely.read`). Les endpoints existants sont seulement « authentifié » : un jeton en lecture seule peut donc appeler les endpoints de mutation (écart assumé, ADR-011) ; poser `PricelyScopes.Write` / `Review` sur les mutations avant tout déploiement, puis filtrer les tools par scope.
 - Les tests d'intégration hérités (Users, solution) sont exclus de la solution : ils référencent un module `Ticketing` inexistant.
-- `Users/USAGE_GUIDE.md` décrit un template `dotnet new` absent du dépôt : ne pas s'y fier, utiliser le skill `new-module`.
-- Le code Key Vault de `Common.Infrastructure` (`AzureKeyvaultClient`, `ConfigureWithSecretsAsync`) n'est plus utilisé par l'authentification ; à supprimer ou à réutiliser pour les secrets.
+- Pour créer un module, utiliser le skill `new-module` (pas de template `dotnet new`).
 
 ## Méthode de travail
 
