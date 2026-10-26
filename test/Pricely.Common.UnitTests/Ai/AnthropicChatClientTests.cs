@@ -24,6 +24,43 @@ public sealed class AnthropicChatClientTests
         }
         """;
 
+    private const string StreamedResponse = """
+        event: message_start
+        data: {"type":"message_start","message":{"id":"msg_2","model":"claude-sonnet-5-5","usage":{"input_tokens":200,"cache_read_input_tokens":20,"cache_creation_input_tokens":0,"output_tokens":1}}}
+
+        event: content_block_start
+        data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Je "}}
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"cherche."}}
+
+        event: content_block_stop
+        data: {"type":"content_block_stop","index":0}
+
+        event: content_block_start
+        data: {"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"toolu_2","name":"search_products","input":{}}}
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"{\"text\": \"cim"}}
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"ent\", \"limit\": 5}"}}
+
+        event: content_block_stop
+        data: {"type":"content_block_stop","index":1}
+
+        event: message_delta
+        data: {"type":"message_delta","delta":{"stop_reason":"tool_use"},"usage":{"output_tokens":42}}
+
+        event: message_stop
+        data: {"type":"message_stop"}
+
+
+        """;
+
     private static readonly string[] ToolResult = ["p1"];
 
     [Fact]
@@ -103,10 +140,61 @@ public sealed class AnthropicChatClientTests
         called.IsSuccess.Should().BeTrue();
     }
 
+    [Fact]
+    public async Task Streaming_ShouldYieldTheTextAsItComes_ThenTheToolCall_ThenTheUsage()
+    {
+        using var handler = new RecordingHandler(StreamedResponse, "text/event-stream");
+        using HttpClient http = Http(handler);
+        using var client = new AnthropicChatClient(http, Options.Create(new AnthropicOptions()), "claude-sonnet-5-5");
+
+        var updates = new List<ChatResponseUpdate>();
+        await foreach (ChatResponseUpdate update in client.GetStreamingResponseAsync([new ChatMessage(ChatRole.User, "Ciment ?")]))
+        {
+            updates.Add(update);
+        }
+
+        JsonNode.Parse(handler.LastBody!)!["stream"]!.GetValue<bool>().Should().BeTrue();
+        updates.Where(u => u.Text.Length > 0).Select(u => u.Text).Should().Equal("Je ", "cherche.");
+
+        var response = updates.ToChatResponse();
+        response.Text.Should().Be("Je cherche.");
+        response.FinishReason.Should().Be(ChatFinishReason.ToolCalls);
+        FunctionCallContent call = response.Messages.SelectMany(m => m.Contents).OfType<FunctionCallContent>().Single();
+        call.Name.Should().Be("search_products");
+        ((JsonElement)call.Arguments!["text"]!).GetString().Should().Be("ciment");
+        ((JsonElement)call.Arguments["limit"]!).GetInt32().Should().Be(5);
+        response.Usage!.InputTokenCount.Should().Be(200);
+        response.Usage.OutputTokenCount.Should().Be(42);
+        response.Usage.CachedInputTokenCount.Should().Be(20);
+    }
+
+    [Fact]
+    public async Task Streaming_ShouldFail_OnAnErrorEvent()
+    {
+        using var handler = new RecordingHandler("""
+            event: error
+            data: {"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}
+
+
+            """, "text/event-stream");
+        using HttpClient http = Http(handler);
+        using var client = new AnthropicChatClient(http, Options.Create(new AnthropicOptions()), "claude-sonnet-5-5");
+
+        Func<Task> act = async () =>
+        {
+            await foreach (ChatResponseUpdate update in client.GetStreamingResponseAsync([new ChatMessage(ChatRole.User, "Ciment ?")]))
+            {
+                update.Should().BeNull("no update is expected");
+            }
+        };
+
+        (await act.Should().ThrowAsync<HttpRequestException>()).Which.Message.Should().Contain("overloaded_error");
+    }
+
     private static HttpClient Http(HttpMessageHandler handler) =>
         new(handler, disposeHandler: false) { BaseAddress = new Uri("https://api.anthropic.test/") };
 
-    private sealed class RecordingHandler(string responseBody) : HttpMessageHandler
+    private sealed class RecordingHandler(string responseBody, string mediaType = "application/json") : HttpMessageHandler
     {
         public string? LastBody { get; private set; }
 
@@ -116,7 +204,7 @@ public sealed class AnthropicChatClientTests
 
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent(responseBody, Encoding.UTF8, "application/json")
+                Content = new StringContent(responseBody, Encoding.UTF8, mediaType)
             };
         }
     }

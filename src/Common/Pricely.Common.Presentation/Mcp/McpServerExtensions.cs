@@ -27,17 +27,35 @@ public static class McpServerExtensions
     /// </summary>
     public static IServiceCollection AddPricelyMcpServer(this IServiceCollection services, Assembly[] toolAssemblies)
     {
-        services
-            .AddMcpServer(options => options.ServerInfo = new Implementation { Name = "pricely", Version = "0.1.0" })
-            .WithHttpTransport(options => options.Stateless = true);
+        // The scope each tool needs (ADR-016): read tools pricely.read, write tools their [ToolScope] or pricely.write.
+        var requiredScopes = ToolMethods(toolAssemblies).ToDictionary(ToolName, RequiredScope, StringComparer.Ordinal);
 
-        // Read-only tools only: write tools need a human approval, which only the internal agent provides (ADR-008),
-        // and per-scope filtering of the MCP tools is not in place yet (ADR-013).
-        foreach (MethodInfo method in ReadOnlyToolMethods(toolAssemblies))
+        IMcpServerBuilder mcp = services
+            .AddMcpServer(options => options.ServerInfo = new Implementation { Name = "pricely", Version = "0.1.0" })
+            .WithHttpTransport(options => options.Stateless = true)
+            .WithRequestFilters(filters => filters.AddListToolsFilter(next => async (context, cancellationToken) =>
+            {
+                // A client only sees the tools its token may call.
+                ListToolsResult result = await next(context, cancellationToken);
+                IReadOnlySet<string> scopes = ScopesOf(context.Services);
+                result.Tools = [.. result.Tools.Where(tool => scopes.Contains(requiredScopes.GetValueOrDefault(tool.Name, PricelyScopes.Write)))];
+
+                return result;
+            }));
+
+        foreach (Assembly assembly in toolAssemblies)
         {
-            services.AddSingleton(serviceProvider => McpServerTool.Create(
-                method,
-                options: new McpServerToolCreateOptions { Services = serviceProvider }));
+            mcp.WithPromptsFromAssembly(assembly);
+        }
+
+        // Every tool, the write ones included: the MCP client asks its user before a non read-only tool (annotations),
+        // and each call checks the scope of the token again.
+        foreach (MethodInfo method in ToolMethods(toolAssemblies))
+        {
+            string scope = RequiredScope(method);
+            services.AddSingleton<McpServerTool>(serviceProvider => new ScopedMcpServerTool(
+                McpServerTool.Create(method, options: new McpServerToolCreateOptions { Services = serviceProvider }),
+                scope));
         }
 
         // Tokens are validated by the JWT bearer scheme; the MCP scheme only answers the challenge and serves the metadata.
@@ -61,11 +79,16 @@ public static class McpServerExtensions
         return services;
     }
 
-    /// <summary>
-    /// Static methods marked <c>[McpServerTool(ReadOnly = true)]</c> of the <c>[McpServerToolType]</c> classes.
-    /// </summary>
-    public static IEnumerable<MethodInfo> ReadOnlyToolMethods(IEnumerable<Assembly> toolAssemblies) =>
-        ToolMethods(toolAssemblies).Where(method => method.GetCustomAttribute<McpServerToolAttribute>()!.ReadOnly);
+    /// <summary>The scope a tool needs: <c>pricely.read</c> to read, its <c>[ToolScope]</c> or <c>pricely.write</c> to write.</summary>
+    public static string RequiredScope(MethodInfo method) =>
+        method.GetCustomAttribute<McpServerToolAttribute>()!.ReadOnly
+            ? PricelyScopes.Read
+            : method.GetCustomAttribute<ToolScopeAttribute>()?.Scope ?? PricelyScopes.Write;
+
+    internal static IReadOnlySet<string> ScopesOf(IServiceProvider? services) =>
+        services?.GetService<ICurrentUser>()?.Scopes ?? new HashSet<string>(StringComparer.Ordinal);
+
+    private static string ToolName(MethodInfo method) => method.GetCustomAttribute<McpServerToolAttribute>()!.Name ?? method.Name;
 
     /// <summary>
     /// The same tool methods as agent tools (ADR-009): every <c>[McpServerTool]</c> method, read-only or not, as an

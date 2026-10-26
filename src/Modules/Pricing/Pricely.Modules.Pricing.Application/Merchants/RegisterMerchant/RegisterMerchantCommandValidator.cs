@@ -9,5 +9,6 @@ internal sealed class RegisterMerchantCommandValidator : AbstractValidator<Regis
     {
         RuleFor(c => c.Name).NotEmpty().MaximumLength(Merchant.NameMaxLength);
         RuleFor(c => c.Website).NotEmpty();
+        RuleFor(c => c.SearchTemplate).MaximumLength(Merchant.SearchTemplateMaxLength);
     }
 }

@@ -32,6 +32,8 @@ internal sealed class OfferConfiguration : IEntityTypeConfiguration<Offer>
                 .HasColumnName("evidence_observed_manufacturer_reference")
                 .HasMaxLength(100);
             evidence.Property(e => e.AiSimilarity).HasColumnName("evidence_ai_similarity").HasPrecision(5, 4);
+            evidence.Property(e => e.ObservedTitle).HasColumnName("evidence_observed_title").HasMaxLength(MatchEvidence.ObservedTitleMaxLength);
+            evidence.Property(e => e.AiRationale).HasColumnName("evidence_ai_rationale").HasMaxLength(MatchEvidence.AiRationaleMaxLength);
         });
 
         builder.HasOne<Merchant>()

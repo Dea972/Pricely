@@ -11,4 +11,15 @@ public sealed record MatchEvidence(
     string? ObservedGtin,
     string? ObservedBrand,
     string? ObservedManufacturerReference,
-    decimal? AiSimilarity);
+    decimal? AiSimilarity)
+{
+    public const int ObservedTitleMaxLength = 300;
+
+    public const int AiRationaleMaxLength = 1000;
+
+    /// <summary>Title of the product on the merchant page, as displayed.</summary>
+    public string? ObservedTitle { get; init; }
+
+    /// <summary>Why the collector thinks it is (or not) the same product, shown to the reviewer.</summary>
+    public string? AiRationale { get; init; }
+}

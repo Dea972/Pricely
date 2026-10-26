@@ -14,4 +14,4 @@ public sealed record CollectionPlanProductResponse(
     string? ManufacturerReference);
 
 /// <param name="Priority">1 = queried first.</param>
-public sealed record CollectionPlanMerchantResponse(Guid MerchantId, string Name, Uri Website, int Priority);
+public sealed record CollectionPlanMerchantResponse(Guid MerchantId, string Name, Uri Website, int Priority, string? SearchTemplate);

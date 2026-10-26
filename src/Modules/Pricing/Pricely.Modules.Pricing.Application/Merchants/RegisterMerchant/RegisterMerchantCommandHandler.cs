@@ -10,7 +10,7 @@ internal sealed class RegisterMerchantCommandHandler(IMerchantRepository merchan
 {
     public async Task<Result<Guid>> Handle(RegisterMerchantCommand request, CancellationToken cancellationToken)
     {
-        Result<Merchant> merchant = Merchant.Register(request.Name, request.Website);
+        Result<Merchant> merchant = Merchant.Register(request.Name, request.Website, request.SearchTemplate);
         if (merchant.IsFailure)
         {
             return Result.Failure<Guid>(merchant.Error);
