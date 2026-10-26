@@ -1,5 +1,6 @@
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Domain;
+using Pricely.Modules.Catalog.Contracts.Categories;
 using Pricely.Modules.Pricing.Application.Abstractions.Data;
 using Pricely.Modules.Pricing.Application.CollectionProfiles;
 using Pricely.Modules.Pricing.Domain.Catalog;
@@ -11,7 +12,7 @@ namespace Pricely.Modules.Pricing.Application.Merchants.AddMerchantToProfiles;
 /// <summary>One profile per save (one aggregate per transaction): a typology already done stays done on a failure.</summary>
 internal sealed class AddMerchantToProfilesCommandHandler(
     IMerchantRepository merchantRepository,
-    ICatalogCategoryRepository catalogCategoryRepository,
+    IProductCategoryReader productCategoryReader,
     ICollectionProfileRepository collectionProfileRepository,
     IUnitOfWork unitOfWork)
     : ICommandHandler<AddMerchantToProfilesCommand>
@@ -43,7 +44,13 @@ internal sealed class AddMerchantToProfilesCommandHandler(
 
     private async Task<Result> AddAsync(Guid merchantId, Guid categoryId, CancellationToken cancellationToken)
     {
-        if (await catalogCategoryRepository.GetAsync(categoryId, cancellationToken) is null)
+        Result<ProductCategorySummary?> category = await productCategoryReader.GetAsync(categoryId, cancellationToken);
+        if (category.IsFailure)
+        {
+            return category;
+        }
+
+        if (category.Value is null)
         {
             return Result.Failure(CatalogErrors.CategoryNotFound(categoryId));
         }
@@ -54,7 +61,7 @@ internal sealed class AddMerchantToProfilesCommandHandler(
         {
             Result<ResolvedCollectionProfile> resolved = await CollectionProfileLookup.ResolveAsync(
                 categoryId,
-                catalogCategoryRepository,
+                productCategoryReader,
                 collectionProfileRepository,
                 cancellationToken);
             if (resolved.IsFailure)

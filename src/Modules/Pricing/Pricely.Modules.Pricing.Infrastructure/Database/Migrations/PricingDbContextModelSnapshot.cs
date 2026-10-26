@@ -129,28 +129,6 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                     b.ToTable("outbox_message_consumers", "pricing");
                 });
 
-            modelBuilder.Entity("Pricely.Modules.Pricing.Domain.Catalog.CatalogCategory", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("name");
-
-                    b.Property<Guid?>("ParentId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("parent_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_catalog_categories");
-
-                    b.ToTable("catalog_categories", "pricing");
-                });
-
             modelBuilder.Entity("Pricely.Modules.Pricing.Domain.Catalog.CatalogProduct", b =>
                 {
                     b.Property<Guid>("Id")

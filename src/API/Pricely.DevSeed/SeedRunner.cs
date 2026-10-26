@@ -37,9 +37,9 @@ internal sealed class SeedRunner(
         Dictionary<string, Guid> products = await ProductsAsync(categories, cancellationToken);
         Dictionary<string, Guid> merchants = await MerchantsAsync(cancellationToken);
 
-        // Pricing knows the typologies and the products through the events of Catalog (outbox, then inbox). The only read
-        // outside the commands and queries: the read models have no query of their own.
-        await WaitForReadModelsAsync(categories.Values, products.Values, cancellationToken);
+        // Pricing reads the typologies from Catalog through its contract, but knows the products through the events of Catalog
+        // (outbox, then inbox). The only read outside the commands and queries: the read model has no query of its own.
+        await WaitForReadModelsAsync(products.Values, cancellationToken);
 
         await ProfilesAsync(categories, merchants, cancellationToken);
         await ObservationsAsync(products, cancellationToken);
@@ -112,23 +112,17 @@ internal sealed class SeedRunner(
         return ids;
     }
 
-    private async Task WaitForReadModelsAsync(IEnumerable<Guid> categoryIds, IEnumerable<Guid> productIds, CancellationToken cancellationToken)
+    private async Task WaitForReadModelsAsync(IEnumerable<Guid> productIds, CancellationToken cancellationToken)
     {
         DateTime deadline = clock.UtcNow + ReadModelTimeout;
-        logger.LogInformation("Waiting for the typologies and products in Pricing (Catalog events)");
+        logger.LogInformation("Waiting for the products in Pricing (Catalog events)");
 
         while (true)
         {
             await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
-            ICatalogCategoryRepository categories = scope.ServiceProvider.GetRequiredService<ICatalogCategoryRepository>();
             ICatalogProductRepository products = scope.ServiceProvider.GetRequiredService<ICatalogProductRepository>();
 
             bool ready = true;
-            foreach (Guid id in categoryIds)
-            {
-                ready &= await categories.GetAsync(id, cancellationToken) is not null;
-            }
-
             foreach (Guid id in productIds)
             {
                 ready &= await products.GetAsync(id, cancellationToken) is not null;

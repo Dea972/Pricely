@@ -9,7 +9,7 @@ using Pricely.Modules.Users.Infrastructure;
 namespace Pricely.ArchitectureTests;
 
 /// <summary>
-/// Modules never reference each other, except another module's IntegrationEvents project.
+/// Modules never reference each other, except another module's IntegrationEvents or Contracts project (ADR-022).
 /// </summary>
 public sealed class ModuleBoundaryTests
 {
@@ -72,7 +72,7 @@ public sealed class ModuleBoundaryTests
     }
 
     [Fact]
-    public void PricingModule_ShouldOnlyDependOn_CatalogIntegrationEvents()
+    public void PricingModule_ShouldOnlyDependOn_CatalogIntegrationEventsAndContracts()
     {
         AssertNoDependency(PricingAssemblies, CatalogInternals);
         AssertNoDependency(PricingAssemblies, UsersInternals);
@@ -81,14 +81,14 @@ public sealed class ModuleBoundaryTests
     [Fact]
     public void UsersModule_ShouldNotDependOn_OtherModules()
     {
-        AssertNoDependency(UsersAssemblies, [.. CatalogInternals, CatalogNamespace + ".IntegrationEvents"]);
+        AssertNoDependency(UsersAssemblies, [.. CatalogInternals, CatalogNamespace + ".IntegrationEvents", CatalogNamespace + ".Contracts"]);
         AssertNoDependency(UsersAssemblies, [.. PricingInternals, PricingNamespace + ".IntegrationEvents"]);
     }
 
     [Fact]
     public void AiEngineModule_ShouldNotDependOn_OtherModules()
     {
-        AssertNoDependency(AiEngineAssemblies, [.. CatalogInternals, CatalogNamespace + ".IntegrationEvents"]);
+        AssertNoDependency(AiEngineAssemblies, [.. CatalogInternals, CatalogNamespace + ".IntegrationEvents", CatalogNamespace + ".Contracts"]);
         AssertNoDependency(AiEngineAssemblies, [.. PricingInternals, PricingNamespace + ".IntegrationEvents"]);
         AssertNoDependency(AiEngineAssemblies, [.. UsersInternals, UsersNamespace + ".IntegrationEvents"]);
     }

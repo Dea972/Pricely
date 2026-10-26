@@ -30,7 +30,8 @@ src/Common/                    Briques partagées : Domain (Entity, Result, Erro
                                behaviors, IEventBus, IDbConnectionFactory, IDateTimeProvider, AI : ILlmGateway, AiFeature),
                                Infrastructure (outbox, inbox, auth, Quartz, MassTransit, Ai : passerelle + fournisseur Anthropic),
                                Presentation (IEndpoint, ApiResults, Mcp : serveur MCP HTTP)
-src/Modules/<Module>/          Pricely.Modules.<Module>.{Domain,Application,Infrastructure,Presentation,IntegrationEvents}
+src/Modules/<Module>/          Pricely.Modules.<Module>.{Domain,Application,Infrastructure,Presentation,IntegrationEvents,Contracts}
+                               (`IntegrationEvents` et `Contracts` sont optionnels : ce que le module publie, ce qu'il laisse lire, ADR-022)
 src/Modules/<Module>/test/     <Module>.UnitTests (domaine), <Module>.ArchitectureTests (couches, conventions)
 test/Pricely.ArchitectureTests Frontières entre modules, découverte des tools MCP
 test/Pricely.Common.UnitTests  Passerelle LLM
@@ -41,28 +42,29 @@ test/Pricely.Common.UnitTests  Passerelle LLM
 | Module | Agrégats | Rôle |
 |---|---|---|
 | Users | `User` | Profils, rôles, permissions métier (l'identité est portée par Keycloak, ADR-010) |
-| Catalog | `ProductCategory`, `Product` | Produits de référence (GTIN, marque, référence fabricant) et typologies (arbre de 3 niveaux max) |
+| Catalog | `ProductCategory`, `Product` | Produits de référence (GTIN, marque, référence fabricant) et typologies (arbre de 3 niveaux max) ; contrat `IProductCategoryReader` (lecture des typologies par les autres modules) |
 | Pricing | `Merchant`, `CollectionProfile`, `Offer`, `PriceObservation` | Enseignes, profils de collecte par typologie, offres, historique de prix, collecte |
 | AiEngine | `Model` (+ `ModelPrice`), `FeatureSetting`, `LlmCall`, `AgentActivity` | Catalogue des modèles et tarifs, modèle ciblé par fonctionnalité IA, journal des appels LLM et coûts, journal des tools et décisions des agents, statistiques d'usage |
 | Agentic | `AgentConversation`, `PendingAction` | Module générique (réutilisable, ne connaît aucun autre module) : exécute les agents déclarés (`AddAgent`) avec les tools fournis (`AddAgentTools`), conversations, actions d'écriture soumises à validation |
 
-Pricing ne lit jamais Catalog : il garde des read models locaux `CatalogProduct` / `CatalogCategory`, alimentés par les événements d'intégration de Catalog (inbox, upsert idempotent sur l'identifiant source).
+Pricing ne lit jamais la base de Catalog. Les **typologies** se lisent par le contrat `Catalog.Contracts` (`IProductCategoryReader`, ADR-022) : pas de copie. Les **produits** sont gardés dans un read model local `CatalogProduct`, alimenté par les événements d'intégration de Catalog (inbox, upsert idempotent sur l'identifiant source).
 
 ## Règles d'architecture (non négociables)
 
-1. Chaque module est une Clean Architecture complète. **Aucune référence entre modules**, sauf vers le projet `IntegrationEvents` d'un autre module.
+1. Chaque module est une Clean Architecture complète. **Aucune référence entre modules**, sauf vers le projet `IntegrationEvents` ou `Contracts` d'un autre module.
 2. Graphe de références autorisé :
 
 | Projet | Peut référencer |
 |---|---|
 | `<M>.Domain` | `Common.Domain` |
-| `<M>.Application` | `<M>.Domain`, `Common.Application`, `<M>.IntegrationEvents` (pour publier) |
+| `<M>.Application` | `<M>.Domain`, `Common.Application`, `<M>.IntegrationEvents` (pour publier), `<Autre>.Contracts` (pour lire) |
 | `<M>.Presentation` | `<M>.Application`, `Common.Presentation`, `<Autre>.IntegrationEvents` (handlers d'événements entrants) |
-| `<M>.Infrastructure` | `<M>.Application`, `<M>.Presentation`, `<M>.IntegrationEvents`, `Common.Infrastructure`, `<Autre>.IntegrationEvents` |
+| `<M>.Infrastructure` | `<M>.Application`, `<M>.Presentation`, `<M>.IntegrationEvents`, `<M>.Contracts` (pour l'implémenter), `Common.Infrastructure`, `<Autre>.IntegrationEvents` |
 | `<M>.IntegrationEvents` | `Common.Application` uniquement |
+| `<M>.Contracts` | `Common.Domain` uniquement (pour `Result`) |
 | `Pricely.Sdk` | `Infrastructure` de chaque module |
 
-3. Besoin d'une donnée d'un autre module : événement d'intégration + read model local. **Jamais** de référence de projet, jamais de clé étrangère entre schémas (colonne `Guid` simple, commentée).
+3. Besoin d'une donnée d'un autre module : lire ponctuellement → son **contrat** (`<Autre>.Contracts`, lu depuis Application) ; réagir à un changement → **événement d'intégration** ; garder une copie locale (événement + read model) seulement si on le justifie (lecture très fréquente, historisation, disponibilité). **Jamais** d'autre référence de projet, jamais de clé étrangère entre schémas (colonne `Guid` simple, commentée). Jamais d'interrogation en boucle d'un contrat pour détecter un changement.
 4. `Domain` ne dépend ni d'EF Core, ni de MassTransit, ni d'ASP.NET, ni de Dapper.
 5. Tout système externe passe par un port défini dans `Application` et implémenté dans `Infrastructure` (couche anti-corruption). Exemple : `IOfferCollector`.
 6. Les tests `ArchitectureTests` font foi. Un test rouge signale un problème de conception, pas un test à modifier.
@@ -75,6 +77,7 @@ Pricing ne lit jamais Catalog : il garde des read models locaux `CatalogProduct`
 - **Événement de domaine** : `sealed class XxxDomainEvent(...) : DomainEvent`, propriétés `{ get; init; }`.
 - **Commande** : `Application/<Agrégats>/<UseCase>/` avec `<UseCase>Command` (`sealed record : ICommand` ou `ICommand<T>`), `<UseCase>CommandHandler` (`internal sealed`), `<UseCase>CommandValidator` (`internal sealed`, FluentValidation).
 - **Requête** : `<UseCase>Query` + `<X>Response` dans `Application`. Le handler est dans **Infrastructure** (`internal sealed`, Dapper + `IDbConnectionFactory`, PostgreSQL, colonnes snake_case aliasées avec `nameof`) sauf s'il a besoin de logique de domaine (alors dans Application, ex. `GetEffectiveCollectionProfileQueryHandler`).
+- **Contrat** (ADR-022) : `Pricely.Modules.<M>.Contracts/<Sujet>/` — interfaces `I<Sujet>Reader`, `sealed record` immuables, erreurs statiques ; méthodes `Task<Result<T>>` avec `CancellationToken` en dernier, volumes bornés ; aucun type du Domain. Implémentation `internal sealed` dans `<M>.Infrastructure/Contracts/<Sujet>/` (EF Core `AsNoTracking` + projection, pas de requête MediatR, pas de règle métier), enregistrée dans `<M>Module`. Exemple : `IProductCategoryReader` lu par `CollectionProfileLookup`.
 - **Publication inter-modules** : un `DomainEventHandler<T>` dans Application publie l'`IntegrationEvent` via `IEventBus`. L'outbox garantit la livraison.
 - **Consommation inter-modules** : `IntegrationEventHandler<T>` dans **Presentation** (`internal sealed`, suffixe `IntegrationEventHandler`) qui envoie une commande ; `PricingModule.ConfigureConsumers` déclare `IntegrationEventConsumer<T>` ; l'inbox du module assure l'idempotence.
 - **Endpoint** : une classe `internal sealed` par endpoint dans `Presentation/<Agrégats>/`, implémente `IEndpoint`, route sans préfixe `/api` (ajouté par `MapPricelyEndpoints`), `.RequireAuthorization().WithTags(Tags.X)`, accepte un `CancellationToken`, renvoie `result.Match(Results.Ok|NoContent, ApiResults.Problem)`. DTO d'entrée : classe imbriquée `Request` avec `{ get; init; }`.

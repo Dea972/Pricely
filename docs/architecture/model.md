@@ -92,8 +92,8 @@ classDiagram
     class CatalogProduct {
         <<read model>>
     }
-    class CatalogCategory {
-        <<read model>>
+    class ProductCategory {
+        <<Catalog.Contracts>>
     }
     CollectionProfile *-- "*" PreferredMerchant
     PreferredMerchant --> Merchant
@@ -101,10 +101,10 @@ classDiagram
     PriceObservation --> Offer
     PageSnapshot --> Merchant
     Offer ..> CatalogProduct : ProductId
-    CollectionProfile ..> CatalogCategory : ProductCategoryId
+    CollectionProfile ..> ProductCategory : ProductCategoryId
 ```
 
-Flèches pointillées : identifiants d'un autre module, sans clé étrangère.
+Flèches pointillées : identifiants d'un autre module, sans clé étrangère. `CatalogProduct` est une copie locale (événements de Catalog) ; `ProductCategory` n'est pas copiée : Pricing la lit chez Catalog par son contrat (ADR-022).
 
 ## Flux de collecte
 

@@ -72,7 +72,6 @@ public static class PricingModule
         services.AddScoped<IOfferRepository, OfferRepository>();
         services.AddScoped<IPriceObservationRepository, PriceObservationRepository>();
         services.AddScoped<ICatalogProductRepository, CatalogProductRepository>();
-        services.AddScoped<ICatalogCategoryRepository, CatalogCategoryRepository>();
 
         services.AddScoped<IPageSnapshotRepository, PageSnapshotRepository>();
 
@@ -111,8 +110,6 @@ public static class PricingModule
     {
         registrationConfigurator.AddConsumer<IntegrationEventConsumer<ProductRegisteredIntegrationEvent>>();
         registrationConfigurator.AddConsumer<IntegrationEventConsumer<ProductUpdatedIntegrationEvent>>();
-        registrationConfigurator.AddConsumer<IntegrationEventConsumer<ProductCategoryCreatedIntegrationEvent>>();
-        registrationConfigurator.AddConsumer<IntegrationEventConsumer<ProductCategoryRenamedIntegrationEvent>>();
     }
 
     private static void AddDomainEventHandlers(this IServiceCollection services)

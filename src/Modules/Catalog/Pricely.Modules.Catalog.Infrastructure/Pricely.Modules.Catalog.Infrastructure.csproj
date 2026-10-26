@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Pricely.Modules.Catalog.Application\Pricely.Modules.Catalog.Application.csproj" />
+    <ProjectReference Include="..\Pricely.Modules.Catalog.Contracts\Pricely.Modules.Catalog.Contracts.csproj" />
     <ProjectReference Include="..\Pricely.Modules.Catalog.IntegrationEvents\Pricely.Modules.Catalog.IntegrationEvents.csproj" />
     <ProjectReference Include="..\Pricely.Modules.Catalog.Presentation\Pricely.Modules.Catalog.Presentation.csproj" />
     <ProjectReference Include="..\..\..\Common\Pricely.Common.Infrastructure\Pricely.Common.Infrastructure.csproj" />

@@ -242,6 +242,27 @@ Conséquences et choix :
 - **Application** : l'utilisateur applique une proposition (ou toutes) dans `/ai` ; `SetModelPriceCommand` reçoit sa source (`PriceSource.LiteLlm`, `AiReading`, `Manual` par défaut), le tarif vaut à partir du jour (UTC) et le coût des appels passés ne change pas (tarif figé, ADR-007). Pas d'import automatique planifié.
 - `/ai` permet aussi d'ajouter un modèle au catalogue (`POST aiengine/models`).
 
+## ADR-022 — Contrats de module : lire un autre module sans copier ses données
+
+**Statut** : acceptée (2026-10-26), décision du propriétaire du projet (« le contrat dans le module, référencé par la couche Application d'un autre module, plutôt que dupliquer par événement d'intégration »).
+
+- **Contrat** : un projet optionnel `Pricely.Modules.<M>.Contracts` dans le module propriétaire, qui expose sa **surface publique de lecture** aux autres modules. Interfaces et `sealed record` immuables uniquement (plus les erreurs en classe statique), un dossier par sujet (`Categories/`) ; aucun type du Domain, aucune entité EF, aucun `IQueryable`. Il ne référence que `Common.Domain` (pour `Result`).
+- **Qui le référence** : la couche **Application** d'un autre module (`<Autre>.Application` → `<M>.Contracts`), jamais son Domain ni sa Presentation ; l'Infrastructure du propriétaire le référence pour l'implémenter. C'est la seule référence entre modules, avec `*.IntegrationEvents`.
+- **Implémentation** : `internal sealed` dans `<M>.Infrastructure/Contracts/<Sujet>/`, enregistrée dans `<M>Module` (`AddScoped`). Lecture **EF Core** sur le `DbContext` du module (`AsNoTracking`, projection `Select`), sans règle métier : la requête projette. Pas une requête MediatR : une requête porte une intention métier, un contrat est une lecture technique entre modules. Appel interne de confiance, aucune autorisation, jamais exposé tel quel par un endpoint.
+- **Forme des méthodes** : asynchrones, `Task<Result<T>>`, `CancellationToken` en dernier paramètre, volumes bornés (pagination par curseur plutôt qu'`IAsyncEnumerable`) : le contrat doit pouvoir être servi demain par HTTP si le module sort du process. Une panne du propriétaire est un `Result` en échec que l'appelant propage.
+- **Quand l'utiliser** :
+
+  | Besoin | Mécanisme |
+  |---|---|
+  | Lire ponctuellement la donnée d'un autre module | son **contrat** |
+  | Réagir à un changement dans un autre module | **événement d'intégration** (outbox / inbox), qui peut ne porter que des identifiants |
+  | Garder une copie locale | événement d'intégration + read model, **à justifier** (lecture très fréquente, historisation, disponibilité) |
+
+  Jamais d'interrogation en boucle d'un contrat pour détecter un changement : la réaction passe par un événement.
+- **Première application : les typologies.** `Catalog.Contracts` expose `IProductCategoryReader` (`GetAsync`, `GetLineageAsync` — la typologie puis ses ancêtres, la plus proche d'abord —, `GetAllAsync`) et `ProductCategorySummary` (`Id`, `Name`, `ParentId`, `Depth`). Pricing l'utilise pour résoudre le profil de collecte (`CollectionProfileLookup`), vérifier qu'une typologie existe (`DefineCollectionProfile`, `AddMerchantToProfiles`) et présenter les typologies à l'assistant de paramétrage (`SuggestMerchant`). Le read model `CatalogCategory`, son dépôt, ses deux commandes d'upsert / renommage, leurs handlers d'événements et ses consumers sont supprimés ; la migration `DropCatalogCategories` retire la table `pricing.catalog_categories`. Une typologie créée ou renommée dans Catalog est donc visible tout de suite, sans attendre l'outbox ni l'inbox. Les identifiants de typologie restent des `Guid` simples dans Pricing (`CollectionProfile.ProductCategoryId`), sans clé étrangère entre schémas : Catalog n'a pas d'identifiant naturel pour une typologie.
+- **Ce qui ne change pas** : `CatalogProduct` reste un read model alimenté par les événements de Catalog (le produit est historisé avec les offres et lu à chaque collecte) ; l'examiner à part si on veut aussi le passer par un contrat. Les événements `ProductCategoryCreated` / `ProductCategoryRenamed` restent publiés par Catalog (contrat d'intégration stable, messages d'outbox / inbox existants) mais n'ont plus de consommateur.
+- **Garde** : `test/Pricely.ArchitectureTests/ContractsTests.cs` (références limitées à `Common.Domain`, contenu du projet, forme des méthodes, implémentations `internal`, Domain et Presentation des consommateurs sans accès au contrat) et `ModuleBoundaryTests` (Users et AiEngine n'ont aucun accès à `Catalog.Contracts`).
+
 ## Compléments du 2026-10-26 (étapes 5b et 6)
 
 - **Jetons du front sur plusieurs instances** (complète l'ADR-015) : `ServerTokenStore` écrit dans `IDistributedCache` (mémoire par défaut, `AddDistributedMemoryCache`), jetons chiffrés par la protection des données (`SetApplicationName("Pricely.Web")`). Plusieurs instances : brancher un cache partagé (Redis…) et des clés de protection partagées, sans changer le code. Le verrou de rafraîchissement reste local à l'instance (64 verrous répartis par session, sans fuite) ; deux instances peuvent rafraîchir la même session en même temps, Keycloak refusant alors le refresh token déjà utilisé si la rotation est active (session close, reconnexion).
@@ -253,6 +274,8 @@ Conséquences et choix :
 
 ## Décisions ouvertes
 
+- Test d'intégration des contrats (ADR-022) : l'implémentation `ProductCategoryReader` a été vérifiée contre un PostgreSQL 16 jetable (lignée, tri `citext`, cycle borné), mais le dépôt n'a pas de projet de tests d'intégration (les anciens ont été supprimés, voir plus haut). À créer (Testcontainers ou PostgreSQL de l'AppHost) avant d'ajouter d'autres contrats.
+- Événements `ProductCategoryCreated` / `ProductCategoryRenamed` : plus aucun consommateur depuis l'ADR-022. Les retirer de Catalog (domain event handlers, outbox) ou les garder pour un futur abonné.
 - Conservation des instantanés de pages (`pricing.page_snapshots`) et limite de débit des lectures de pages : `fetch_merchant_page` (un jeton `pricely.read` peut faire lire des pages d'enseigne), `pricing/merchants/suggestions` et `catalog/products/suggestions` (un jeton `pricely.write` fait lire une adresse publique quelconque et appeler un modèle, ADR-020) : rien ne purge ni ne limite aujourd'hui ; à fixer avant d'activer la collecte planifiée ou d'ouvrir `/mcp` hors du poste de développement.
 - Garde-fou de prix : un relevé signalé reste un prix de référence pour les relevés suivants des autres offres (`GetLatestComparablePricesAsync`) ; un prix de lot peut ainsi faire signaler le prix normal d'une autre enseigne relevé juste après. Exclure les relevés signalés de la référence est à décider (règle métier).
 - Sites rendus en JavaScript : un navigateur sans tête (Playwright) derrière le même port `IWebPageReader`, si le HTML et le JSON-LD ne suffisent pas.

@@ -16,9 +16,10 @@ Soit `<M>` le nom du module (PascalCase, pluriel ou nom de contexte : `Alerts`, 
 1. **Projets** sous `src/Modules/<M>/`, csproj minimalistes (le `Directory.Build.props` fixe `net10.0`, nullable, analyseurs) :
    - `Pricely.Modules.<M>.Domain` → `Common.Domain`
    - `Pricely.Modules.<M>.IntegrationEvents` → `Common.Application` (seulement si le module publie)
-   - `Pricely.Modules.<M>.Application` → Domain, IntegrationEvents (si publie), `Common.Application`
+   - `Pricely.Modules.<M>.Contracts` → `Common.Domain` (seulement si le module laisse les autres le lire : interfaces et records, ADR-022)
+   - `Pricely.Modules.<M>.Application` → Domain, IntegrationEvents (si publie), `Common.Application` (+ `<Autre>.Contracts` s'il lit un autre module)
    - `Pricely.Modules.<M>.Presentation` → Application, `Common.Presentation` (+ `<Autre>.IntegrationEvents` s'il consomme)
-   - `Pricely.Modules.<M>.Infrastructure` → Application, Presentation, IntegrationEvents, `Common.Infrastructure`, package `Npgsql.EntityFrameworkCore.PostgreSQL`
+   - `Pricely.Modules.<M>.Infrastructure` → Application, Presentation, IntegrationEvents, Contracts (si le module en a un), `Common.Infrastructure`, package `Npgsql.EntityFrameworkCore.PostgreSQL`
 2. **Fichiers de base** :
    - `Application/AssemblyReference.cs`, `Presentation/AssemblyReference.cs`, `Presentation/Tags.cs`
    - `Application/Abstractions/Data/IUnitOfWork.cs`
@@ -41,5 +42,5 @@ Soit `<M>` le nom du module (PascalCase, pluriel ou nom de contexte : `Alerts`, 
 
 ## Vérifications
 
-- Aucun `ProjectReference` vers un autre module hors `*.IntegrationEvents`.
+- Aucun `ProjectReference` vers un autre module hors `*.IntegrationEvents` et `*.Contracts` (ce dernier depuis `Application` seulement).
 - Toutes les classes `internal sealed` sauf `AssemblyReference`, `<M>Module`, `<M>DbContext`, contrats d'Application et types du domaine.

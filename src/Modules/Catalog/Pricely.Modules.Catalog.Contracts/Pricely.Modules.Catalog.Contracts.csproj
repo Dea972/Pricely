@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Public read surface of the Catalog module: interfaces and immutable records only (ADR-022). -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Common\Pricely.Common.Domain\Pricely.Common.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

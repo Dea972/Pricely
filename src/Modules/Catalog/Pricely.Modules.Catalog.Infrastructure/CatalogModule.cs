@@ -9,9 +9,11 @@ using Pricely.Common.Infrastructure.Outbox;
 using Pricely.Common.Presentation.Endpoints;
 using Pricely.Modules.Catalog.Application;
 using Pricely.Modules.Catalog.Application.Abstractions.Data;
+using Pricely.Modules.Catalog.Contracts.Categories;
 using Pricely.Modules.Catalog.Domain.Categories;
 using Pricely.Modules.Catalog.Domain.Products;
 using Pricely.Modules.Catalog.Infrastructure.Categories;
+using Pricely.Modules.Catalog.Infrastructure.Contracts.Categories;
 using Pricely.Modules.Catalog.Infrastructure.Database;
 using Pricely.Modules.Catalog.Infrastructure.Outbox;
 using Pricely.Modules.Catalog.Infrastructure.Products;
@@ -53,6 +55,9 @@ public static class CatalogModule
         services.AddScoped<IUnitOfWork>(serviceProvider => serviceProvider.GetRequiredService<CatalogDbContext>());
         services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
+
+        // Public read surface for the other modules (ADR-022).
+        services.AddScoped<IProductCategoryReader, ProductCategoryReader>();
 
         services.AddAiFeature(CatalogAiFeatures.ProductEntry);
 

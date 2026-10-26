@@ -53,6 +53,7 @@
 		<Project Path="src/Modules/Catalog/Pricely.Modules.Catalog.Infrastructure/Pricely.Modules.Catalog.Infrastructure.csproj" />
 		<Project Path="src/Modules/Catalog/Pricely.Modules.Catalog.Presentation/Pricely.Modules.Catalog.Presentation.csproj" />
 		<Project Path="src/Modules/Catalog/Pricely.Modules.Catalog.IntegrationEvents/Pricely.Modules.Catalog.IntegrationEvents.csproj" />
+		<Project Path="src/Modules/Catalog/Pricely.Modules.Catalog.Contracts/Pricely.Modules.Catalog.Contracts.csproj" />
 	</Folder>
 	<Folder Name="/src/Modules/Catalog/test/">
 		<Project Path="src/Modules/Catalog/test/Pricely.Modules.Catalog.ArchitectureTests/Pricely.Modules.Catalog.ArchitectureTests.csproj" />

@@ -5,6 +5,8 @@ description: Connect two Pricely modules with an integration event - publish fro
 
 # Nouvel événement d'intégration
 
+**D'abord, choisir le mécanisme** (ADR-022). Un événement d'intégration sert à **réagir** à un changement d'un autre module ou à **garder une copie locale** justifiée (lecture très fréquente, historisation, disponibilité). Pour **lire ponctuellement** une donnée d'un autre module, ne pas la copier : utiliser (ou ajouter) son projet `<S>.Contracts`, lu depuis l'Application du module cible (exemple : `IProductCategoryReader`, lu par Pricing). Ce skill ne couvre que l'événement.
+
 Exemple complet existant : `Catalog` publie `ProductRegisteredIntegrationEvent`, `Pricing` le consomme pour alimenter son read model `CatalogProduct`.
 
 Flux : agrégat `Raise(DomainEvent)` → `SaveChanges` (l'intercepteur écrit l'outbox du module source) → `ProcessOutboxJob` → `DomainEventHandler` publie l'`IntegrationEvent` sur MassTransit → `IntegrationEventConsumer<T>` du module cible écrit dans son inbox → `ProcessInboxJob` → `IntegrationEventHandler<T>` (Presentation) → commande d'Application → upsert idempotent.

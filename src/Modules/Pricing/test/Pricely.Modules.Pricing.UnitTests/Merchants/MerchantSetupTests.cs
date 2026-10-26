@@ -4,19 +4,20 @@ using Pricely.Common.Application.Clock;
 using Pricely.Common.Application.EventBus;
 using Pricely.Common.Application.Web;
 using Pricely.Common.Domain;
+using Pricely.Modules.Catalog.Contracts.Categories;
 using Pricely.Modules.Pricing.Application.Abstractions.Data;
 using Pricely.Modules.Pricing.Application.Merchants.AddMerchantToProfiles;
 using Pricely.Modules.Pricing.Application.Merchants.SuggestMerchant;
-using Pricely.Modules.Pricing.Domain.Catalog;
 using Pricely.Modules.Pricing.Domain.CollectionProfiles;
 using Pricely.Modules.Pricing.Domain.Merchants;
+using Pricely.Modules.Pricing.UnitTests.Abstractions;
 
 namespace Pricely.Modules.Pricing.UnitTests.Merchants;
 
 public sealed class MerchantSetupTests
 {
-    private static readonly CatalogCategory Root = CatalogCategory.Create(Guid.NewGuid(), "Gros œuvre", null);
-    private static readonly CatalogCategory Cement = CatalogCategory.Create(Guid.NewGuid(), "Ciment", Root.Id);
+    private static readonly ProductCategorySummary Root = new(Guid.NewGuid(), "Gros œuvre", null, 1);
+    private static readonly ProductCategorySummary Cement = new(Guid.NewGuid(), "Ciment", Root.Id, 2);
 
     private readonly FakeWeb _web = new();
 
@@ -88,7 +89,7 @@ public sealed class MerchantSetupTests
         Merchant added = Merchant.Register("Comptoir", "https://comptoir.test").Value;
         var profiles = new FakeProfiles(CollectionProfile.Define(Root.Id, [inherited.Id], "Prix TTC.").Value);
 
-        var handler = new AddMerchantToProfilesCommandHandler(new FakeMerchants(inherited, added), new FakeCategories(), profiles, new NoUnitOfWork());
+        var handler = new AddMerchantToProfilesCommandHandler(new FakeMerchants(inherited, added), new FakeProductCategoryReader(Root, Cement), profiles, new NoUnitOfWork());
         Result result = await handler.Handle(new AddMerchantToProfilesCommand(added.Id, [Cement.Id, Root.Id]), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
@@ -98,8 +99,47 @@ public sealed class MerchantSetupTests
         profiles.Of(Root.Id)!.Instructions.Should().Be("Prix TTC.");
     }
 
+    [Fact]
+    public async Task AddToProfiles_ShouldRefuseATypologyCatalogDoesNotKnow()
+    {
+        Merchant added = Merchant.Register("Comptoir", "https://comptoir.test").Value;
+        var profiles = new FakeProfiles();
+        var unknown = Guid.NewGuid();
+
+        var handler = new AddMerchantToProfilesCommandHandler(new FakeMerchants(added), new FakeProductCategoryReader(Root, Cement), profiles, new NoUnitOfWork());
+        Result result = await handler.Handle(new AddMerchantToProfilesCommand(added.Id, [unknown]), CancellationToken.None);
+
+        result.Error.Code.Should().Be("Catalog.CategoryNotFound");
+        profiles.Of(unknown).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task AddToProfiles_ShouldFail_WhenCatalogCannotBeRead()
+    {
+        Merchant added = Merchant.Register("Comptoir", "https://comptoir.test").Value;
+        var unreachable = Error.Failure("Catalog.Unreachable", "Catalog does not answer.");
+        var profiles = new FakeProfiles();
+
+        var handler = new AddMerchantToProfilesCommandHandler(new FakeMerchants(added), new FakeProductCategoryReader(Root) { Failure = unreachable }, profiles, new NoUnitOfWork());
+        Result result = await handler.Handle(new AddMerchantToProfilesCommand(added.Id, [Root.Id]), CancellationToken.None);
+
+        result.Error.Should().Be(unreachable);
+        profiles.Of(Root.Id).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Suggest_ShouldFail_WhenCatalogCannotBeRead()
+    {
+        var unreachable = Error.Failure("Catalog.Unreachable", "Catalog does not answer.");
+        var handler = new SuggestMerchantCommandHandler(_web, new FakeGateway(new FakeModel(null)), new FakeProductCategoryReader(Root) { Failure = unreachable });
+
+        Result<MerchantSuggestionResponse> result = await handler.Handle(new SuggestMerchantCommand("comptoir.test", null), CancellationToken.None);
+
+        result.Error.Should().Be(unreachable);
+    }
+
     private SuggestMerchantCommandHandler Handler(FakeModel model) =>
-        new(_web, new FakeGateway(model), new FakeCategories());
+        new(_web, new FakeGateway(model), new FakeProductCategoryReader(Root, Cement));
 
     private sealed class FakeWeb : IWebPageReader
     {
@@ -134,19 +174,6 @@ public sealed class MerchantSetupTests
     {
         public Task<LlmClient> ForFeatureAsync(AiFeature feature, CancellationToken cancellationToken = default) =>
             Task.FromResult(new LlmClient(service, feature, new LlmTarget("fake")));
-    }
-
-    private sealed class FakeCategories : ICatalogCategoryRepository
-    {
-        private static readonly CatalogCategory[] All = [Root, Cement];
-
-        public Task<CatalogCategory?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
-            Task.FromResult(Array.Find(All, c => c.Id == id));
-
-        public Task<IReadOnlyCollection<CatalogCategory>> GetAllAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyCollection<CatalogCategory>>(All);
-
-        public void Insert(CatalogCategory category) => throw new NotSupportedException();
     }
 
     private sealed class FakeProfiles(params CollectionProfile[] profiles) : ICollectionProfileRepository

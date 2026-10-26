@@ -1,4 +1,5 @@
 using Pricely.Common.Domain;
+using Pricely.Modules.Catalog.Contracts.Categories;
 using Pricely.Modules.Pricing.Application.Abstractions.Collection;
 using Pricely.Modules.Pricing.Application.CollectionProfiles;
 using Pricely.Modules.Pricing.Domain.Catalog;
@@ -14,7 +15,7 @@ namespace Pricely.Modules.Pricing.Application.Offers.CollectProductOffers;
 /// </summary>
 public sealed class OfferCollectionPlanner(
     ICatalogProductRepository catalogProductRepository,
-    ICatalogCategoryRepository catalogCategoryRepository,
+    IProductCategoryReader productCategoryReader,
     ICollectionProfileRepository collectionProfileRepository,
     IMerchantRepository merchantRepository)
 {
@@ -28,7 +29,7 @@ public sealed class OfferCollectionPlanner(
 
         Result<ResolvedCollectionProfile> profile = await CollectionProfileLookup.ResolveAsync(
             product.ProductCategoryId,
-            catalogCategoryRepository,
+            productCategoryReader,
             collectionProfileRepository,
             cancellationToken);
         if (profile.IsFailure)

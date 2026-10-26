@@ -15,9 +15,10 @@ Tu es le relecteur d'architecture de Pricely. Tu ne modifies aucun fichier : tu 
 ## Points de contrôle
 
 **Frontières**
-- Aucun `ProjectReference` d'un module vers un autre, sauf `*.IntegrationEvents`. Aucun `using Pricely.Modules.<Autre>.(Domain|Application|Infrastructure|Presentation)`.
+- Aucun `ProjectReference` d'un module vers un autre, sauf `*.IntegrationEvents` et `*.Contracts` (ce dernier référencé par `Application` seulement, ADR-022). Aucun `using Pricely.Modules.<Autre>.(Domain|Application|Infrastructure|Presentation)`.
 - Aucune clé étrangère EF vers une table d'un autre schéma ; aucune requête SQL Dapper sur le schéma d'un autre module.
-- Données d'un autre module : read model local alimenté par événement, upsert idempotent.
+- Données d'un autre module : lecture ponctuelle par son **contrat** (`<Autre>.Contracts`) ; réaction à un changement par événement ; read model local (événement + upsert idempotent) seulement s'il est justifié (lecture très fréquente, historisation, disponibilité). Une copie locale d'une donnée qu'un contrat expose déjà est un défaut.
+- Contrat (`*.Contracts`) : interfaces et `sealed record` immuables, `Task<Result<T>>` avec `CancellationToken`, aucun type du Domain ni entité EF ; implémentation `internal sealed` dans `Infrastructure/Contracts/`, EF Core en lecture seule, sans règle métier ni requête MediatR.
 
 **Couches**
 - `Domain` sans EF Core, MassTransit, ASP.NET, Dapper, MediatR handlers.
