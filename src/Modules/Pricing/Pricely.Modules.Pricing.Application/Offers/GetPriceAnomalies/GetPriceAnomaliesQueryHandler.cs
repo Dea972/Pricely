@@ -1,46 +1,46 @@
-using System.Data.Common;
-using Dapper;
-using Pricely.Common.Application.Data;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Domain;
+using Pricely.Modules.Catalog.Contracts.Products;
 
 namespace Pricely.Modules.Pricing.Application.Offers.GetPriceAnomalies;
 
-internal sealed class GetPriceAnomaliesQueryHandler(IDbConnectionFactory dbConnectionFactory)
+/// <summary>The anomalies come from Pricing, the names of the products from Catalog (contract).</summary>
+internal sealed class GetPriceAnomaliesQueryHandler(IOfferReadStore readStore, IProductReader productReader)
     : IQueryHandler<GetPriceAnomaliesQuery, IReadOnlyCollection<PriceAnomalyResponse>>
 {
     public async Task<Result<IReadOnlyCollection<PriceAnomalyResponse>>> Handle(
         GetPriceAnomaliesQuery request,
         CancellationToken cancellationToken)
     {
-        await using DbConnection connection = await dbConnectionFactory.OpenConnectionAsync();
+        IReadOnlyCollection<PriceAnomalyRow> rows = await readStore.GetPriceAnomaliesAsync(request.SinceUtc, request.Limit, cancellationToken);
 
-        const string sql =
-            $"""
-             SELECT
-                 po.id AS {nameof(PriceAnomalyResponse.PriceObservationId)},
-                 o.id AS {nameof(PriceAnomalyResponse.OfferId)},
-                 o.product_id AS {nameof(PriceAnomalyResponse.ProductId)},
-                 p.name AS {nameof(PriceAnomalyResponse.ProductName)},
-                 m.name AS {nameof(PriceAnomalyResponse.MerchantName)},
-                 o.product_page AS {nameof(PriceAnomalyResponse.ProductPage)},
-                 o.status AS {nameof(PriceAnomalyResponse.OfferStatus)},
-                 po.price_amount AS {nameof(PriceAnomalyResponse.Amount)},
-                 po.price_currency AS {nameof(PriceAnomalyResponse.Currency)},
-                 po.observed_on_utc AS {nameof(PriceAnomalyResponse.ObservedOnUtc)}
-             FROM pricing.price_observations po
-             INNER JOIN pricing.offers o ON o.id = po.offer_id
-             INNER JOIN pricing.merchants m ON m.id = o.merchant_id
-             INNER JOIN pricing.catalog_products p ON p.id = o.product_id
-             WHERE po.is_flagged_as_anomaly
-               AND (CAST(@SinceUtc AS timestamptz) IS NULL OR po.observed_on_utc >= @SinceUtc)
-             ORDER BY po.observed_on_utc DESC
-             LIMIT @Limit
-             """;
+        Result<Dictionary<Guid, ProductSummary>> products =
+            await ProductLookup.LoadAsync(productReader, rows.Select(r => r.ProductId), cancellationToken);
+        if (products.IsFailure)
+        {
+            return Result.Failure<IReadOnlyCollection<PriceAnomalyResponse>>(products.Error);
+        }
 
-        IEnumerable<PriceAnomalyResponse> anomalies = await connection.QueryAsync<PriceAnomalyResponse>(
-            new CommandDefinition(sql, request, cancellationToken: cancellationToken));
+        // An observation of a product Catalog no longer knows is left out, as an inner join would.
+        IReadOnlyCollection<PriceAnomalyResponse> anomalies =
+        [
+            .. rows
+                .Where(r => products.Value.ContainsKey(r.ProductId))
+                .Select(r => new PriceAnomalyResponse
+                {
+                    PriceObservationId = r.PriceObservationId,
+                    OfferId = r.OfferId,
+                    ProductId = r.ProductId,
+                    ProductName = products.Value[r.ProductId].Name,
+                    MerchantName = r.MerchantName,
+                    ProductPage = r.ProductPage,
+                    OfferStatus = r.OfferStatus,
+                    Amount = r.Amount,
+                    Currency = r.Currency,
+                    ObservedOnUtc = r.ObservedOnUtc
+                })
+        ];
 
-        return Result.Success<IReadOnlyCollection<PriceAnomalyResponse>>(anomalies.ToList());
+        return Result.Success(anomalies);
     }
 }

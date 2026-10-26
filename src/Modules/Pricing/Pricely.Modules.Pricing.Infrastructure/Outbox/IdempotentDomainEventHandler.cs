@@ -1,5 +1,5 @@
 ﻿using System.Data.Common;
-using Pricely.Common.Application.Data;
+using Pricely.Common.Infrastructure.Data;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Domain;
 using Pricely.Common.Infrastructure.Outbox;

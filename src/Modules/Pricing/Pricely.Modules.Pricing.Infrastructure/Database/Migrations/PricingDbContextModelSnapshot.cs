@@ -129,47 +129,6 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                     b.ToTable("outbox_message_consumers", "pricing");
                 });
 
-            modelBuilder.Entity("Pricely.Modules.Pricing.Domain.Catalog.CatalogProduct", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Brand")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("character varying(150)")
-                        .HasColumnName("brand");
-
-                    b.Property<string>("Gtin")
-                        .HasMaxLength(14)
-                        .HasColumnType("character varying(14)")
-                        .HasColumnName("gtin");
-
-                    b.Property<string>("ManufacturerReference")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("manufacturer_reference");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)")
-                        .HasColumnName("name");
-
-                    b.Property<Guid>("ProductCategoryId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("product_category_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_catalog_products");
-
-                    b.HasIndex("ProductCategoryId")
-                        .HasDatabaseName("ix_catalog_products_product_category_id");
-
-                    b.ToTable("catalog_products", "pricing");
-                });
-
             modelBuilder.Entity("Pricely.Modules.Pricing.Domain.CollectionProfiles.CollectionProfile", b =>
                 {
                     b.Property<Guid>("Id")

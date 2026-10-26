@@ -9,7 +9,7 @@ Lire avant de coder : `docs/architecture/ubiquitous-language.md`, `docs/architec
 ## Stack
 
 - .NET 10 (`net10.0`), ASP.NET Core minimal APIs, .NET Aspire 13.6 (AppHost + ServiceDefaults)
-- PostgreSQL (Npgsql) : EF Core 10 (écriture) + Dapper (lecture), un `DbContext` et un schéma par module, `UseSnakeCaseNamingConvention()`
+- PostgreSQL (Npgsql) : EF Core 10 (écriture et lectures, `AsNoTracking` + projection) ; Dapper seulement dans l'Infrastructure, pour une lecture que LINQ rend mal (jointure latérale, agrégat `FILTER`, médiane), derrière un `ReadStore` ; un `DbContext` et un schéma par module, `UseSnakeCaseNamingConvention()`
 - MediatR (commandes / requêtes / pipeline behaviors), FluentValidation
 - MassTransit in-memory + outbox / inbox maison (tables par module) traitées par des jobs Quartz
 - Tests : xUnit, FluentAssertions, NetArchTest.Rules, Bogus, bUnit (composants du front)
@@ -27,8 +27,8 @@ src/Agents/                    Agents de Pricely (ADR-014) : un projet par agent
                                Common uniquement ; ils sont exécutés par le module Agentic
 src/Adapters/Pricely.Sdk       Composition : AddPricelyAsync() enregistre tous les modules, MapPricelyEndpoints() sous /api
 src/Common/                    Briques partagées : Domain (Entity, Result, Error, DomainEvent), Application (ICommand, IQuery,
-                               behaviors, IEventBus, IDbConnectionFactory, IDateTimeProvider, AI : ILlmGateway, AiFeature),
-                               Infrastructure (outbox, inbox, auth, Quartz, MassTransit, Ai : passerelle + fournisseur Anthropic),
+                               behaviors, IEventBus, IDateTimeProvider, AI : ILlmGateway, AiFeature),
+                               Infrastructure (IDbConnectionFactory, outbox, inbox, auth, Quartz, MassTransit, Ai : passerelle + fournisseur Anthropic),
                                Presentation (IEndpoint, ApiResults, Mcp : serveur MCP HTTP)
 src/Modules/<Module>/          Pricely.Modules.<Module>.{Domain,Application,Infrastructure,Presentation,IntegrationEvents,Contracts}
                                (`IntegrationEvents` et `Contracts` sont optionnels : ce que le module publie, ce qu'il laisse lire, ADR-022)
@@ -47,7 +47,7 @@ test/Pricely.Common.UnitTests  Passerelle LLM
 | AiEngine | `Model` (+ `ModelPrice`), `FeatureSetting`, `LlmCall`, `AgentActivity` | Catalogue des modèles et tarifs, modèle ciblé par fonctionnalité IA, journal des appels LLM et coûts, journal des tools et décisions des agents, statistiques d'usage |
 | Agentic | `AgentConversation`, `PendingAction` | Module générique (réutilisable, ne connaît aucun autre module) : exécute les agents déclarés (`AddAgent`) avec les tools fournis (`AddAgentTools`), conversations, actions d'écriture soumises à validation |
 
-Pricing ne lit jamais la base de Catalog. Les **typologies** se lisent par le contrat `Catalog.Contracts` (`IProductCategoryReader`, ADR-022) : pas de copie. Les **produits** sont gardés dans un read model local `CatalogProduct`, alimenté par les événements d'intégration de Catalog (inbox, upsert idempotent sur l'identifiant source).
+Pricing ne lit jamais la base de Catalog. Les **typologies** se lisent par le contrat `Catalog.Contracts` (`IProductCategoryReader`, ADR-022) : pas de copie. Les **produits** aussi (`IProductReader`, `ProductSummary`, ADR-025) : Pricing ne garde aucune copie du catalogue, il lit chez Catalog quand il en a besoin (planificateur de collecte, noms et identité des produits des offres).
 
 ## Règles d'architecture (non négociables)
 
@@ -65,7 +65,7 @@ Pricing ne lit jamais la base de Catalog. Les **typologies** se lisent par le co
 | `Pricely.Sdk` | `Infrastructure` de chaque module |
 
 3. Besoin d'une donnée d'un autre module : lire ponctuellement → son **contrat** (`<Autre>.Contracts`, lu depuis Application) ; réagir à un changement → **événement d'intégration** ; garder une copie locale (événement + read model) seulement si on le justifie (lecture très fréquente, historisation, disponibilité). **Jamais** d'autre référence de projet, jamais de clé étrangère entre schémas (colonne `Guid` simple, commentée). Jamais d'interrogation en boucle d'un contrat pour détecter un changement.
-4. `Domain` ne dépend ni d'EF Core, ni de MassTransit, ni d'ASP.NET, ni de Dapper. `Application` ne dépend pas d'EF Core (Dapper y est permis, pour les requêtes).
+4. `Domain` ne dépend ni d'EF Core, ni de MassTransit, ni d'ASP.NET, ni de Dapper. `Application` ne dépend ni d'EF Core ni de Dapper (ni d'aucun accès aux données) : elle lit et écrit par des ports (dépôts, `ReadStore`) implémentés dans `Infrastructure`.
 5. Tout système externe passe par un port défini dans `Application` et implémenté dans `Infrastructure` (couche anti-corruption). Exemple : `IOfferCollector`.
 6. Les tests `ArchitectureTests` font foi. Un test rouge signale un problème de conception, pas un test à modifier.
 
@@ -76,7 +76,7 @@ Pricing ne lit jamais la base de Catalog. Les **typologies** se lisent par le co
 - **Value Object** : `sealed record`, constructeur privé + `static Result<T> Create(...)` qui valide (`Money`, `Gtin`). Données descriptives sans invariant : `sealed record` positionnel (`MatchEvidence`, `ProductDescription`).
 - **Événement de domaine** : `sealed class XxxDomainEvent(...) : DomainEvent`, propriétés `{ get; init; }`.
 - **Commande** : `Application/<Agrégats>/<UseCase>/` avec `<UseCase>Command` (`sealed record : ICommand` ou `ICommand<T>`), `<UseCase>CommandHandler` (`internal sealed`), `<UseCase>CommandValidator` (`internal sealed`, FluentValidation).
-- **Requête** : `<UseCase>Query`, `<UseCase>QueryHandler` et `<X>Response` dans `Application/<Agrégats>/<UseCase>/`. **Le handler est toujours dans Application** (ADR-023), jamais dans Infrastructure (`QueryHandlerTests`) : `internal sealed`, Dapper + `IDbConnectionFactory` (`Common.Application`), PostgreSQL, colonnes snake_case aliasées avec `nameof` ; ou un dépôt du Domain s'il a besoin d'un agrégat (ex. `GetEffectiveCollectionProfileQueryHandler`). Pas d'EF Core dans Application.
+- **Requête** : `<UseCase>Query`, `<UseCase>QueryHandler` et `<X>Response` dans `Application/<Agrégats>/<UseCase>/`. **Le handler est toujours dans Application** (ADR-023), jamais dans Infrastructure (`QueryHandlerTests`), `internal sealed`. Il ne touche pas aux données : il appelle un **`I<Sujet>ReadStore`** (port de lecture défini dans `Application/<Agrégats>/`, ADR-024) qui renvoie des `Response` ou des lignes, et fait ce qui reste (erreur `NotFound`, règle du domaine, enrichissement par le contrat d'un autre module). Le `ReadStore` est `internal sealed` dans `Infrastructure/<Agrégats>/<Sujet>ReadStore.cs` : EF Core `AsNoTracking` + projection `Select`, ou, si LINQ le rend mal, Dapper sur `IDbConnectionFactory` (`Common.Infrastructure`), PostgreSQL, colonnes snake_case aliasées avec `nameof`. Un dépôt du Domain suffit si la requête a besoin d'un agrégat (ex. `GetEffectiveCollectionProfileQueryHandler`).
 - **Contrat** (ADR-022) : `Pricely.Modules.<M>.Contracts/<Sujet>/` — interfaces `I<Sujet>Reader`, `sealed record` immuables, erreurs statiques ; méthodes `Task<Result<T>>` avec `CancellationToken` en dernier, volumes bornés ; aucun type du Domain. Implémentation `internal sealed` dans `<M>.Infrastructure/Contracts/<Sujet>/` (EF Core `AsNoTracking` + projection, pas de requête MediatR, pas de règle métier), enregistrée dans `<M>Module`. Exemple : `IProductCategoryReader` lu par `CollectionProfileLookup`.
 - **Publication inter-modules** : un `DomainEventHandler<T>` dans Application publie l'`IntegrationEvent` via `IEventBus`. L'outbox garantit la livraison.
 - **Consommation inter-modules** : `IntegrationEventHandler<T>` dans **Presentation** (`internal sealed`, suffixe `IntegrationEventHandler`) qui envoie une commande ; `PricingModule.ConfigureConsumers` déclare `IntegrationEventConsumer<T>` ; l'inbox du module assure l'idempotence.
@@ -94,7 +94,7 @@ Le build échoue sur le moindre avertissement (`TreatWarningsAsErrors`, `Analysi
 - Lambdas à une seule instruction : corps expression (IDE0053). Propriétés : corps expression.
 - Pas de parenthèses inutiles, `if` / `else` d'affectation simple → ternaire, `??` / `?.` quand possible.
 - Paramètres `string` nommés `*url*` / `*uri*` interdits (CA1054) : utiliser `Uri` ou un autre nom (`website`, `productPage`).
-- Toujours propager le `CancellationToken` (CA2016). Dapper : `new CommandDefinition(sql, param, cancellationToken: ct)`.
+- Toujours propager le `CancellationToken` (CA2016). Dapper (dans un `ReadStore`) : `new CommandDefinition(sql, param, cancellationToken: ct)`.
 - Comparaisons de chaînes : `StringComparison.Ordinal*`, `ToUpperInvariant()`. `List<T>.Find` plutôt que `FirstOrDefault`.
 
 ## PostgreSQL : pièges connus (ADR-012)

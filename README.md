@@ -40,7 +40,7 @@ The agents of Pricely live in `src/Agents` (one project per agent, `Pricely.Agen
 - **Collection profile** per typology: preferred merchants (nearest typology wins) and collection instructions (concatenated from the root typology down).
 - **Price observation**: history kept outside the offer. A price that deviates more than 40 % from the median of the other confirmed offers is flagged.
 - **Collection** goes through the `IOfferCollector` port (AI agent, scrapers, partner feeds). The default implementation fails explicitly until a real collector is plugged in. The periodic job is disabled by default (`Pricing:Collection:Enabled`).
-- Catalog's database is never read directly: Pricing reads the typologies through the `Catalog.Contracts` project (ADR-022) and keeps a local product read model fed by Catalog integration events (inbox).
+- Catalog's database is never read directly: Pricing reads the typologies through the `Catalog.Contracts` project (ADR-022) and the products through the same contract style (ADR-022, ADR-025): no copy of the Catalog is kept.
 
 ## Run locally
 

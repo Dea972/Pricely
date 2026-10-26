@@ -1,36 +1,41 @@
-using System.Data.Common;
-using Dapper;
-using Pricely.Common.Application.Data;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Domain;
+using Pricely.Modules.Catalog.Contracts.Categories;
 
 namespace Pricely.Modules.Pricing.Application.CollectionProfiles.GetCollectionProfiles;
 
-internal sealed class GetCollectionProfilesQueryHandler(IDbConnectionFactory dbConnectionFactory)
+/// <summary>The profiles come from Pricing, the names of the typologies from Catalog (contract).</summary>
+internal sealed class GetCollectionProfilesQueryHandler(
+    ICollectionProfileReadStore readStore,
+    IProductCategoryReader productCategoryReader)
     : IQueryHandler<GetCollectionProfilesQuery, IReadOnlyCollection<CollectionProfileSummaryResponse>>
 {
     public async Task<Result<IReadOnlyCollection<CollectionProfileSummaryResponse>>> Handle(
         GetCollectionProfilesQuery request,
         CancellationToken cancellationToken)
     {
-        await using DbConnection connection = await dbConnectionFactory.OpenConnectionAsync();
+        Result<IReadOnlyList<ProductCategorySummary>> categories = await productCategoryReader.GetAllAsync(cancellationToken);
+        if (categories.IsFailure)
+        {
+            return Result.Failure<IReadOnlyCollection<CollectionProfileSummaryResponse>>(categories.Error);
+        }
 
-        const string sql =
-            $"""
-             SELECT
-                 p.product_category_id AS {nameof(CollectionProfileSummaryResponse.ProductCategoryId)},
-                 c.name AS {nameof(CollectionProfileSummaryResponse.CategoryName)},
-                 CAST((SELECT COUNT(*) FROM pricing.collection_profile_preferred_merchants m
-                       WHERE m.collection_profile_id = p.id) AS integer) AS {nameof(CollectionProfileSummaryResponse.PreferredMerchantCount)},
-                 p.instructions IS NOT NULL AS {nameof(CollectionProfileSummaryResponse.HasInstructions)}
-             FROM pricing.collection_profiles p
-             LEFT JOIN pricing.catalog_categories c ON c.id = p.product_category_id
-             ORDER BY c.name
-             """;
+        var names = categories.Value.ToDictionary(c => c.Id, c => c.Name);
+        IReadOnlyCollection<CollectionProfileRow> profiles = await readStore.GetAllAsync(cancellationToken);
 
-        IEnumerable<CollectionProfileSummaryResponse> profiles = await connection.QueryAsync<CollectionProfileSummaryResponse>(
-            new CommandDefinition(sql, cancellationToken: cancellationToken));
+        // A profile whose typology Catalog no longer knows has no name and comes last.
+        IReadOnlyCollection<CollectionProfileSummaryResponse> summaries =
+        [
+            .. profiles
+                .Select(p => new CollectionProfileSummaryResponse(
+                    p.ProductCategoryId,
+                    names.GetValueOrDefault(p.ProductCategoryId),
+                    p.PreferredMerchantCount,
+                    p.HasInstructions))
+                .OrderBy(s => s.CategoryName is null)
+                .ThenBy(s => s.CategoryName, StringComparer.OrdinalIgnoreCase)
+        ];
 
-        return Result.Success<IReadOnlyCollection<CollectionProfileSummaryResponse>>(profiles.ToList());
+        return Result.Success(summaries);
     }
 }

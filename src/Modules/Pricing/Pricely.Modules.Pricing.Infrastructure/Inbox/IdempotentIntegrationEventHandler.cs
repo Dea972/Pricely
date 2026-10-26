@@ -1,5 +1,5 @@
 ﻿using System.Data.Common;
-using Pricely.Common.Application.Data;
+using Pricely.Common.Infrastructure.Data;
 using Pricely.Common.Application.EventBus;
 using Pricely.Common.Infrastructure.Inbox;
 using Pricely.Modules.Pricing.Infrastructure.Database;

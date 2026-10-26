@@ -9,6 +9,7 @@ using Pricely.Common.Application.Messaging;
 using Pricely.Common.Infrastructure.Outbox;
 using Pricely.Common.Presentation.Endpoints;
 using Pricely.Modules.Users.Application.Abstractions.Data;
+using Pricely.Modules.Users.Application.Users;
 using Pricely.Modules.Users.Domain.Users;
 using Pricely.Modules.Users.Infrastructure.Authorization;
 using Pricely.Modules.Users.Infrastructure.Database;
@@ -63,6 +64,7 @@ public static class UsersModule
                 .AddInterceptors(serviceProvider.GetRequiredService<InsertOutboxMessagesInterceptor>()));
 
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IUserReadStore, UserReadStore>();
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<UsersDbContext>());
 

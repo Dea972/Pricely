@@ -8,7 +8,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Pricely.Modules.Pricing.Application\Pricely.Modules.Pricing.Application.csproj" />
     <ProjectReference Include="..\Pricely.Modules.Pricing.Presentation\Pricely.Modules.Pricing.Presentation.csproj" />
-    <ProjectReference Include="..\..\Catalog\Pricely.Modules.Catalog.IntegrationEvents\Pricely.Modules.Catalog.IntegrationEvents.csproj" />
     <ProjectReference Include="..\..\..\Common\Pricely.Common.Infrastructure\Pricely.Common.Infrastructure.csproj" />
   </ItemGroup>
 

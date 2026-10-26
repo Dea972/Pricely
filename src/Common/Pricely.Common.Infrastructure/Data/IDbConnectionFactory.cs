@@ -1,6 +1,6 @@
 ﻿using System.Data.Common;
 
-namespace Pricely.Common.Application.Data;
+namespace Pricely.Common.Infrastructure.Data;
 
 public interface IDbConnectionFactory
 {

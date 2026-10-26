@@ -260,18 +260,38 @@ Conséquences et choix :
 
   Jamais d'interrogation en boucle d'un contrat pour détecter un changement : la réaction passe par un événement.
 - **Première application : les typologies.** `Catalog.Contracts` expose `IProductCategoryReader` (`GetAsync`, `GetLineageAsync` — la typologie puis ses ancêtres, la plus proche d'abord —, `GetAllAsync`) et `ProductCategorySummary` (`Id`, `Name`, `ParentId`, `Depth`). Pricing l'utilise pour résoudre le profil de collecte (`CollectionProfileLookup`), vérifier qu'une typologie existe (`DefineCollectionProfile`, `AddMerchantToProfiles`) et présenter les typologies à l'assistant de paramétrage (`SuggestMerchant`). Le read model `CatalogCategory`, son dépôt, ses deux commandes d'upsert / renommage, leurs handlers d'événements et ses consumers sont supprimés ; la migration `DropCatalogCategories` retire la table `pricing.catalog_categories`. Une typologie créée ou renommée dans Catalog est donc visible tout de suite, sans attendre l'outbox ni l'inbox. Les identifiants de typologie restent des `Guid` simples dans Pricing (`CollectionProfile.ProductCategoryId`), sans clé étrangère entre schémas : Catalog n'a pas d'identifiant naturel pour une typologie.
-- **Ce qui ne change pas** : `CatalogProduct` reste un read model alimenté par les événements de Catalog (le produit est historisé avec les offres et lu à chaque collecte) ; l'examiner à part si on veut aussi le passer par un contrat. Les événements `ProductCategoryCreated` / `ProductCategoryRenamed` restent publiés par Catalog (contrat d'intégration stable, messages d'outbox / inbox existants) mais n'ont plus de consommateur.
+- **Produits** : `CatalogProduct` est passé par contrat à son tour (ADR-025). Les événements `ProductCategory*` et `Product*` restent publiés par Catalog (contrat d'intégration stable, messages d'outbox / inbox existants) mais n'ont plus de consommateur.
 - **Garde** : `test/Pricely.ArchitectureTests/ContractsTests.cs` (références limitées à `Common.Domain`, contenu du projet, forme des méthodes, implémentations `internal`, Domain et Presentation des consommateurs sans accès au contrat) et `ModuleBoundaryTests` (Users et AiEngine n'ont aucun accès à `Catalog.Contracts`).
 
 ## ADR-023 — Les handlers de requête sont toujours dans Application
 
-**Statut** : acceptée (2026-10-26), décision du propriétaire du projet (« les query handlers doivent toujours être implémentés côté Application »). Remplace la convention « handler Dapper dans Infrastructure » de `CLAUDE.md`.
+**Statut** : acceptée (2026-10-26), décision du propriétaire du projet (« les query handlers doivent toujours être implémentés côté Application »). Remplace la convention « handler Dapper dans Infrastructure » de `CLAUDE.md`. Le point « Dapper accessible à l'Application » est remplacé par l'ADR-024 (`ReadStore`).
 
 - Commandes et requêtes ont leur handler dans `Application/<Agrégats>/<UseCase>/`, à côté du message et de sa réponse. Les 19 handlers de requête de Catalog, Pricing, Users, AiEngine et Agentic qui étaient en Infrastructure y ont été déplacés (même code, espace de noms de la requête) ; `UsageSql` (AiEngine) les a suivis.
 - Dapper et `IDbConnectionFactory` sont accessibles à l'Application : le package `Dapper` est référencé par `Common.Application`, à côté de `IDbConnectionFactory`. Le SQL reste dans les handlers de requête (schéma explicite, snake_case). L'Application ne dépend toujours pas d'EF Core.
 - L'Infrastructure n'implémente que des ports : dépôts, lecteurs de contrat (ADR-022), collecteurs, jobs, outbox / inbox.
 - Gardes : `test/Pricely.ArchitectureTests/QueryHandlerTests.cs` (aucun `IQueryHandler` dans une Infrastructure ; aucune dépendance d'Application à `Microsoft.EntityFrameworkCore`).
 - Règles de l'équipe rassemblées dans `.claude/rules/backend-architecture.md`.
+
+## ADR-024 — Les lectures passent par des `ReadStore` ; EF Core par défaut, Dapper cantonné à l'Infrastructure
+
+**Statut** : acceptée (2026-10-26), décision du propriétaire du projet (« EF Core avec `AsNoTracking` pour les requêtes, pas de Dapper dans `Common.Application`, des interfaces implémentées côté infrastructure ; si trop conséquent, Dapper en implémentation mais côté Infrastructure »). Précise l'ADR-023 (le handler reste dans Application) et remplace son point « Dapper accessible à l'Application ».
+
+- **Nom** : `I<Sujet>ReadStore` (le côté lecture d'un sujet, par opposition au dépôt qui porte l'écriture) ; `Reader` reste réservé aux contrats entre modules (ADR-022).
+- **Forme** : interface dans `Application/<Agrégats>/` (`IProductReadStore`, `IOfferReadStore`, `IUsageReadStore`…), qui renvoie des `Response` ou des lignes (`...Row`) ; implémentation `internal sealed` dans `Infrastructure/<Agrégats>/<Sujet>ReadStore.cs`, enregistrée dans `<M>Module`. Le handler de requête (Application) appelle le `ReadStore`, puis fait ce qui reste : `NotFound`, règle du domaine, enrichissement par le contrat d'un autre module. Plus aucun accès aux données dans l'Application.
+- **EF Core par défaut** (`AsNoTracking`, projection `Select`) : changer de moteur ne touche que l'Infrastructure, sans réécrire du SQL. Fait ainsi : Catalog (produits, typologies), Pricing (enseignes, résumé des profils).
+- **Dapper conservé, dans l'Infrastructure seulement**, pour les lectures que LINQ rend mal : jointures latérales et médiane (offres de Pricing), agrégats `FILTER` (usage d'AiEngine, avec la dernière tarification en vigueur), requêtes sur les tables de rôles (Users) et lectures multi-tables d'Agentic. Le SQL, inchangé, est réparti dans les `ReadStore` ; il est PostgreSQL, donc à réécrire si le moteur change. À convertir en EF Core au fil des besoins.
+- **`Dapper` quitte `Common.Application`** ; `IDbConnectionFactory` passe dans `Common.Infrastructure` (espace de noms `Pricely.Common.Infrastructure.Data`).
+- **Gardes** : `QueryHandlerTests` (aucun handler de requête en Infrastructure ; l'Application ne dépend ni d'EF Core ni de Dapper ; un `ReadStore` est `internal` et vit en Infrastructure).
+
+## ADR-025 — Les produits de Catalog se lisent par contrat, comme les typologies
+
+**Statut** : acceptée (2026-10-26), décision du propriétaire du projet (« faire la même chose pour les produits »). Complète l'ADR-022, dont la mention « `CatalogProduct` reste un read model » est remplacée.
+
+- `Catalog.Contracts` expose `IProductReader` (`GetAsync`, `GetByIdsAsync` — au plus 1 000 identifiants —, `GetIdsPageAsync` par curseur) et `ProductSummary` (`Id`, `Name`, `Brand`, `Gtin`, `ManufacturerReference`, `ProductCategoryId`). Implémentation `ProductReader` (EF Core, lecture seule, `internal`).
+- Dans Pricing, le read model `CatalogProduct`, son dépôt, sa configuration, la commande d'upsert et les deux handlers d'événements disparaissent ; la migration `DropCatalogProducts` supprime `pricing.catalog_products`. Le planificateur de collecte lit le produit chez Catalog ; le job de collecte passe par `GetProductsToCollectQuery` (Application), qui parcourt le catalogue par curseur, car l'Infrastructure n'utilise pas le contrat d'un autre module.
+- **Conséquence sur les jointures** : les requêtes de Pricing qui joignaient `catalog_products` ou `catalog_categories` (anomalies de prix, offres à valider, résumé des profils) ne le peuvent plus. Leur `ReadStore` renvoie des lignes avec l'identifiant du produit ou de la typologie, et le handler les complète par le contrat (lecture par lot, `ProductLookup`). Une offre ou une observation dont le produit n'existe plus chez Catalog est écartée, comme le faisait la jointure interne. Un produit ou une typologie créé dans Catalog est visible tout de suite dans Pricing, sans événement.
+- **Plus de consommateur d'événement dans Pricing** : `PricingModule.ConfigureConsumers` est vide, la référence à `Catalog.IntegrationEvents` est retirée de Pricing. Catalog continue de publier ses événements (voir décisions ouvertes).
 
 ## Compléments du 2026-10-26 (étapes 5b et 6)
 
@@ -285,7 +305,7 @@ Conséquences et choix :
 ## Décisions ouvertes
 
 - Test d'intégration des contrats (ADR-022) : l'implémentation `ProductCategoryReader` a été vérifiée contre un PostgreSQL 16 jetable (lignée, tri `citext`, cycle borné), mais le dépôt n'a pas de projet de tests d'intégration (les anciens ont été supprimés, voir plus haut). À créer (Testcontainers ou PostgreSQL de l'AppHost) avant d'ajouter d'autres contrats.
-- Événements `ProductCategoryCreated` / `ProductCategoryRenamed` : plus aucun consommateur depuis l'ADR-022. Les retirer de Catalog (domain event handlers, outbox) ou les garder pour un futur abonné.
+- Événements `ProductCategoryCreated`, `ProductCategoryRenamed`, `ProductRegistered`, `ProductUpdated` : plus aucun consommateur depuis les ADR-022 et ADR-025 (l'inbox de Pricing n'a plus de consommateur non plus). Les retirer de Catalog (domain event handlers, outbox) et de Pricing (inbox, job) ou les garder pour un futur abonné.
 - Conservation des instantanés de pages (`pricing.page_snapshots`) et limite de débit des lectures de pages : `fetch_merchant_page` (un jeton `pricely.read` peut faire lire des pages d'enseigne), `pricing/merchants/suggestions` et `catalog/products/suggestions` (un jeton `pricely.write` fait lire une adresse publique quelconque et appeler un modèle, ADR-020) : rien ne purge ni ne limite aujourd'hui ; à fixer avant d'activer la collecte planifiée ou d'ouvrir `/mcp` hors du poste de développement.
 - Garde-fou de prix : un relevé signalé reste un prix de référence pour les relevés suivants des autres offres (`GetLatestComparablePricesAsync`) ; un prix de lot peut ainsi faire signaler le prix normal d'une autre enseigne relevé juste après. Exclure les relevés signalés de la référence est à décider (règle métier).
 - Sites rendus en JavaScript : un navigateur sans tête (Playwright) derrière le même port `IWebPageReader`, si le HTML et le JSON-LD ne suffisent pas.

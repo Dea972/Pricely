@@ -1,6 +1,6 @@
 using System.Data.Common;
 using Dapper;
-using Pricely.Common.Application.Data;
+using Pricely.Common.Infrastructure.Data;
 using Pricely.Modules.Pricing.Domain.Offers;
 using Pricely.Modules.Pricing.Infrastructure.Database;
 

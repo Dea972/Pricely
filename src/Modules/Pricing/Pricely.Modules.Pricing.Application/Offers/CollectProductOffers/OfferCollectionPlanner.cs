@@ -1,5 +1,6 @@
 using Pricely.Common.Domain;
 using Pricely.Modules.Catalog.Contracts.Categories;
+using Pricely.Modules.Catalog.Contracts.Products;
 using Pricely.Modules.Pricing.Application.Abstractions.Collection;
 using Pricely.Modules.Pricing.Application.CollectionProfiles;
 using Pricely.Modules.Pricing.Domain.Catalog;
@@ -14,15 +15,20 @@ namespace Pricely.Modules.Pricing.Application.Offers.CollectProductOffers;
 /// of its typology (inherited if needed) and the typology's instructions.
 /// </summary>
 public sealed class OfferCollectionPlanner(
-    ICatalogProductRepository catalogProductRepository,
+    IProductReader productReader,
     IProductCategoryReader productCategoryReader,
     ICollectionProfileRepository collectionProfileRepository,
     IMerchantRepository merchantRepository)
 {
     public async Task<Result<OfferCollectionPlan>> PlanAsync(Guid productId, CancellationToken cancellationToken)
     {
-        CatalogProduct? product = await catalogProductRepository.GetAsync(productId, cancellationToken);
-        if (product is null)
+        Result<ProductSummary?> read = await productReader.GetAsync(productId, cancellationToken);
+        if (read.IsFailure)
+        {
+            return Result.Failure<OfferCollectionPlan>(read.Error);
+        }
+
+        if (read.Value is not ProductSummary product)
         {
             return Result.Failure<OfferCollectionPlan>(CatalogErrors.ProductNotFound(productId));
         }

@@ -7,7 +7,7 @@ description: Connect two Pricely modules with an integration event - publish fro
 
 **D'abord, choisir le mécanisme** (ADR-022). Un événement d'intégration sert à **réagir** à un changement d'un autre module ou à **garder une copie locale** justifiée (lecture très fréquente, historisation, disponibilité). Pour **lire ponctuellement** une donnée d'un autre module, ne pas la copier : utiliser (ou ajouter) son projet `<S>.Contracts`, lu depuis l'Application du module cible (exemple : `IProductCategoryReader`, lu par Pricing). Ce skill ne couvre que l'événement.
 
-Exemple complet existant : `Catalog` publie `ProductRegisteredIntegrationEvent`, `Pricing` le consomme pour alimenter son read model `CatalogProduct`.
+Schéma de référence (Pricing ne consomme plus d'événement de Catalog depuis l'ADR-025 : il lit par contrat ; Catalog publie toujours `ProductRegisteredIntegrationEvent` et les autres, sans abonné). Les extraits ci-dessous prennent cet événement comme exemple.
 
 Flux : agrégat `Raise(DomainEvent)` → `SaveChanges` (l'intercepteur écrit l'outbox du module source) → `ProcessOutboxJob` → `DomainEventHandler` publie l'`IntegrationEvent` sur MassTransit → `IntegrationEventConsumer<T>` du module cible écrit dans son inbox → `ProcessInboxJob` → `IntegrationEventHandler<T>` (Presentation) → commande d'Application → upsert idempotent.
 
@@ -42,7 +42,7 @@ public sealed class ProductRegisteredIntegrationEvent : IntegrationEvent
 ## Côté cible (module `<C>`)
 
 1. `Pricely.Modules.<C>.Presentation.csproj` et `Pricely.Modules.<C>.Infrastructure.csproj` : `ProjectReference` vers `Pricely.Modules.<S>.IntegrationEvents` (et **rien d'autre** du module source).
-2. Read model local dans `<C>.Domain/<S>/` (ex. `Pricing.Domain/Catalog/CatalogProduct.cs`) : classe simple (pas `Entity`), `Create` / `Update`, repository `GetAsync` + `Insert`, configuration EF `ValueGeneratedNever()` sur l'`Id` (identifiant source).
+2. Read model local dans `<C>.Domain/<S>/` (nom `<S>Xxx`, par exemple `CatalogProduct`) : classe simple (pas `Entity`), `Create` / `Update`, repository `GetAsync` + `Insert`, configuration EF `ValueGeneratedNever()` sur l'`Id` (identifiant source).
 3. Commande `Upsert<X>Command` dans `<C>.Application/<S>/` : `GetAsync` puis `Insert` ou `Update`, `SaveChangesAsync`. Doit être idempotente (rejouable).
 4. `<C>.Presentation/<S>/<Fait>IntegrationEventHandler.cs` :
 

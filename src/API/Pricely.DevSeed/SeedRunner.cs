@@ -14,7 +14,6 @@ using Pricely.Modules.Pricing.Application.Merchants.GetMerchants;
 using Pricely.Modules.Pricing.Application.Merchants.RegisterMerchant;
 using Pricely.Modules.Pricing.Application.Offers.CollectProductOffers;
 using Pricely.Modules.Pricing.Application.Offers.GetProductOffers;
-using Pricely.Modules.Pricing.Domain.Catalog;
 
 namespace Pricely.DevSeed;
 
@@ -29,17 +28,11 @@ internal sealed class SeedRunner(
     IConfiguration configuration,
     ILogger<SeedRunner> logger)
 {
-    private static readonly TimeSpan ReadModelTimeout = TimeSpan.FromMinutes(2);
-
     public async Task RunAsync(CancellationToken cancellationToken)
     {
         Dictionary<string, Guid> categories = await CategoriesAsync(cancellationToken);
         Dictionary<string, Guid> products = await ProductsAsync(categories, cancellationToken);
         Dictionary<string, Guid> merchants = await MerchantsAsync(cancellationToken);
-
-        // Pricing reads the typologies from Catalog through its contract, but knows the products through the events of Catalog
-        // (outbox, then inbox). The only read outside the commands and queries: the read model has no query of its own.
-        await WaitForReadModelsAsync(products.Values, cancellationToken);
 
         await ProfilesAsync(categories, merchants, cancellationToken);
         await ObservationsAsync(products, cancellationToken);
@@ -110,36 +103,6 @@ internal sealed class SeedRunner(
         }
 
         return ids;
-    }
-
-    private async Task WaitForReadModelsAsync(IEnumerable<Guid> productIds, CancellationToken cancellationToken)
-    {
-        DateTime deadline = clock.UtcNow + ReadModelTimeout;
-        logger.LogInformation("Waiting for the products in Pricing (Catalog events)");
-
-        while (true)
-        {
-            await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
-            ICatalogProductRepository products = scope.ServiceProvider.GetRequiredService<ICatalogProductRepository>();
-
-            bool ready = true;
-            foreach (Guid id in productIds)
-            {
-                ready &= await products.GetAsync(id, cancellationToken) is not null;
-            }
-
-            if (ready)
-            {
-                return;
-            }
-
-            if (clock.UtcNow > deadline)
-            {
-                throw new TimeoutException("The Catalog events did not reach Pricing: are the outbox and inbox jobs running?");
-            }
-
-            await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
-        }
     }
 
     private async Task ProfilesAsync(Dictionary<string, Guid> categories, Dictionary<string, Guid> merchants, CancellationToken cancellationToken)

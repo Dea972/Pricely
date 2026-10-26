@@ -7,7 +7,6 @@ using Pricely.Modules.Pricing.Domain.CollectionProfiles;
 using Pricely.Modules.Pricing.Domain.Merchants;
 using Pricely.Modules.Pricing.Domain.Offers;
 using Pricely.Modules.Pricing.Domain.PageSnapshots;
-using Pricely.Modules.Pricing.Infrastructure.Catalog;
 using Pricely.Modules.Pricing.Infrastructure.CollectionProfiles;
 using Pricely.Modules.Pricing.Infrastructure.Merchants;
 using Pricely.Modules.Pricing.Infrastructure.Offers;
@@ -24,8 +23,6 @@ public sealed class PricingDbContext(DbContextOptions<PricingDbContext> options)
     internal DbSet<Offer> Offers { get; set; }
 
     internal DbSet<PriceObservation> PriceObservations { get; set; }
-
-    internal DbSet<CatalogProduct> CatalogProducts { get; set; }
 
     internal DbSet<PageSnapshot> PageSnapshots { get; set; }
 
@@ -44,7 +41,6 @@ public sealed class PricingDbContext(DbContextOptions<PricingDbContext> options)
         modelBuilder.ApplyConfiguration(new CollectionProfileConfiguration());
         modelBuilder.ApplyConfiguration(new OfferConfiguration());
         modelBuilder.ApplyConfiguration(new PriceObservationConfiguration());
-        modelBuilder.ApplyConfiguration(new CatalogProductConfiguration());
         modelBuilder.ApplyConfiguration(new PageSnapshotConfiguration());
     }
 }

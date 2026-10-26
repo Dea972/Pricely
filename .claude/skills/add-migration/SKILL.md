@@ -44,4 +44,4 @@ Localement, l'AppHost Aspire démarre PostgreSQL (`pricely-db`) puis `Pricely.Mi
 
 ## Requêtes Dapper
 
-Après une migration qui renomme une colonne ou une table, mettre à jour le SQL des query handlers Dapper du module (dans `Application`) (recherche du nom snake_case) : le compilateur ne le verra pas.
+Après une migration qui renomme une colonne ou une table, mettre à jour le SQL des `ReadStore` Dapper du module (dans `Infrastructure`, recherche du nom snake_case ; les `ReadStore` EF Core suivent le modèle) : le compilateur ne le verra pas.

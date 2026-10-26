@@ -21,9 +21,9 @@ Chaque module `src/Modules/<M>/` = projets `Pricely.Modules.<M>.{Domain,Applicat
 | Couche | Peut référencer | Ne doit pas référencer |
 |---|---|---|
 | Domain | `Common.Domain` | tout le reste (ni EF Core, MassTransit, ASP.NET, Dapper) |
-| Application | `Common.Application`, son Domain, son IntegrationEvents, le `.Contracts` d'un autre module | Infrastructure, Presentation, **EF Core** |
+| Application | `Common.Application`, son Domain, son IntegrationEvents, le `.Contracts` d'un autre module | Infrastructure, Presentation, **EF Core, Dapper** (aucun accès aux données) |
 | Presentation | `Common.Presentation`, son Application, `<Autre>.IntegrationEvents` (handlers d'événements entrants) | Infrastructure, Domain en direct |
-| Infrastructure | `Common.Infrastructure`, son Application, sa Presentation, son IntegrationEvents, son `.Contracts` (pour l'implémenter), `<Autre>.IntegrationEvents` | l'Infrastructure d'un autre module |
+| Infrastructure | `Common.Infrastructure` (dont `IDbConnectionFactory`), son Application, sa Presentation, son IntegrationEvents, son `.Contracts` (pour l'implémenter), `<Autre>.IntegrationEvents` | l'Infrastructure d'un autre module |
 | Contracts | `Common.Domain` (pour `Result`) | tout le reste |
 | IntegrationEvents | `Common.Application` | tout le reste |
 
@@ -33,9 +33,10 @@ Infrastructure → Presentation est voulu : l'Infrastructure scanne les `IEndpoi
 
 - **Commandes ET requêtes : le handler est toujours dans `Application`** (`internal sealed`), à côté de sa commande / requête : `Application/<Agrégats>/<UseCase>/`. Jamais de `IQueryHandler` dans l'Infrastructure (test `QueryHandlerTests`).
 - Une **commande** passe par les dépôts du Domain (`IRepository` + `IUnitOfWork`) et les agrégats.
-- Une **requête** lit sans charger d'agrégat : Dapper sur `IDbConnectionFactory` (défini dans `Common.Application`), SQL PostgreSQL, schéma explicite (`pricing.offers`), colonnes snake_case aliasées par `nameof(XResponse.Prop)`, `new CommandDefinition(sql, param, cancellationToken: ct)`. Si elle a besoin d'une règle du domaine, elle l'appelle (fonction pure du Domain) sur les lignes lues.
-- Pas d'EF Core dans l'Application : l'écriture passe par les dépôts, implémentés dans l'Infrastructure.
-- L'Infrastructure n'implémente que des **ports** (dépôts, `IOfferCollector`, `IWebPageReader`, lecteurs de contrat, jobs, outbox / inbox).
+- Une **requête** lit sans charger d'agrégat, **par un port de lecture** : `I<Sujet>ReadStore` (ADR-024), interface dans `Application/<Agrégats>/`, implémentée dans `Infrastructure/<Agrégats>/<Sujet>ReadStore.cs` (`internal sealed`, enregistrée dans `<M>Module`). Le handler appelle le `ReadStore`, puis fait ce qui reste : `NotFound`, règle du domaine (fonction pure du Domain appelée sur les lignes lues), enrichissement par le contrat d'un autre module.
+- Le `ReadStore` lit en **EF Core** (`AsNoTracking` + projection `Select` vers la `Response` ou une ligne `...Row`) pour rester indépendant du moteur. **Dapper reste possible, uniquement dans l'Infrastructure**, pour une lecture que LINQ rend mal (jointure latérale, agrégat `FILTER`, médiane) : SQL PostgreSQL, schéma explicite, colonnes snake_case aliasées par `nameof`, `new CommandDefinition(sql, param, cancellationToken: ct)`. Changer de base ne touche alors que l'Infrastructure.
+- Pas d'EF Core ni de Dapper dans l'Application : l'écriture passe par les dépôts, la lecture par les `ReadStore`, tous implémentés dans l'Infrastructure.
+- L'Infrastructure n'implémente que des **ports** (dépôts, `ReadStore`, `IOfferCollector`, `IWebPageReader`, lecteurs de contrat, jobs, outbox / inbox). Elle ne référence pas le contrat d'un autre module (la Presentation non plus) : un job passe par une requête d'Application.
 
 ## Isolation des modules
 
@@ -52,7 +53,7 @@ Décision : ADR-022.
 |---|---|
 | Lire ponctuellement la donnée d'un autre module | son **contrat** |
 | Réagir à un changement dans un autre module | **IntegrationEvent** (outbox / inbox), qui peut ne porter que des identifiants |
-| Garder une copie locale | IntegrationEvent + read model, **à justifier** (lecture très fréquente, historisation, disponibilité) |
+| Garder une copie locale | IntegrationEvent + read model, **à justifier** (lecture très fréquente, historisation, disponibilité) ; ni produits ni typologies de Catalog n'en ont (ADR-022, ADR-025) |
 
 Jamais d'interrogation en boucle d'un contrat pour détecter un changement : la réaction passe par un événement.
 
