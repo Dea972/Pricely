@@ -85,6 +85,7 @@ public static class PricingModule
         services.TryAddScoped<IOfferCollector, AgentOfferCollector>();
 
         services.AddAiFeature(PricingAiFeatures.OfferCollection);
+        services.AddAiFeature(PricingAiFeatures.MerchantSetup);
 
         services.AddDomainEventHandlers();
         services.AddIntegrationEventHandlers();

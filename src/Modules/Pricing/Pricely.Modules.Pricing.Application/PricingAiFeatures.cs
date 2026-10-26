@@ -13,4 +13,11 @@ public static class PricingAiFeatures
         "Collecte des offres des enseignes par l'agent",
         "Pricing",
         AiProviderKeys.Anthropic);
+
+    /// <summary>Setup of a new merchant from its site: name, search page, typologies (ADR-020).</summary>
+    public static readonly AiFeature MerchantSetup = new(
+        "pricing.merchant-setup",
+        "Configuration des enseignes assistée par l'IA",
+        "Pricing",
+        AiProviderKeys.Anthropic);
 }

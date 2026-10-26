@@ -277,7 +277,36 @@ public sealed record InstructionBlockDto(Guid ProductCategoryId, string Instruct
 
 public sealed record ProductRequest(string Name, string Brand, string? Gtin, string? ManufacturerReference, Guid ProductCategoryId);
 
+/// <summary>A reference product proposed from a product page (<c>catalog/products/suggestions</c>), nothing saved yet.</summary>
+public sealed record ProductSuggestionDto(
+    string ProductPage,
+    string? Name,
+    string? Brand,
+    string? Gtin,
+    string? ManufacturerReference,
+    Guid? ProductCategoryId,
+    string? Packaging,
+    string? Rationale,
+    Guid? ExistingProductId,
+    string? ExistingProductName,
+    bool IsAiAnswer);
+
 public sealed record MerchantRequest(string Name, string Website, string? SearchTemplate);
+
+/// <summary>The setup of a merchant proposed from its site (<c>pricing/merchants/suggestions</c>), nothing saved yet.</summary>
+public sealed record MerchantSuggestionDto(
+    string Name,
+    string Website,
+    string? SearchTemplate,
+    IReadOnlyList<string> SearchCandidates,
+    SearchCheckDto? SearchCheck,
+    IReadOnlyList<SuggestedCategoryDto> Categories,
+    string? Rationale,
+    bool IsAiAnswer);
+
+public sealed record SearchCheckDto(string Query, string? TestedAddress, bool IsReachable, bool ShowsQuery, int TextLength);
+
+public sealed record SuggestedCategoryDto(Guid ProductCategoryId, string Name, string? Reason);
 
 public sealed record CollectionProfileRequest(IReadOnlyList<Guid> PreferredMerchantIds, string? Instructions);
 

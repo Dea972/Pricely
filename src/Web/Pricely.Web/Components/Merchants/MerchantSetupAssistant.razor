@@ -1,0 +1,198 @@
+@inherits ApiComponentBase
+@inject PricelyApiClient Api
+
+@* The setup of a new merchant proposed by the AI from its site (ADR-020): nothing is saved before « Créer l'enseigne ». *@
+<section class="card" aria-labelledby="merchant-assistant">
+    <div class="card-header">
+        <div>
+            <h2 id="merchant-assistant">Ajouter une enseigne avec l'IA</h2>
+            <div class="small muted">Donne l'adresse du site : Pricely le lit, trouve et teste sa page de recherche, et propose les typologies qu'elle vend.</div>
+        </div>
+    </div>
+
+    <form class="card-body form-grid" @onsubmit="AnalyseAsync">
+        <label>Site de l'enseigne <input class="field mono" maxlength="500" required placeholder="www.enseigne.fr" @bind="_website" /></label>
+        <label>Nom (facultatif) <input class="field" maxlength="150" @bind="_name" /></label>
+        <div><button type="submit" class="btn btn-primary" disabled="@_busy">@(_busy && _suggestion is null ? "Lecture du site…" : "Analyser le site")</button></div>
+    </form>
+
+    <div class="card-body"><ApiProblemAlert Problem="Problem" /></div>
+
+    @if (_suggestion is not null)
+    {
+        <div class="card-body suggestion">
+            @if (!_suggestion.IsAiAnswer)
+            {
+                <div class="alert alert-warn" role="status">L'IA n'a pas répondu : la proposition vient du site seul (titre, page de recherche déclarée). Vérifie-la.</div>
+            }
+            else if (_suggestion.Rationale is not null)
+            {
+                <div class="ai-opinion"><strong>Avis IA :</strong> @_suggestion.Rationale</div>
+            }
+
+            <div class="form-grid">
+                <label>Nom <input class="field" maxlength="150" required @bind="_proposedName" /></label>
+                <label>Site <input class="field mono" maxlength="500" required @bind="_proposedWebsite" /></label>
+                <label>
+                    Page de recherche
+                    <input class="field mono" maxlength="500" placeholder="aucune trouvée" @bind="_proposedSearch" />
+                </label>
+            </div>
+
+            @if (_suggestion.SearchCandidates.Count > 1)
+            {
+                <div class="small">
+                    Pages de recherche déclarées par le site :
+                    @foreach (string candidate in _suggestion.SearchCandidates)
+                    {
+                        <button type="button" class="chip chip-button" @onclick="() => _proposedSearch = candidate">@candidate</button>
+                    }
+                </div>
+            }
+
+            <div role="status">@SearchCheckBadge()</div>
+
+            @if (_suggestion.Categories.Count > 0)
+            {
+                <fieldset class="category-picks">
+                    <legend>Ajouter l'enseigne aux profils de collecte de :</legend>
+                    @foreach (SuggestedCategoryDto category in _suggestion.Categories)
+                    {
+                        <label class="check">
+                            <input type="checkbox" checked="@_categories.Contains(category.ProductCategoryId)" @onchange="e => Toggle(category.ProductCategoryId, e.Value is true)" />
+                            <span><strong>@category.Name</strong>@(category.Reason is null ? null : " — " + category.Reason)</span>
+                        </label>
+                    }
+                    <div class="small muted">Une typologie qui hérite ses enseignes garde les héritées, puis celle-ci.</div>
+                </fieldset>
+            }
+
+            <div class="action-buttons">
+                <button type="button" class="btn btn-primary" disabled="@_busy" @onclick="CreateAsync">Créer l'enseigne</button>
+                <button type="button" class="btn btn-secondary" disabled="@_busy" @onclick="Cancel">Annuler</button>
+            </div>
+        </div>
+    }
+</section>
+
+@code {
+    private string _website = string.Empty;
+    private string? _name;
+    private MerchantSuggestionDto? _suggestion;
+    private string _proposedName = string.Empty;
+    private string _proposedWebsite = string.Empty;
+    private string? _proposedSearch;
+    private HashSet<Guid> _categories = [];
+    private bool _busy;
+
+    /// <summary>The merchant was created: its name, for the message of the page.</summary>
+    [Parameter]
+    public EventCallback<string> OnCreated { get; set; }
+
+    private async Task AnalyseAsync()
+    {
+        if (_busy || string.IsNullOrWhiteSpace(_website))
+        {
+            return;
+        }
+
+        _busy = true;
+        Problem = null;
+        _suggestion = null;
+
+        try
+        {
+            _suggestion = await CallAsync(() => Api.SuggestMerchantAsync(_website.Trim(), string.IsNullOrWhiteSpace(_name) ? null : _name.Trim(), CancellationToken.None));
+            if (_suggestion is not null)
+            {
+                _proposedName = _suggestion.Name;
+                _proposedWebsite = _suggestion.Website;
+                _proposedSearch = _suggestion.SearchTemplate;
+                _categories = [.. _suggestion.Categories.Select(c => c.ProductCategoryId)];
+            }
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task CreateAsync()
+    {
+        if (_busy || _suggestion is null)
+        {
+            return;
+        }
+
+        _busy = true;
+        Problem = null;
+
+        try
+        {
+            var merchant = new MerchantRequest(_proposedName.Trim(), _proposedWebsite.Trim(), string.IsNullOrWhiteSpace(_proposedSearch) ? null : _proposedSearch.Trim());
+            Guid[] categories = [.. _categories];
+
+            bool created = await CallAsync(async () =>
+            {
+                Guid merchantId = await Api.RegisterMerchantAsync(merchant, CancellationToken.None);
+                if (categories.Length > 0)
+                {
+                    await Api.AddMerchantToProfilesAsync(merchantId, categories, CancellationToken.None);
+                }
+
+                return merchant;
+            }) is not null;
+
+            if (created)
+            {
+                Cancel();
+                _website = string.Empty;
+                _name = null;
+                await OnCreated.InvokeAsync(categories.Length == 0
+                    ? $"Enseigne « {merchant.Name} » créée. Ajoute-la aux profils de collecte des typologies qu'elle vend."
+                    : $"Enseigne « {merchant.Name} » créée et ajoutée à {categories.Length} profil(s) de collecte.");
+            }
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        _suggestion = null;
+        _categories = [];
+    }
+
+    private void Toggle(Guid categoryId, bool selected)
+    {
+        if (selected)
+        {
+            _categories.Add(categoryId);
+        }
+        else
+        {
+            _categories.Remove(categoryId);
+        }
+    }
+
+    private RenderFragment SearchCheckBadge() => builder =>
+    {
+        SearchCheckDto? check = _suggestion?.SearchCheck;
+        bool unchanged = string.Equals(_proposedSearch?.Trim(), _suggestion?.SearchTemplate, StringComparison.Ordinal);
+        (string css, string text) = (check, unchanged) switch
+        {
+            (null, _) => ("badge badge-pending", "✗ Aucune page de recherche trouvée : l'agent ne lira que les pages dont il connaît l'adresse."),
+            (_, false) => ("badge badge-pending", "Page de recherche modifiée : elle n'a pas été testée."),
+            ({ IsReachable: true, ShowsQuery: true }, _) => ("badge badge-confirmed", $"✓ Recherche testée : « {check.Query} » renvoie une page de résultats."),
+            ({ IsReachable: true }, _) => ("badge badge-pending", $"⚠ La recherche « {check.Query} » répond, mais le mot cherché n'apparaît pas dans la page."),
+            _ => ("badge badge-pending", $"✗ La recherche « {check.Query} » n'a pas répondu.")
+        };
+
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "class", css);
+        builder.AddContent(2, text);
+        builder.CloseElement();
+    };
+}

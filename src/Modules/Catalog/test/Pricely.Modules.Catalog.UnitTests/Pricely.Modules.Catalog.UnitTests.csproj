@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Pricely.Modules.Catalog.Domain\Pricely.Modules.Catalog.Domain.csproj" />
+    <ProjectReference Include="..\..\Pricely.Modules.Catalog.Application\Pricely.Modules.Catalog.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

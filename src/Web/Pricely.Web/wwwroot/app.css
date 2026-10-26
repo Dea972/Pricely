@@ -326,6 +326,16 @@ dl.facts.compact dt { min-width: 110px; }
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 16px; align-items: end; }
 .form-grid > h2, .form-grid > p, .form-grid > div { grid-column: 1 / -1; }
 .form-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-2); }
+.suggestion { display: flex; flex-direction: column; gap: 14px; border-top: 1px solid var(--separator); }
+.suggestion .ai-opinion { padding: 12px 14px; border-radius: var(--radius); }
+.chip-button { border: 0; cursor: pointer; min-height: 32px; margin: 4px 4px 0 0; }
+.category-picks { border: 1px solid var(--separator); border-radius: var(--radius); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.category-picks legend { padding: 0 6px; font-size: 13px; color: var(--text-2); }
+.check { display: flex; align-items: flex-start; gap: 10px; min-height: 32px; font-size: 14px; }
+.check input { width: 20px; height: 20px; margin-top: 2px; }
+.assist { grid-column: 1 / -1; }
+.assist .field { flex: 1 1 320px; }
+.form-grid > .ai-opinion, .form-grid > .alert { grid-column: 1 / -1; padding: 12px 14px; border-radius: var(--radius); }
 .inline-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 
 /* Mobile: the comparison becomes a list (docs/design/mockups/mobile.html) */

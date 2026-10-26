@@ -121,6 +121,38 @@
 
                 <form class="card card-body form-grid" @onsubmit="SaveProductAsync" aria-labelledby="product-form">
                     <h2 id="product-form">@(_editedProductId is null ? "Nouveau produit" : "Modifier le produit")</h2>
+                    @if (_editedProductId is null)
+                    {
+                        <div class="inline-form assist">
+                            <label for="product-page" class="visually-hidden">Adresse d'une page produit</label>
+                            <input id="product-page" class="field mono" maxlength="2000" placeholder="Adresse d'une page produit (fabricant ou enseigne)" @bind="_productPage" />
+                            <button type="button" class="btn btn-secondary" disabled="@_saving" @onclick="SuggestAsync">@(_suggesting ? "Lecture de la page…" : "Pré-remplir avec l'IA")</button>
+                        </div>
+                    }
+                    @if (_suggestion is not null)
+                    {
+                        <div class="ai-opinion" role="status">
+                            @if (!_suggestion.IsAiAnswer)
+                            {
+                                <span>L'IA n'a pas répondu : seul le titre de la page est repris.</span>
+                            }
+                            else
+                            {
+                                <strong>Avis IA :</strong> @(_suggestion.Rationale ?? "champs repris de la page.")
+                                @if (_suggestion.Packaging is not null)
+                                {
+                                    <span> Conditionnement : @_suggestion.Packaging.</span>
+                                }
+                                <span> Un GTIN ou une référence absents de la page ne sont jamais repris.</span>
+                            }
+                        </div>
+                        @if (_suggestion.ExistingProductId is Guid existingId)
+                        {
+                            <div class="alert alert-warn" role="alert">
+                                Ce GTIN est déjà au catalogue : <a href="/products/@existingId">@_suggestion.ExistingProductName</a>. Modifie ce produit plutôt que d'en créer un second.
+                            </div>
+                        }
+                    }
                     <label>Nom <input class="field" maxlength="300" required @bind="_product.Name" /></label>
                     <label>Marque <input class="field" maxlength="150" required @bind="_product.Brand" /></label>
                     <label>GTIN / EAN <input class="field mono" inputmode="numeric" maxlength="14" @bind="_product.Gtin" /></label>

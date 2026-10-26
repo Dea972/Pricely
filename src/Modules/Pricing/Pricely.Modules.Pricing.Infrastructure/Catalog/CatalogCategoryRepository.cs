@@ -9,5 +9,8 @@ internal sealed class CatalogCategoryRepository(PricingDbContext context) : ICat
     public Task<CatalogCategory?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
         context.CatalogCategories.FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
 
+    public async Task<IReadOnlyCollection<CatalogCategory>> GetAllAsync(CancellationToken cancellationToken = default) =>
+        await context.CatalogCategories.AsNoTracking().OrderBy(c => c.Name).ToListAsync(cancellationToken);
+
     public void Insert(CatalogCategory category) => context.CatalogCategories.Add(category);
 }

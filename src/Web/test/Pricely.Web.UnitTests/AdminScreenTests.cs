@@ -34,7 +34,7 @@ public sealed class AdminScreenTests : BunitContext
 
         page.Find("form[aria-labelledby='product-form'] input[required]").Change("Mortier colle C2TE 25 kg");
         page.FindAll("form[aria-labelledby='product-form'] input[required]")[1].Change("Fixalis");
-        page.FindAll("form[aria-labelledby='product-form'] input")[2].Change("3760000100021");
+        page.FindAll("form[aria-labelledby='product-form'] input")[3].Change("3760000100021");
         page.Find("form[aria-labelledby='product-form']").Submit();
 
         page.WaitForAssertion(() => page.Markup.Should().Contain("Produit ajouté."));
@@ -58,11 +58,11 @@ public sealed class AdminScreenTests : BunitContext
 
         page.Find("form[aria-labelledby='product-form'] input[required]").Change("Produit");
         page.FindAll("form[aria-labelledby='product-form'] input[required]")[1].Change("Marque");
-        page.FindAll("form[aria-labelledby='product-form'] input")[2].Change("123");
+        page.FindAll("form[aria-labelledby='product-form'] input")[3].Change("123");
         page.Find("form[aria-labelledby='product-form']").Submit();
 
         page.WaitForAssertion(() => page.Find(".alert-warn").TextContent.Should().Contain("The GTIN '123' is not valid."));
-        page.FindAll("form[aria-labelledby='product-form'] input")[2].GetAttribute("value").Should().Be("123");
+        page.FindAll("form[aria-labelledby='product-form'] input")[3].GetAttribute("value").Should().Be("123");
     }
 
     [Fact]
@@ -104,6 +104,66 @@ public sealed class AdminScreenTests : BunitContext
         page.WaitForAssertion(() => page.Markup.Should().Contain("Enseigne « BricoPlus » ajoutée."));
         api.Bodies[api.Requests.FindIndex(r => r.Method == HttpMethod.Post)]
             .Should().Be("""{"name":"BricoPlus","website":"https://www.bricoplus.example/","searchTemplate":"https://www.bricoplus.example/s?k={query}"}""");
+    }
+
+    [Fact]
+    public void MerchantAssistant_ShouldProposeTheSetup_ThenCreateTheMerchant_AndAddItToTheProfiles()
+    {
+        var created = Guid.NewGuid();
+        FakeServer api = Api(request => (request.Method.Method, request.RequestUri!.AbsolutePath) switch
+        {
+            ("GET", "/api/pricing/merchants") => Responses.Json("[]"),
+            ("POST", "/api/pricing/merchants/suggestions") => Responses.Json($$"""
+                {"name":"Comptoir du Bâtiment","website":"https://www.comptoir.test/","searchTemplate":"https://www.comptoir.test/recherche?q={query}",
+                 "searchCandidates":["https://www.comptoir.test/recherche?q={query}"],
+                 "searchCheck":{"query":"ciment","testedAddress":"https://www.comptoir.test/recherche?q=ciment","isReachable":true,"showsQuery":true,"textLength":4000},
+                 "categories":[{"productCategoryId":"{{Cement}}","name":"Gros œuvre › Ciment","reason":"Vend du ciment en sac."}],
+                 "rationale":"Négoce de matériaux.","isAiAnswer":true}
+                """),
+            ("POST", "/api/pricing/merchants") => Responses.Json($"\"{created}\""),
+            ("POST", _) => new HttpResponseMessage(HttpStatusCode.NoContent),
+            _ => new HttpResponseMessage(HttpStatusCode.NotFound)
+        });
+
+        IRenderedComponent<MerchantsPage> page = Render<MerchantsPage>();
+        page.Find("section[aria-labelledby='merchant-assistant'] input").Change("comptoir.test");
+        page.Find("section[aria-labelledby='merchant-assistant'] form").Submit();
+
+        page.WaitForAssertion(() => page.Markup.Should().Contain("✓ Recherche testée : « ciment » renvoie une page de résultats.")
+            .And.Contain("Gros œuvre › Ciment").And.Contain("Négoce de matériaux."));
+
+        page.FindAll("button").Single(b => b.TextContent == "Créer l'enseigne").Click();
+
+        page.WaitForAssertion(() => page.Markup.Should().Contain("Enseigne « Comptoir du Bâtiment » créée et ajoutée à 1 profil(s) de collecte."));
+        int profiles = api.Requests.FindIndex(r => r.RequestUri!.AbsolutePath == $"/api/pricing/merchants/{created}/profiles");
+        api.Bodies[profiles].Should().Be($$"""{"productCategoryIds":["{{Cement}}"]}""");
+        api.Bodies[api.Requests.FindIndex(r => r.RequestUri!.AbsolutePath == "/api/pricing/merchants" && r.Method == HttpMethod.Post)]
+            .Should().Contain("\"searchTemplate\":\"https://www.comptoir.test/recherche?q={query}\"");
+    }
+
+    [Fact]
+    public void ProductAssistant_ShouldFillTheForm_AndPointOutAnExistingProduct()
+    {
+        var existing = Guid.NewGuid();
+        Api(request => (request.Method.Method, request.RequestUri!.AbsolutePath) switch
+        {
+            ("GET", "/api/catalog/categories") => Responses.Json(Categories),
+            ("GET", _) => Responses.Json("[]"),
+            ("POST", "/api/catalog/products/suggestions") => Responses.Json($$"""
+                {"productPage":"https://fabricant.test/p","name":"Ciment CEM II — sac 35 kg","brand":"CR","gtin":"3760000100014","manufacturerReference":null,
+                 "productCategoryId":"{{Cement}}","packaging":"sac 35 kg","rationale":"GTIN affiché.","existingProductId":"{{existing}}","existingProductName":"Ciment 35 kg","isAiAnswer":true}
+                """),
+            _ => new HttpResponseMessage(HttpStatusCode.NotFound)
+        });
+
+        IRenderedComponent<CatalogPage> page = Render<CatalogPage>(parameters => parameters.Add(p => p.CategoryId, Cement));
+        page.WaitForAssertion(() => page.Find("#product-page"));
+        page.Find("#product-page").Change("https://fabricant.test/p");
+        page.FindAll("button").Single(b => b.TextContent == "Pré-remplir avec l'IA").Click();
+
+        page.WaitForAssertion(() => page.Markup.Should().Contain("Conditionnement : sac 35 kg.").And.Contain($"href=\"/products/{existing}\""));
+        page.FindAll("form[aria-labelledby='product-form'] input[required]")[0].GetAttribute("value").Should().Be("Ciment CEM II — sac 35 kg");
+        page.FindAll("form[aria-labelledby='product-form'] input")[3].GetAttribute("value").Should().Be("3760000100014");
     }
 
     protected override void Dispose(bool disposing)

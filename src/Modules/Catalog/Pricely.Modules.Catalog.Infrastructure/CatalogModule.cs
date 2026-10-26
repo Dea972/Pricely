@@ -3,9 +3,11 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Pricely.Common.Application.AI;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Infrastructure.Outbox;
 using Pricely.Common.Presentation.Endpoints;
+using Pricely.Modules.Catalog.Application;
 using Pricely.Modules.Catalog.Application.Abstractions.Data;
 using Pricely.Modules.Catalog.Domain.Categories;
 using Pricely.Modules.Catalog.Domain.Products;
@@ -51,6 +53,8 @@ public static class CatalogModule
         services.AddScoped<IUnitOfWork>(serviceProvider => serviceProvider.GetRequiredService<CatalogDbContext>());
         services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
+
+        services.AddAiFeature(CatalogAiFeatures.ProductEntry);
 
         services.AddDomainEventHandlers();
 

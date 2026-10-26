@@ -10,6 +10,8 @@
         <p class="muted" style="margin: 4px 0 0">Les sites dont Pricely relève les prix. L'agent de collecte ne lit que le site de chaque enseigne, en partant de sa page de recherche.</p>
     </div>
 
+    <MerchantSetupAssistant OnCreated="OnAssistedCreatedAsync" />
+
     <ApiProblemAlert Problem="Problem" />
     @if (_message is not null)
     {
@@ -92,7 +94,7 @@
     </div>
 
     <form class="card card-body form-grid" @onsubmit="RegisterAsync" aria-labelledby="new-merchant">
-        <h2 id="new-merchant">Nouvelle enseigne</h2>
+        <h2 id="new-merchant">Nouvelle enseigne, à la main</h2>
         <label>Nom <input class="field" maxlength="150" required @bind="_new.Name" /></label>
         <label>Site web <input class="field mono" type="url" maxlength="500" required placeholder="https://www.enseigne.fr/" @bind="_new.Website" /></label>
         <label>Page de recherche (facultative) <input class="field mono" maxlength="500" placeholder="https://www.enseigne.fr/recherche?q={query}" @bind="_new.SearchTemplate" /></label>
@@ -110,6 +112,12 @@
     private string? _message;
 
     protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task OnAssistedCreatedAsync(string message)
+    {
+        _message = message;
+        await LoadAsync();
+    }
 
     private async Task LoadAsync() =>
         _merchants = await CallAsync(() => Api.GetMerchantsAsync(CancellationToken.None)) ?? _merchants ?? [];

@@ -22,6 +22,9 @@ public partial class CatalogPage
     private string _rename = string.Empty;
     private ProductForm _product = new();
     private Guid? _editedProductId;
+    private string? _productPage;
+    private ProductSuggestionDto? _suggestion;
+    private bool _suggesting;
     private bool _saving;
     private string? _message;
 
@@ -137,9 +140,48 @@ public partial class CatalogPage
         };
     }
 
+    /// <summary>Fills the form from a product page; the user checks it before « Ajouter le produit ».</summary>
+    private async Task SuggestAsync()
+    {
+        if (_saving || string.IsNullOrWhiteSpace(_productPage))
+        {
+            return;
+        }
+
+        _saving = true;
+        _suggesting = true;
+        _message = null;
+        _suggestion = null;
+        Problem = null;
+
+        try
+        {
+            string productPage = _productPage.Trim();
+            _suggestion = await CallAsync(() => Api.SuggestProductAsync(productPage, CancellationToken.None));
+            if (_suggestion is not null)
+            {
+                _product = new ProductForm
+                {
+                    Name = _suggestion.Name ?? string.Empty,
+                    Brand = _suggestion.Brand ?? string.Empty,
+                    Gtin = _suggestion.Gtin,
+                    ManufacturerReference = _suggestion.ManufacturerReference,
+                    CategoryId = _suggestion.ProductCategoryId ?? _product.CategoryId
+                };
+            }
+        }
+        finally
+        {
+            _saving = false;
+            _suggesting = false;
+        }
+    }
+
     private void NewProduct()
     {
         _editedProductId = null;
+        _suggestion = null;
+        _productPage = null;
         _product = new ProductForm { CategoryId = _category?.Id ?? Guid.Empty };
     }
 

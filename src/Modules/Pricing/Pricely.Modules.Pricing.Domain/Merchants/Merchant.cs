@@ -103,17 +103,20 @@ public sealed class Merchant : Entity
     /// Whether an address belongs to the merchant's site: http(s), same host as the website or one of its sub-domains
     /// (<c>www.</c> aside), default port or the website's. The collection agent never reads a page elsewhere (ADR-009).
     /// </summary>
-    public bool Owns(Uri address)
+    public bool Owns(Uri address) => BelongsToSite(Website, address);
+
+    /// <summary>The rule of <see cref="Owns"/> for a site that is not a merchant yet (the setup of a new merchant).</summary>
+    public static bool BelongsToSite(Uri website, Uri address)
     {
         if (!address.IsAbsoluteUri
             || address.Scheme is not ("http" or "https")
             || !string.IsNullOrEmpty(address.UserInfo)
-            || !(address.IsDefaultPort || address.Port == Website.Port))
+            || !(address.IsDefaultPort || address.Port == website.Port))
         {
             return false;
         }
 
-        string siteHost = WithoutWww(Website.IdnHost).ToUpperInvariant();
+        string siteHost = WithoutWww(website.IdnHost).ToUpperInvariant();
         string host = address.IdnHost.ToUpperInvariant();
 
         return host == siteHost || host.EndsWith("." + siteHost, StringComparison.Ordinal);

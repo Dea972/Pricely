@@ -118,6 +118,9 @@ internal sealed class PricelyApiClient(HttpClient http, AccessTokenProvider toke
     public Task RenameCategoryAsync(Guid categoryId, string name, CancellationToken cancellationToken) =>
         SendAsync(HttpMethod.Put, $"catalog/categories/{categoryId}", new { name }, cancellationToken);
 
+    public Task<ProductSuggestionDto> SuggestProductAsync(string productPage, CancellationToken cancellationToken) =>
+        SendAsync<ProductSuggestionDto>(HttpMethod.Post, "catalog/products/suggestions", new { productPage }, cancellationToken);
+
     public Task<Guid> RegisterProductAsync(ProductRequest product, CancellationToken cancellationToken) =>
         SendAsync<Guid>(HttpMethod.Post, "catalog/products", product, cancellationToken);
 
@@ -129,6 +132,13 @@ internal sealed class PricelyApiClient(HttpClient http, AccessTokenProvider toke
 
     public Task ConfigureMerchantSearchAsync(Guid merchantId, string? searchTemplate, CancellationToken cancellationToken) =>
         SendAsync(HttpMethod.Put, $"pricing/merchants/{merchantId}/search", new { searchTemplate }, cancellationToken);
+
+    /// <summary>Reads the site and calls a model: as long as a collection command.</summary>
+    public Task<MerchantSuggestionDto> SuggestMerchantAsync(string website, string? name, CancellationToken cancellationToken) =>
+        SendAsync<MerchantSuggestionDto>(HttpMethod.Post, "pricing/merchants/suggestions", new { website, name }, cancellationToken);
+
+    public Task AddMerchantToProfilesAsync(Guid merchantId, IReadOnlyList<Guid> productCategoryIds, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Post, $"pricing/merchants/{merchantId}/profiles", new { productCategoryIds }, cancellationToken);
 
     public Task DeactivateMerchantAsync(Guid merchantId, CancellationToken cancellationToken) =>
         SendAsync(HttpMethod.Post, $"pricing/merchants/{merchantId}/deactivate", null, cancellationToken);
