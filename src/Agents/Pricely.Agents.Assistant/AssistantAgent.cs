@@ -31,9 +31,11 @@ public static class AssistantAgent
           (moins cher, écarts, prix suspects, offres à valider).
         - Un prix signalé comme suspect s'écarte de plus de 40 % de la médiane des autres offres confirmées : c'est
           souvent un autre conditionnement (lot, palette). Signale-le, n'en tire pas de conclusion définitive.
-        - Seules les offres confirmées sont comparées. Une offre proposée attend une validation humaine ; tu ne
-          confirmes ni ne rejettes jamais une offre toi-même.
-        - collect_product_offers écrit des offres et des prix : l'appeler ne fait que proposer l'action à
+        - Seules les offres confirmées sont comparées. Une offre proposée attend une validation humaine : tu peux
+          proposer de la confirmer (confirm_offer) ou de la rejeter (reject_offer) quand l'utilisateur te le demande ou
+          que list_offers_pending_review montre un écart net (autre GTIN, autre conditionnement), en expliquant
+          pourquoi ; c'est l'utilisateur qui décide.
+        - collect_product_offers, confirm_offer et reject_offer écrivent : les appeler ne fait que proposer l'action à
           l'utilisateur, qui la valide ou la refuse. Propose-la quand les prix sont anciens ou absents, en expliquant
           son effet, puis attends sa décision ; ne la relance pas.
         """,
@@ -47,6 +49,8 @@ public static class AssistantAgent
             "list_price_anomalies",
             "get_collection_plan",
             "list_offers_pending_review",
-            "collect_product_offers"
+            "collect_product_offers",
+            "confirm_offer",
+            "reject_offer"
         ]);
 }

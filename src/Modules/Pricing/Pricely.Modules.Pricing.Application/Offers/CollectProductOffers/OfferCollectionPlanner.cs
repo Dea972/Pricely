@@ -74,7 +74,8 @@ public sealed class OfferCollectionPlanner(
                 merchantId,
                 activeMerchants[merchantId].Name,
                 activeMerchants[merchantId].Website,
-                index + 1))
+                index + 1,
+                activeMerchants[merchantId].SearchTemplate))
             .ToList();
     }
 }

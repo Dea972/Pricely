@@ -26,12 +26,14 @@ internal sealed class OfferConfiguration : IEntityTypeConfiguration<Offer>
 
         builder.ComplexProperty(o => o.Evidence, evidence =>
         {
-            evidence.Property(e => e.ObservedGtin).HasColumnName("evidence_observed_gtin").HasMaxLength(14);
-            evidence.Property(e => e.ObservedBrand).HasColumnName("evidence_observed_brand").HasMaxLength(150);
+            evidence.Property(e => e.ObservedGtin).HasColumnName("evidence_observed_gtin").HasMaxLength(MatchEvidence.ObservedGtinMaxLength);
+            evidence.Property(e => e.ObservedBrand).HasColumnName("evidence_observed_brand").HasMaxLength(MatchEvidence.ObservedBrandMaxLength);
             evidence.Property(e => e.ObservedManufacturerReference)
                 .HasColumnName("evidence_observed_manufacturer_reference")
-                .HasMaxLength(100);
+                .HasMaxLength(MatchEvidence.ObservedManufacturerReferenceMaxLength);
             evidence.Property(e => e.AiSimilarity).HasColumnName("evidence_ai_similarity").HasPrecision(5, 4);
+            evidence.Property(e => e.ObservedTitle).HasColumnName("evidence_observed_title").HasMaxLength(MatchEvidence.ObservedTitleMaxLength);
+            evidence.Property(e => e.AiRationale).HasColumnName("evidence_ai_rationale").HasMaxLength(MatchEvidence.AiRationaleMaxLength);
         });
 
         builder.HasOne<Merchant>()

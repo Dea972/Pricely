@@ -17,7 +17,7 @@ internal sealed class RegisterMerchant : IEndpoint
         app.MapPost("pricing/merchants", async (Request request, ISender sender, CancellationToken cancellationToken) =>
         {
             Result<Guid> result = await sender.Send(
-                new RegisterMerchantCommand(request.Name, request.Website),
+                new RegisterMerchantCommand(request.Name, request.Website, request.SearchTemplate),
                 cancellationToken);
 
             return result.Match(Results.Ok, ApiResults.Problem);
@@ -31,5 +31,8 @@ internal sealed class RegisterMerchant : IEndpoint
         public string Name { get; init; }
 
         public string Website { get; init; }
+
+        /// <summary>Search page of the merchant's site with <c>{query}</c>, e.g. https://www.enseigne.fr/recherche?q={query}.</summary>
+        public string? SearchTemplate { get; init; }
     }
 }

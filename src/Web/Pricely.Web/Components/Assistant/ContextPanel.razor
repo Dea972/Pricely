@@ -43,6 +43,14 @@
 
     <div>
         <h2>Consommation</h2>
+        @if (SessionUsage is { Calls: > 0 })
+        {
+            <div class="tile-grid">
+                <div class="tile"><div class="small muted">Appels LLM</div><div class="mono">@Format.Count(SessionUsage.Calls)</div></div>
+                <div class="tile"><div class="small muted">Coût</div><div class="mono">@Format.Cost(SessionUsage.Cost)</div></div>
+            </div>
+            <p class="small muted" style="margin: 8px 0 12px">Cette conversation · <span class="mono">@Format.Count(SessionUsage.TotalTokens)</span> jetons</p>
+        }
         @if (Usage is not null)
         {
             <div class="tile-grid">
@@ -70,6 +78,9 @@
 
     [Parameter]
     public AgentUsageDto? Usage { get; set; }
+
+    [Parameter]
+    public UsageDto? SessionUsage { get; set; }
 
     protected override async Task OnParametersSetAsync()
     {

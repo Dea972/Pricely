@@ -14,6 +14,9 @@ internal sealed class PricelyApiClient(HttpClient http, AccessTokenProvider toke
 {
     internal static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
+    /// <summary>The API lists 50 products at most per search.</summary>
+    public const int MaxProductsPerPage = 50;
+
     public Task<IReadOnlyList<ProductDto>> SearchProductsAsync(string text, int limit, CancellationToken cancellationToken) =>
         GetAsync<IReadOnlyList<ProductDto>>($"catalog/products?text={Uri.EscapeDataString(text)}&limit={Number(limit)}", cancellationToken);
 
@@ -63,19 +66,131 @@ internal sealed class PricelyApiClient(HttpClient http, AccessTokenProvider toke
             $"aiengine/usage/by-agent?fromUtc={Uri.EscapeDataString(fromUtc.ToString("O", CultureInfo.InvariantCulture))}",
             cancellationToken);
 
+    /// <summary>Usage of one conversation of an agent (its LLM calls are journaled under the conversation id).</summary>
+    public Task<UsageDto> GetSessionUsageAsync(Guid conversationId, CancellationToken cancellationToken) =>
+        GetAsync<UsageDto>($"aiengine/usage/sessions/{conversationId}", cancellationToken);
+
+    public Task<UsageDto> GetUsageSummaryAsync(DateTime fromUtc, CancellationToken cancellationToken) =>
+        GetAsync<UsageDto>($"aiengine/usage/summary?fromUtc={Utc(fromUtc)}", cancellationToken);
+
+    public Task<IReadOnlyList<DailyUsageDto>> GetDailyUsageAsync(DateTime fromUtc, CancellationToken cancellationToken) =>
+        GetAsync<IReadOnlyList<DailyUsageDto>>($"aiengine/usage/daily?fromUtc={Utc(fromUtc)}", cancellationToken);
+
+    public Task<IReadOnlyList<FeatureUsageDto>> GetUsageByFeatureAsync(DateTime fromUtc, CancellationToken cancellationToken) =>
+        GetAsync<IReadOnlyList<FeatureUsageDto>>($"aiengine/usage/by-feature?fromUtc={Utc(fromUtc)}", cancellationToken);
+
+    public Task<IReadOnlyList<AiFeatureDto>> GetAiFeaturesAsync(CancellationToken cancellationToken) =>
+        GetAsync<IReadOnlyList<AiFeatureDto>>("aiengine/features", cancellationToken);
+
+    public Task SetFeatureTargetAsync(string featureCode, Guid modelId, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Put, $"aiengine/features/{Uri.EscapeDataString(featureCode)}/target", new { modelId }, cancellationToken);
+
+    public Task ResetFeatureTargetAsync(string featureCode, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Delete, $"aiengine/features/{Uri.EscapeDataString(featureCode)}/target", null, cancellationToken);
+
+    public Task<IReadOnlyList<AiModelDto>> GetModelsAsync(CancellationToken cancellationToken) =>
+        GetAsync<IReadOnlyList<AiModelDto>>("aiengine/models", cancellationToken);
+
+    /// <summary>Reads LiteLLM, and the pricing pages for the others: as long as a collection command.</summary>
+    public Task<IReadOnlyList<ModelPriceProposalDto>> ProposeModelPricesAsync(CancellationToken cancellationToken) =>
+        SendAsync<IReadOnlyList<ModelPriceProposalDto>>(HttpMethod.Post, "aiengine/models/price-proposals", cancellationToken);
+
+    public Task<Guid> RegisterModelAsync(string provider, string providerModelId, string label, CancellationToken cancellationToken) =>
+        SendAsync<Guid>(HttpMethod.Post, "aiengine/models", new { provider, providerModelId, label }, cancellationToken);
+
+    public Task SetModelPriceAsync(Guid modelId, ModelPriceRequest price, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Post, $"aiengine/models/{modelId}/prices", price, cancellationToken);
+
+    public Task ConfirmOfferAsync(Guid offerId, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Post, $"pricing/offers/{offerId}/confirm", null, cancellationToken);
+
+    public Task RejectOfferAsync(Guid offerId, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Post, $"pricing/offers/{offerId}/reject", null, cancellationToken);
+
+    public Task<IReadOnlyList<CollectionProfileSummaryDto>> GetCollectionProfilesAsync(CancellationToken cancellationToken) =>
+        GetAsync<IReadOnlyList<CollectionProfileSummaryDto>>("pricing/collection-profiles", cancellationToken);
+
+    public Task<EffectiveCollectionProfileDto> GetEffectiveCollectionProfileAsync(Guid categoryId, CancellationToken cancellationToken) =>
+        GetAsync<EffectiveCollectionProfileDto>($"pricing/collection-profiles/{categoryId}/effective", cancellationToken);
+
+    public Task DefineCollectionProfileAsync(Guid categoryId, CollectionProfileRequest profile, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Put, $"pricing/collection-profiles/{categoryId}", profile, cancellationToken);
+
+    public Task<IReadOnlyList<ProductDto>> GetProductsOfCategoryAsync(Guid categoryId, CancellationToken cancellationToken) =>
+        GetAsync<IReadOnlyList<ProductDto>>($"catalog/products?productCategoryId={categoryId}&limit={Number(MaxProductsPerPage)}", cancellationToken);
+
+    public Task<Guid> CreateCategoryAsync(string name, Guid? parentId, CancellationToken cancellationToken) =>
+        SendAsync<Guid>(HttpMethod.Post, "catalog/categories", new { name, parentId }, cancellationToken);
+
+    public Task RenameCategoryAsync(Guid categoryId, string name, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Put, $"catalog/categories/{categoryId}", new { name }, cancellationToken);
+
+    public Task<ProductSuggestionDto> SuggestProductAsync(string productPage, CancellationToken cancellationToken) =>
+        SendAsync<ProductSuggestionDto>(HttpMethod.Post, "catalog/products/suggestions", new { productPage }, cancellationToken);
+
+    public Task<Guid> RegisterProductAsync(ProductRequest product, CancellationToken cancellationToken) =>
+        SendAsync<Guid>(HttpMethod.Post, "catalog/products", product, cancellationToken);
+
+    public Task UpdateProductAsync(Guid productId, ProductRequest product, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Put, $"catalog/products/{productId}", product, cancellationToken);
+
+    public Task<Guid> RegisterMerchantAsync(MerchantRequest merchant, CancellationToken cancellationToken) =>
+        SendAsync<Guid>(HttpMethod.Post, "pricing/merchants", merchant, cancellationToken);
+
+    public Task ConfigureMerchantSearchAsync(Guid merchantId, string? searchTemplate, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Put, $"pricing/merchants/{merchantId}/search", new { searchTemplate }, cancellationToken);
+
+    /// <summary>Reads the site and calls a model: as long as a collection command.</summary>
+    public Task<MerchantSuggestionDto> SuggestMerchantAsync(string website, string? name, CancellationToken cancellationToken) =>
+        SendAsync<MerchantSuggestionDto>(HttpMethod.Post, "pricing/merchants/suggestions", new { website, name }, cancellationToken);
+
+    public Task AddMerchantToProfilesAsync(Guid merchantId, IReadOnlyList<Guid> productCategoryIds, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Post, $"pricing/merchants/{merchantId}/profiles", new { productCategoryIds }, cancellationToken);
+
+    public Task DeactivateMerchantAsync(Guid merchantId, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Post, $"pricing/merchants/{merchantId}/deactivate", null, cancellationToken);
+
+    public Task ActivateMerchantAsync(Guid merchantId, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Post, $"pricing/merchants/{merchantId}/activate", null, cancellationToken);
+
     private Task<T> GetAsync<T>(string path, CancellationToken cancellationToken) =>
         SendAsync<T>(HttpMethod.Get, path, cancellationToken);
 
-    private async Task<T> SendAsync<T>(HttpMethod method, string path, CancellationToken cancellationToken)
-    {
-        using var request = new HttpRequestMessage(method, new Uri("api/" + path, UriKind.Relative));
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await tokens.GetAccessTokenAsync(cancellationToken));
+    private Task<T> SendAsync<T>(HttpMethod method, string path, CancellationToken cancellationToken) =>
+        SendAsync<T>(method, path, null, cancellationToken);
 
-        using HttpResponseMessage response = await http.SendAsync(request, cancellationToken);
-        await EnsureSuccessAsync(response, cancellationToken);
+    private async Task<T> SendAsync<T>(HttpMethod method, string path, object? body, CancellationToken cancellationToken)
+    {
+        using HttpResponseMessage response = await SendCoreAsync(method, path, body, cancellationToken);
 
         return await response.Content.ReadFromJsonAsync<T>(JsonOptions, cancellationToken)
             ?? throw new PricelyApiException(response.StatusCode, null, "The API returned an empty response.");
+    }
+
+    /// <summary>A call whose response has no body (204).</summary>
+    private async Task SendAsync(HttpMethod method, string path, object? body, CancellationToken cancellationToken)
+    {
+        using HttpResponseMessage response = await SendCoreAsync(method, path, body, cancellationToken);
+    }
+
+    private async Task<HttpResponseMessage> SendCoreAsync(HttpMethod method, string path, object? body, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(method, new Uri("api/" + path, UriKind.Relative));
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await tokens.GetAccessTokenAsync(cancellationToken));
+        request.Content = body is null ? null : JsonContent.Create(body, options: JsonOptions);
+
+        HttpResponseMessage response = await http.SendAsync(request, cancellationToken);
+        try
+        {
+            await EnsureSuccessAsync(response, cancellationToken);
+
+            return response;
+        }
+        catch
+        {
+            response.Dispose();
+            throw;
+        }
     }
 
     /// <summary>Turns a refused call into an exception carrying the error code of the problem details.</summary>
@@ -111,6 +226,8 @@ internal sealed class PricelyApiClient(HttpClient http, AccessTokenProvider toke
     }
 
     private static string Number(int value) => value.ToString(CultureInfo.InvariantCulture);
+
+    private static string Utc(DateTime utc) => Uri.EscapeDataString(utc.ToString("O", CultureInfo.InvariantCulture));
 
     private sealed record ProblemDto(string? Title, string? Detail);
 }

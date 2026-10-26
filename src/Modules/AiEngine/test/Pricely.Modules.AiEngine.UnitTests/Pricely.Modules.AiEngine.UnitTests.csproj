@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Pricely.Modules.AiEngine.Domain\Pricely.Modules.AiEngine.Domain.csproj" />
+    <ProjectReference Include="..\..\Pricely.Modules.AiEngine.Infrastructure\Pricely.Modules.AiEngine.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

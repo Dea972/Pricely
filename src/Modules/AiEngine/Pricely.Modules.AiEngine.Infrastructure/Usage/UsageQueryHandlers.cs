@@ -27,6 +27,25 @@ internal sealed class GetUsageSummaryQueryHandler(IDbConnectionFactory dbConnect
     }
 }
 
+internal sealed class GetSessionUsageQueryHandler(IDbConnectionFactory dbConnectionFactory)
+    : IQueryHandler<GetSessionUsageQuery, UsageSummaryResponse>
+{
+    public async Task<Result<UsageSummaryResponse>> Handle(GetSessionUsageQuery request, CancellationToken cancellationToken)
+    {
+        await using DbConnection connection = await dbConnectionFactory.OpenConnectionAsync();
+
+        const string sql =
+            $"""
+             SELECT {UsageSql.Totals}
+             FROM aiengine.llm_calls c
+             WHERE c.session_id = @{nameof(GetSessionUsageQuery.SessionId)}
+             """;
+
+        return await connection.QuerySingleAsync<UsageSummaryResponse>(
+            new CommandDefinition(sql, request, cancellationToken: cancellationToken));
+    }
+}
+
 internal sealed class GetUsageByModelQueryHandler(IDbConnectionFactory dbConnectionFactory)
     : IQueryHandler<GetUsageByModelQuery, IReadOnlyCollection<ModelUsageResponse>>
 {

@@ -61,6 +61,20 @@ public sealed class CollectionProfileResolverTests
             "Bags of 25 or 35 kg." +
             CollectionProfileResolver.InstructionsSeparator +
             "Distinguish CEM I and CEM II.");
+        resolved.InstructionBlocks.Should().Equal(
+            new InstructionBlock(Root, "Compare unit prices including VAT."),
+            new InstructionBlock(Parent, "Bags of 25 or 35 kg."),
+            new InstructionBlock(Leaf, "Distinguish CEM I and CEM II."));
+        resolved.OwnProfile!.ProductCategoryId.Should().Be(Leaf);
+    }
+
+    [Fact]
+    public void Resolve_ShouldHaveNoOwnProfile_WhenTheTypologyOnlyInherits()
+    {
+        ResolvedCollectionProfile resolved = CollectionProfileResolver.Resolve(Lineage, [Profile(Root, [Guid.NewGuid()], "Root.")]);
+
+        resolved.OwnProfile.Should().BeNull();
+        resolved.InstructionBlocks.Should().ContainSingle().Which.ProductCategoryId.Should().Be(Root);
     }
 
     [Fact]

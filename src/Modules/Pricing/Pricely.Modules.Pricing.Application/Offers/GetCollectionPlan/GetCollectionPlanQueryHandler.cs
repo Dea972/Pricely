@@ -30,7 +30,7 @@ internal sealed class GetCollectionPlanQueryHandler(OfferCollectionPlanner offer
                 product.Brand,
                 product.Gtin,
                 product.ManufacturerReference),
-            [.. collection.Merchants.Select(m => new CollectionPlanMerchantResponse(m.MerchantId, m.Name, m.Website, m.Priority))],
+            [.. collection.Merchants.Select(m => new CollectionPlanMerchantResponse(m.MerchantId, m.Name, m.Website, m.Priority, m.SearchTemplate))],
             collection.Instructions);
     }
 }

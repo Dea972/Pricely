@@ -1,0 +1,186 @@
+@page "/catalog"
+@page "/catalog/{CategoryId:guid}"
+@inherits ApiComponentBase
+
+<PageTitle>Catalogue — Pricely</PageTitle>
+
+<div class="page">
+    <div>
+        <h1>Catalogue</h1>
+        <p class="muted" style="margin: 4px 0 0">Les typologies (3 niveaux au plus) et les produits de référence que Pricely compare.</p>
+    </div>
+
+    <ApiProblemAlert Problem="Problem" />
+
+    <div class="row">
+        <div class="grow-1 profile-detail">
+            <nav class="card profile-tree" aria-label="Typologies">
+                <div class="card-header"><div class="eyebrow">Typologies</div></div>
+                @if (_tree is null)
+                {
+                    <div class="card-body muted" role="status">Chargement…</div>
+                }
+                else if (_tree.Count == 0)
+                {
+                    <div class="card-body muted">Aucune typologie : crée la première ci-dessous.</div>
+                }
+                else
+                {
+                    <ul class="tree">
+                        @foreach ((ProductCategoryDto category, int depth) in _tree)
+                        {
+                            <li style="padding-left: @(depth * 16)px">
+                                <a href="/catalog/@category.Id" aria-current="@(category.Id == CategoryId ? "page" : null)">@category.Name</a>
+                            </li>
+                        }
+                    </ul>
+                }
+            </nav>
+
+            <form class="card card-body form-grid" @onsubmit="CreateCategoryAsync" aria-labelledby="new-category">
+                <h2 id="new-category">Nouvelle typologie</h2>
+                <label>Nom <input class="field" maxlength="200" required @bind="_newCategoryName" /></label>
+                <label>
+                    Typologie parente
+                    <select class="field" @bind="_newCategoryParent">
+                        <option value="">Aucune (racine)</option>
+                        @foreach ((ProductCategoryDto category, int depth) in _tree ?? [])
+                        {
+                            @if (depth + 1 < CategoryTree.MaxDepth)
+                            {
+                                <option value="@category.Id">@Indent(depth)@category.Name</option>
+                            }
+                        }
+                    </select>
+                </label>
+                <div><button type="submit" class="btn btn-primary" disabled="@_saving">Créer la typologie</button></div>
+            </form>
+        </div>
+
+        <div class="grow-2 profile-detail">
+            @if (_category is null)
+            {
+                <div class="card"><div class="card-body muted">Choisis une typologie pour voir et ajouter ses produits.</div></div>
+            }
+            else
+            {
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <div class="breadcrumb">@_categoryPath</div>
+                            <h2>@_category.Name</h2>
+                        </div>
+                        <form class="inline-form" @onsubmit="RenameAsync">
+                            <label for="rename" class="visually-hidden">Nouveau nom de la typologie</label>
+                            <input id="rename" class="field" maxlength="200" required @bind="_rename" />
+                            <button type="submit" class="btn btn-secondary" disabled="@_saving">Renommer</button>
+                        </form>
+                    </div>
+
+                    @if (_products is null)
+                    {
+                        <div class="card-body muted" role="status">Chargement des produits…</div>
+                    }
+                    else if (_products.Count == 0)
+                    {
+                        <div class="card-body muted">Aucun produit dans cette typologie (les sous-typologies ont les leurs).</div>
+                    }
+                    else
+                    {
+                        <div class="table-scroll">
+                            <table class="data">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Produit</th>
+                                        <th scope="col">Marque</th>
+                                        <th scope="col">GTIN</th>
+                                        <th scope="col">Réf. fabricant</th>
+                                        <th scope="col"><span class="visually-hidden">Actions</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (ProductDto product in _products)
+                                    {
+                                        <tr>
+                                            <td><a href="/products/@product.Id">@product.Name</a></td>
+                                            <td>@product.Brand</td>
+                                            <td class="mono">@(product.Gtin ?? "—")</td>
+                                            <td class="mono">@(product.ManufacturerReference ?? "—")</td>
+                                            <td><button type="button" class="btn btn-secondary btn-small" @onclick="() => Edit(product)">Modifier</button></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        @if (_products.Count >= PricelyApiClient.MaxProductsPerPage)
+                        {
+                            <p class="card-body small muted" style="margin: 0">Les @PricelyApiClient.MaxProductsPerPage premiers produits ; la recherche de « Produits » trouve les autres.</p>
+                        }
+                    }
+                </div>
+
+                <form class="card card-body form-grid" @onsubmit="SaveProductAsync" aria-labelledby="product-form">
+                    <h2 id="product-form">@(_editedProductId is null ? "Nouveau produit" : "Modifier le produit")</h2>
+                    @if (_editedProductId is null)
+                    {
+                        <div class="inline-form assist">
+                            <label for="product-page" class="visually-hidden">Adresse d'une page produit</label>
+                            <input id="product-page" class="field mono" maxlength="2000" placeholder="Adresse d'une page produit (fabricant ou enseigne)" @bind="_productPage" />
+                            <button type="button" class="btn btn-secondary" disabled="@_saving" @onclick="SuggestAsync">@(_suggesting ? "Lecture de la page…" : "Pré-remplir avec l'IA")</button>
+                        </div>
+                    }
+                    @if (_suggestion is not null)
+                    {
+                        <div class="ai-opinion" role="status">
+                            @if (!_suggestion.IsAiAnswer)
+                            {
+                                <span>L'IA n'a pas répondu : seul le titre de la page est repris.</span>
+                            }
+                            else
+                            {
+                                <strong>Avis IA :</strong> @(_suggestion.Rationale ?? "champs repris de la page.")
+                                @if (_suggestion.Packaging is not null)
+                                {
+                                    <span> Conditionnement : @_suggestion.Packaging.</span>
+                                }
+                                <span> Un GTIN ou une référence absents de la page ne sont jamais repris.</span>
+                            }
+                        </div>
+                        @if (_suggestion.ExistingProductId is Guid existingId)
+                        {
+                            <div class="alert alert-warn" role="alert">
+                                Ce GTIN est déjà au catalogue : <a href="/products/@existingId">@_suggestion.ExistingProductName</a>. Modifie ce produit plutôt que d'en créer un second.
+                            </div>
+                        }
+                    }
+                    <label>Nom <input class="field" maxlength="300" required @bind="_product.Name" /></label>
+                    <label>Marque <input class="field" maxlength="150" required @bind="_product.Brand" /></label>
+                    <label>GTIN / EAN <input class="field mono" inputmode="numeric" maxlength="14" @bind="_product.Gtin" /></label>
+                    <label>Référence fabricant <input class="field mono" maxlength="100" @bind="_product.ManufacturerReference" /></label>
+                    <label>
+                        Typologie
+                        <select class="field" @bind="_product.CategoryId">
+                            @foreach ((ProductCategoryDto category, int depth) in _tree ?? [])
+                            {
+                                <option value="@category.Id">@Indent(depth)@category.Name</option>
+                            }
+                        </select>
+                    </label>
+                    <p class="small muted" style="margin: 0">Un produit par conditionnement (un sac de 25 kg et un sac de 35 kg sont deux produits). Le GTIN, s'il est connu, permet de confirmer les offres automatiquement.</p>
+                    <div class="action-buttons">
+                        <button type="submit" class="btn btn-primary" disabled="@_saving">@(_editedProductId is null ? "Ajouter le produit" : "Enregistrer")</button>
+                        @if (_editedProductId is not null)
+                        {
+                            <button type="button" class="btn btn-secondary" @onclick="NewProduct">Annuler</button>
+                        }
+                    </div>
+                </form>
+            }
+
+            @if (_message is not null)
+            {
+                <div class="alert alert-info" role="status">@_message</div>
+            }
+        </div>
+    </div>
+</div>

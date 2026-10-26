@@ -1,0 +1,149 @@
+@page "/profiles"
+@page "/profiles/{CategoryId:guid}"
+@inherits ApiComponentBase
+
+<PageTitle>Profils de collecte — Pricely</PageTitle>
+
+<div class="page">
+    <div>
+        <h1>Profils de collecte</h1>
+        <p class="muted" style="margin: 4px 0 0">Par typologie : les enseignes interrogées en priorité et les instructions données à l'agent de collecte.</p>
+    </div>
+
+    <ApiProblemAlert Problem="Problem" />
+
+    <div class="row">
+        <nav class="card grow-1 profile-tree" aria-label="Typologies">
+            <div class="card-header"><div class="eyebrow">Typologies</div></div>
+            @if (_tree is null)
+            {
+                <div class="card-body muted" role="status">Chargement…</div>
+            }
+            else if (_tree.Count == 0)
+            {
+                <div class="card-body muted">Aucune typologie dans le catalogue.</div>
+            }
+            else
+            {
+                <ul class="tree">
+                    @foreach ((ProductCategoryDto category, int depth) in _tree)
+                    {
+                        <li style="padding-left: @(depth * 16)px">
+                            <a href="/profiles/@category.Id" aria-current="@(category.Id == CategoryId ? "page" : null)">
+                                <span>@category.Name</span>
+                                @if (_profiles.ContainsKey(category.Id))
+                                {
+                                    <span class="badge badge-confirmed">profil</span>
+                                }
+                            </a>
+                        </li>
+                    }
+                </ul>
+                <p class="small muted card-body" style="margin: 0">3 niveaux maximum. « profil » : la typologie définit son propre profil.</p>
+            }
+        </nav>
+
+        <div class="grow-2 profile-detail">
+            @if (CategoryId is null)
+            {
+                <div class="card"><div class="card-body muted">Choisis une typologie pour voir ou modifier son profil.</div></div>
+            }
+            else if (_effective is not null && _category is not null)
+            {
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <div class="breadcrumb">@_categoryPath</div>
+                            <h2>Profil de collecte : @_category.Name</h2>
+                        </div>
+                        <button type="button" class="btn btn-primary" disabled="@_saving" @onclick="SaveAsync">Enregistrer</button>
+                    </div>
+
+                    <div class="card-body profile-section">
+                        <h3>Enseignes favorites</h3>
+                        @if (_ownMerchants is null)
+                        {
+                            @if (_effective.PreferredMerchantsSourceCategoryId is Guid source)
+                            {
+                                <span class="badge badge-pending">↳ Héritées de @NameOf(source)</span>
+                                <p class="small muted">@_category.Name ne définit pas ses propres enseignes : la liste de la typologie la plus proche s'applique telle quelle.</p>
+                            }
+                            else
+                            {
+                                <p class="small muted">Aucune typologie de la lignée ne définit d'enseignes favorites.</p>
+                            }
+                            <ol class="merchant-order">
+                                @foreach (Guid merchantId in _effective.PreferredMerchantIds)
+                                {
+                                    <li><span>@MerchantName(merchantId)</span> <span class="small muted">@MerchantState(merchantId)</span></li>
+                                }
+                            </ol>
+                            <button type="button" class="btn btn-secondary btn-small" @onclick="DefineOwnMerchants">Définir une liste propre à @_category.Name</button>
+                        }
+                        else
+                        {
+                            <p class="small muted">L'ordre est la priorité d'interrogation (1 = d'abord).</p>
+                            <ol class="merchant-order">
+                                @foreach ((Guid merchantId, int index) in _ownMerchants.Select((m, i) => (m, i)))
+                                {
+                                    <li>
+                                        <span>@MerchantName(merchantId) <span class="small muted">@MerchantState(merchantId)</span></span>
+                                        <span class="order-buttons">
+                                            <button type="button" class="icon-button" aria-label="Monter @MerchantName(merchantId)" disabled="@(index == 0)" @onclick="() => Move(index, -1)">↑</button>
+                                            <button type="button" class="icon-button" aria-label="Descendre @MerchantName(merchantId)" disabled="@(index == _ownMerchants.Count - 1)" @onclick="() => Move(index, 1)">↓</button>
+                                            <button type="button" class="icon-button" aria-label="Retirer @MerchantName(merchantId)" @onclick="() => _ownMerchants.RemoveAt(index)">✕</button>
+                                        </span>
+                                    </li>
+                                }
+                            </ol>
+                            @if (OtherMerchants.Any())
+                            {
+                                <div class="search">
+                                    <label for="add-merchant" class="visually-hidden">Ajouter une enseigne</label>
+                                    <select id="add-merchant" class="field" @bind="_merchantToAdd">
+                                        <option value="">Ajouter une enseigne…</option>
+                                        @foreach (MerchantDto merchant in OtherMerchants)
+                                        {
+                                            <option value="@merchant.Id">@merchant.Name</option>
+                                        }
+                                    </select>
+                                    <button type="button" class="btn btn-secondary" @onclick="AddMerchant">Ajouter</button>
+                                </div>
+                            }
+                            <button type="button" class="btn btn-secondary btn-small" @onclick="InheritMerchants">Hériter de la typologie parente</button>
+                        }
+                    </div>
+
+                    <div class="card-body profile-section">
+                        <h3><label for="instructions">Instructions de collecte</label></h3>
+                        <p class="small muted">Instructions propres à @_category.Name (ajoutées après celles des typologies parentes).</p>
+                        <textarea id="instructions" class="field textarea" rows="5" maxlength="4000" @bind="_ownInstructions"></textarea>
+                    </div>
+
+                    @if (_saved)
+                    {
+                        <div class="card-body"><div class="alert alert-info" role="status">Profil enregistré.</div></div>
+                    }
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><div class="eyebrow">Prompt effectif envoyé à l'agent</div></div>
+                    @if (_effective.InstructionBlocks.Count == 0)
+                    {
+                        <div class="card-body muted">Aucune instruction dans la lignée de cette typologie.</div>
+                    }
+                    else
+                    {
+                        @foreach (InstructionBlockDto block in _effective.InstructionBlocks)
+                        {
+                            <div class="card-body prompt-block">
+                                <div class="small"><strong>@NameOf(block.ProductCategoryId)</strong> <span class="muted">(@(block.ProductCategoryId == CategoryId ? "cette typologie" : "hérité"))</span></div>
+                                <p class="prompt-text">@block.Instructions</p>
+                            </div>
+                        }
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>

@@ -15,4 +15,5 @@ public sealed record ProductToCollect(
     string? Gtin,
     string? ManufacturerReference);
 
-public sealed record MerchantToSearch(Guid MerchantId, string Name, Uri Website, int Priority);
+/// <param name="SearchTemplate">Search page of the merchant's site with <c>{query}</c>, if configured.</param>
+public sealed record MerchantToSearch(Guid MerchantId, string Name, Uri Website, int Priority, string? SearchTemplate = null);

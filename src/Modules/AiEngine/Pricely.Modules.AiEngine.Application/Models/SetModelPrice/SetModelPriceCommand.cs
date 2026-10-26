@@ -9,4 +9,11 @@ public sealed record SetModelPriceCommand(
     decimal InputPerMillion,
     decimal CachedInputPerMillion,
     decimal CacheWritePerMillion,
-    decimal OutputPerMillion) : ICommand;
+    decimal OutputPerMillion) : ICommand
+{
+    /// <summary>
+    /// Where the price comes from: <c>Manual</c> (default), or the proposal of LiteLLM (<c>LiteLlm</c>) or of the AI
+    /// (<c>AiReading</c>) that the user applied.
+    /// </summary>
+    public string? Source { get; init; }
+}

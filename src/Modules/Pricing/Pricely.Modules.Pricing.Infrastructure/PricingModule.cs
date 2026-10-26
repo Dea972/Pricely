@@ -15,10 +15,13 @@ using Pricely.Modules.Pricing.Application;
 using Pricely.Modules.Pricing.Application.Abstractions.Collection;
 using Pricely.Modules.Pricing.Application.Abstractions.Data;
 using Pricely.Modules.Pricing.Application.Offers.CollectProductOffers;
+using Pricely.Modules.Pricing.Application.Offers.SubmitCollectedOffer;
+using Pricely.Modules.Pricing.Application.PageSnapshots;
 using Pricely.Modules.Pricing.Domain.Catalog;
 using Pricely.Modules.Pricing.Domain.CollectionProfiles;
 using Pricely.Modules.Pricing.Domain.Merchants;
 using Pricely.Modules.Pricing.Domain.Offers;
+using Pricely.Modules.Pricing.Domain.PageSnapshots;
 using Pricely.Modules.Pricing.Infrastructure.Catalog;
 using Pricely.Modules.Pricing.Infrastructure.Collection;
 using Pricely.Modules.Pricing.Infrastructure.CollectionProfiles;
@@ -27,6 +30,7 @@ using Pricely.Modules.Pricing.Infrastructure.Inbox;
 using Pricely.Modules.Pricing.Infrastructure.Merchants;
 using Pricely.Modules.Pricing.Infrastructure.Offers;
 using Pricely.Modules.Pricing.Infrastructure.Outbox;
+using Pricely.Modules.Pricing.Infrastructure.PageSnapshots;
 
 namespace Pricely.Modules.Pricing.Infrastructure;
 
@@ -70,13 +74,18 @@ public static class PricingModule
         services.AddScoped<ICatalogProductRepository, CatalogProductRepository>();
         services.AddScoped<ICatalogCategoryRepository, CatalogCategoryRepository>();
 
+        services.AddScoped<IPageSnapshotRepository, PageSnapshotRepository>();
+
         services.AddScoped<OfferCollectionPlanner>();
         services.AddScoped<CollectedOfferRecorder>();
+        services.AddScoped<MerchantPageReader>();
+        services.AddScoped<SubmittedOfferVerifier>();
 
-        // Replace with the real collector (AI agent, scrapers, partner feeds) when available.
-        services.TryAddScoped<IOfferCollector, NotConfiguredOfferCollector>();
+        // The collection agent (ADR-017); dedicated scrapers or partner feeds can replace it.
+        services.TryAddScoped<IOfferCollector, AgentOfferCollector>();
 
         services.AddAiFeature(PricingAiFeatures.OfferCollection);
+        services.AddAiFeature(PricingAiFeatures.MerchantSetup);
 
         services.AddDomainEventHandlers();
         services.AddIntegrationEventHandlers();

@@ -33,6 +33,18 @@ public abstract class ApiComponentBase : ComponentBase
         }
     }
 
+    /// <summary>
+    /// A page that Pricely could not read (site that does not exist, out of reach or that refuses robots): said in
+    /// words instead of the technical message of the API.
+    /// </summary>
+    protected void ExplainUnreadablePage()
+    {
+        if (Problem?.Exception?.Code is "Web.Unreadable" or "Web.TooManyRedirects" or "Web.RedirectNotAllowed")
+        {
+            Problem = new ApiProblem("La page n'a pas pu être lue : adresse inexistante, site injoignable ou qui refuse les robots. Vérifie l'adresse, ou saisis à la main.");
+        }
+    }
+
     protected string LoginAddress => "authentication/login?returnUrl=" + Uri.EscapeDataString("/" + Navigation.ToBaseRelativePath(Navigation.Uri));
 }
 

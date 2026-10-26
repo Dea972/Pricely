@@ -18,5 +18,8 @@ internal sealed class ModelRepository(AiEngineDbContext context) : IModelReposit
     public Task<bool> ExistsAsync(Provider provider, string providerModelId, CancellationToken cancellationToken = default) =>
         context.Models.AnyAsync(m => m.Provider == provider && m.ProviderModelId == providerModelId, cancellationToken);
 
+    public async Task<IReadOnlyCollection<Model>> GetAllAsync(CancellationToken cancellationToken = default) =>
+        await context.Models.Include(m => m.Prices).AsNoTracking().OrderBy(m => m.ProviderModelId).ToListAsync(cancellationToken);
+
     public void Insert(Model model) => context.Models.Add(model);
 }

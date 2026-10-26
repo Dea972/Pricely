@@ -22,7 +22,8 @@ internal sealed class GetMerchantsQueryHandler(IDbConnectionFactory dbConnection
                  id AS {nameof(MerchantResponse.Id)},
                  name AS {nameof(MerchantResponse.Name)},
                  website AS {nameof(MerchantResponse.Website)},
-                 is_active AS {nameof(MerchantResponse.IsActive)}
+                 is_active AS {nameof(MerchantResponse.IsActive)},
+                 search_template AS {nameof(MerchantResponse.SearchTemplate)}
              FROM pricing.merchants
              ORDER BY name
              """;

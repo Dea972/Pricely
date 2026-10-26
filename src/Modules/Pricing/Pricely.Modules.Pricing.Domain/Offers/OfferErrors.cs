@@ -11,6 +11,11 @@ public static class OfferErrors
     public static Error InvalidCurrency(string currency) =>
         Error.Problem("Offers.InvalidCurrency", $"'{currency}' is not an ISO 4217 currency code");
 
+    public static Error MerchantNotInCollectionPlan(Guid merchantId, Guid productId) =>
+        Error.Problem(
+            "Offers.MerchantNotInCollectionPlan",
+            $"The merchant {merchantId} is not in the collection plan of the product {productId}");
+
     public static Error NotFound(Guid offerId) =>
         Error.NotFound("Offers.NotFound", $"The offer with the identifier {offerId} was not found");
 

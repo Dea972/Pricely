@@ -11,4 +11,13 @@ public static class McpToolResults
     /// </summary>
     public static T ValueOrToolError<T>(this Result<T> result) =>
         result.IsSuccess ? result.Value : throw new McpException($"{result.Error.Code}: {result.Error.Description}");
+
+    /// <summary>Nothing on success; otherwise the same MCP tool error as <see cref="ValueOrToolError{T}"/>.</summary>
+    public static void ThrowIfToolError(this Result result)
+    {
+        if (result.IsFailure)
+        {
+            throw new McpException($"{result.Error.Code}: {result.Error.Description}");
+        }
+    }
 }

@@ -10,4 +10,8 @@
     <ProjectReference Include="..\..\..\Common\Pricely.Common.Infrastructure\Pricely.Common.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pricely.Modules.AiEngine.UnitTests" />
+  </ItemGroup>
+
 </Project>

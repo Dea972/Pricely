@@ -3,6 +3,8 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -81,13 +83,13 @@ internal sealed class TestSession : IDisposable
     public const string SessionKey = "session-1";
     public static readonly Uri TokenEndpoint = new("http://keycloak.test/realms/pricely/protocol/openid-connect/token");
 
-    private readonly MemoryCache _cache = new(new MemoryCacheOptions());
+    private readonly MemoryDistributedCache _cache = new(Options.Create(new MemoryDistributedCacheOptions()));
     private readonly List<IDisposable> _owned = [];
 
     public TestSession(Func<HttpRequestMessage, HttpResponseMessage>? keycloak = null)
     {
         Keycloak = Server(keycloak ?? (_ => new HttpResponseMessage(HttpStatusCode.BadRequest)));
-        Store = new ServerTokenStore(_cache);
+        Store = new ServerTokenStore(_cache, new EphemeralDataProtectionProvider());
         var oidc = new OpenIdConnectOptions
         {
             ClientId = "pricely-web",
@@ -117,7 +119,7 @@ internal sealed class TestSession : IDisposable
 
     public TestSession SignedIn(TimeSpan validFor, string accessToken = "access-1")
     {
-        Store.Set(SessionKey, new TokenSet(accessToken, "refresh-1", "id-1", Clock.GetUtcNow().Add(validFor)));
+        Store.SetAsync(SessionKey, new TokenSet(accessToken, "refresh-1", "id-1", Clock.GetUtcNow().Add(validFor))).GetAwaiter().GetResult();
 
         return this;
     }
@@ -140,8 +142,6 @@ internal sealed class TestSession : IDisposable
         {
             owned.Dispose();
         }
-
-        _cache.Dispose();
     }
 
     private HttpClient Client(FakeServer server)

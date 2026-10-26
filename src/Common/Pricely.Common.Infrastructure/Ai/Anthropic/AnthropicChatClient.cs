@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Net.ServerSentEvents;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -12,7 +13,8 @@ namespace Pricely.Common.Infrastructure.Ai.Anthropic;
 /// <see cref="IChatClient"/> over the Anthropic Messages API with tool use: <see cref="AIFunctionDeclaration"/>s become
 /// <c>tools</c>, <c>tool_use</c> blocks become <see cref="FunctionCallContent"/> and <see cref="FunctionResultContent"/>
 /// is sent back as <c>tool_result</c>. Tool invocation itself is left to <c>FunctionInvokingChatClient</c>.
-/// Streaming is emulated: the full response is returned as updates (token streaming is not needed by the agent loop).
+/// Streaming reads the server-sent events of the API (<c>stream: true</c>): text as it is generated, each tool call once
+/// its input is complete, the usage at the end.
 /// </summary>
 internal sealed class AnthropicChatClient(HttpClient httpClient, IOptions<AnthropicOptions> anthropicOptions, string model) : IChatClient
 {
@@ -31,15 +33,7 @@ internal sealed class AnthropicChatClient(HttpClient httpClient, IOptions<Anthro
             body,
             cancellationToken);
 
-        if (!httpResponse.IsSuccessStatusCode)
-        {
-            string error = await httpResponse.Content.ReadAsStringAsync(cancellationToken);
-
-            throw new HttpRequestException(
-                $"Anthropic answered {(int)httpResponse.StatusCode}: {error}",
-                inner: null,
-                statusCode: httpResponse.StatusCode);
-        }
+        await EnsureSuccessAsync(httpResponse, cancellationToken);
 
         using JsonDocument document = await JsonDocument.ParseAsync(
             await httpResponse.Content.ReadAsStreamAsync(cancellationToken),
@@ -53,11 +47,32 @@ internal sealed class AnthropicChatClient(HttpClient httpClient, IOptions<Anthro
         ChatOptions? options = null,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        ChatResponse response = await GetResponseAsync(messages, options, cancellationToken);
+        JsonObject body = BuildRequest(messages, options);
+        body["stream"] = true;
 
-        foreach (ChatResponseUpdate update in response.ToChatResponseUpdates())
+        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri("v1/messages", UriKind.Relative))
         {
-            yield return update;
+            Content = JsonContent.Create(body)
+        };
+
+        using HttpResponseMessage httpResponse = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        await EnsureSuccessAsync(httpResponse, cancellationToken);
+
+        await using Stream stream = await httpResponse.Content.ReadAsStreamAsync(cancellationToken);
+        var state = new StreamState(model);
+
+        await foreach (SseItem<string> item in SseParser.Create(stream).EnumerateAsync(cancellationToken))
+        {
+            if (string.IsNullOrEmpty(item.Data))
+            {
+                continue;
+            }
+
+            using var document = JsonDocument.Parse(item.Data);
+            if (state.Read(item.EventType, document.RootElement) is ChatResponseUpdate update)
+            {
+                yield return update;
+            }
         }
     }
 
@@ -67,6 +82,21 @@ internal sealed class AnthropicChatClient(HttpClient httpClient, IOptions<Anthro
     public void Dispose()
     {
         // The HttpClient belongs to IHttpClientFactory.
+    }
+
+    private static async Task EnsureSuccessAsync(HttpResponseMessage httpResponse, CancellationToken cancellationToken)
+    {
+        if (httpResponse.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        string error = await httpResponse.Content.ReadAsStringAsync(cancellationToken);
+
+        throw new HttpRequestException(
+            $"Anthropic answered {(int)httpResponse.StatusCode}: {error}",
+            inner: null,
+            statusCode: httpResponse.StatusCode);
     }
 
     private JsonObject BuildRequest(IEnumerable<ChatMessage> messages, ChatOptions? chatOptions)
@@ -225,34 +255,142 @@ internal sealed class AnthropicChatClient(HttpClient httpClient, IOptions<Anthro
         {
             ModelId = modelId,
             ResponseId = root.TryGetProperty("id", out JsonElement id) ? id.GetString() : null,
-            FinishReason = stopReason switch
-            {
-                "tool_use" => ChatFinishReason.ToolCalls,
-                "max_tokens" => ChatFinishReason.Length,
-                _ => ChatFinishReason.Stop
-            },
+            FinishReason = ToFinishReason(stopReason),
             Usage = root.TryGetProperty("usage", out JsonElement usage) ? ParseUsage(usage) : null
         };
     }
 
-    private static UsageDetails ParseUsage(JsonElement usage)
-    {
-        static long Read(JsonElement element, string name) =>
-            element.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.Number ? value.GetInt64() : 0;
+    private static ChatFinishReason ToFinishReason(string? stopReason) =>
+        stopReason switch
+        {
+            "tool_use" => ChatFinishReason.ToolCalls,
+            "max_tokens" => ChatFinishReason.Length,
+            _ => ChatFinishReason.Stop
+        };
 
-        long input = Read(usage, "input_tokens");
-        long output = Read(usage, "output_tokens");
+    private static long ReadCount(JsonElement element, string name) =>
+        element.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.Number ? value.GetInt64() : 0;
 
-        return new UsageDetails
+    private static UsageDetails ParseUsage(JsonElement usage) =>
+        Usage(ReadCount(usage, "input_tokens"), ReadCount(usage, "output_tokens"), ReadCount(usage, "cache_read_input_tokens"), ReadCount(usage, "cache_creation_input_tokens"));
+
+    private static UsageDetails Usage(long input, long output, long cacheRead, long cacheCreation) =>
+        new()
         {
             InputTokenCount = input,
             OutputTokenCount = output,
             TotalTokenCount = input + output,
-            CachedInputTokenCount = Read(usage, "cache_read_input_tokens"),
+            CachedInputTokenCount = cacheRead,
             AdditionalCounts = new AdditionalPropertiesDictionary<long>
             {
-                [LlmChatUsage.CacheCreationInputTokens] = Read(usage, "cache_creation_input_tokens")
+                [LlmChatUsage.CacheCreationInputTokens] = cacheCreation
             }
         };
+
+    /// <summary>
+    /// The events of one streamed message (<c>message_start</c>, <c>content_block_*</c>, <c>message_delta</c>): text
+    /// deltas go out at once, a tool call once its JSON input is complete, the usage and the stop reason at the end.
+    /// </summary>
+    private sealed class StreamState(string model)
+    {
+        private readonly Dictionary<int, ToolCallInProgress> _toolCalls = [];
+        private string? _messageId;
+        private string? _modelId;
+        private long _inputTokens;
+        private long _cacheRead;
+        private long _cacheCreation;
+
+        public ChatResponseUpdate? Read(string eventType, JsonElement data) =>
+            eventType switch
+            {
+                "message_start" => Start(data.GetProperty("message")),
+                "content_block_start" => StartBlock(data),
+                "content_block_delta" => Delta(data),
+                "content_block_stop" => StopBlock(data),
+                "message_delta" => End(data),
+                "error" => throw new HttpRequestException($"Anthropic stream failed: {data.GetRawText()}"),
+                _ => null
+            };
+
+        private ChatResponseUpdate? Start(JsonElement message)
+        {
+            _messageId = message.TryGetProperty("id", out JsonElement id) ? id.GetString() : null;
+            _modelId = message.TryGetProperty("model", out JsonElement modelElement) ? modelElement.GetString() : model;
+
+            if (message.TryGetProperty("usage", out JsonElement usage))
+            {
+                _inputTokens = ReadCount(usage, "input_tokens");
+                _cacheRead = ReadCount(usage, "cache_read_input_tokens");
+                _cacheCreation = ReadCount(usage, "cache_creation_input_tokens");
+            }
+
+            return null;
+        }
+
+        private ChatResponseUpdate? StartBlock(JsonElement data)
+        {
+            JsonElement block = data.GetProperty("content_block");
+            if (block.GetProperty("type").GetString() == "tool_use")
+            {
+                _toolCalls[data.GetProperty("index").GetInt32()] =
+                    new ToolCallInProgress(block.GetProperty("id").GetString()!, block.GetProperty("name").GetString()!, new System.Text.StringBuilder());
+            }
+
+            return null;
+        }
+
+        private ChatResponseUpdate? Delta(JsonElement data)
+        {
+            JsonElement delta = data.GetProperty("delta");
+
+            switch (delta.GetProperty("type").GetString())
+            {
+                case "text_delta":
+                    return Update([new TextContent(delta.GetProperty("text").GetString())]);
+                case "input_json_delta" when _toolCalls.TryGetValue(data.GetProperty("index").GetInt32(), out ToolCallInProgress? call):
+                    call.Input.Append(delta.GetProperty("partial_json").GetString());
+                    return null;
+                default:
+                    return null;
+            }
+        }
+
+        private ChatResponseUpdate? StopBlock(JsonElement data)
+        {
+            int index = data.GetProperty("index").GetInt32();
+            if (!_toolCalls.Remove(index, out ToolCallInProgress? call))
+            {
+                return null;
+            }
+
+            string input = call.Input.Length == 0 ? "{}" : call.Input.ToString();
+            using var arguments = JsonDocument.Parse(input);
+
+            return Update([new FunctionCallContent(
+                call.Id,
+                call.Name,
+                arguments.RootElement.EnumerateObject().ToDictionary(p => p.Name, p => (object?)p.Value.Clone()))]);
+        }
+
+        private ChatResponseUpdate End(JsonElement data)
+        {
+            string? stopReason = data.GetProperty("delta").TryGetProperty("stop_reason", out JsonElement stop) ? stop.GetString() : null;
+            long output = data.TryGetProperty("usage", out JsonElement usage) ? ReadCount(usage, "output_tokens") : 0;
+
+            ChatResponseUpdate update = Update([new UsageContent(Usage(_inputTokens, output, _cacheRead, _cacheCreation))]);
+            update.FinishReason = ToFinishReason(stopReason);
+
+            return update;
+        }
+
+        private ChatResponseUpdate Update(IList<AIContent> contents) =>
+            new(ChatRole.Assistant, contents)
+            {
+                MessageId = _messageId,
+                ResponseId = _messageId,
+                ModelId = _modelId
+            };
+
+        private sealed record ToolCallInProgress(string Id, string Name, System.Text.StringBuilder Input);
     }
 }

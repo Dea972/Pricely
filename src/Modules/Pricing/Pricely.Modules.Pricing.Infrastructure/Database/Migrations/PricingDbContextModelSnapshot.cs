@@ -235,6 +235,11 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                         .HasColumnType("citext")
                         .HasColumnName("name");
 
+                    b.Property<string>("SearchTemplate")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("search_template");
+
                     b.Property<string>("Website")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -300,6 +305,11 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                         {
                             b1.IsRequired();
 
+                            b1.Property<string>("AiRationale")
+                                .HasMaxLength(1000)
+                                .HasColumnType("character varying(1000)")
+                                .HasColumnName("evidence_ai_rationale");
+
                             b1.Property<decimal?>("AiSimilarity")
                                 .HasPrecision(5, 4)
                                 .HasColumnType("numeric(5,4)")
@@ -319,6 +329,11 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                                 .HasMaxLength(100)
                                 .HasColumnType("character varying(100)")
                                 .HasColumnName("evidence_observed_manufacturer_reference");
+
+                            b1.Property<string>("ObservedTitle")
+                                .HasMaxLength(300)
+                                .HasColumnType("character varying(300)")
+                                .HasColumnName("evidence_observed_title");
                         });
 
                     b.HasKey("Id")
@@ -389,6 +404,46 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                     b.ToTable("price_observations", "pricing");
                 });
 
+            modelBuilder.Entity("Pricely.Modules.Pricing.Domain.PageSnapshots.PageSnapshot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("address");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(200000)
+                        .HasColumnType("character varying(200000)")
+                        .HasColumnName("content");
+
+                    b.Property<DateTime>("FetchedOnUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fetched_on_utc");
+
+                    b.Property<bool>("IsSearchPage")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_search_page");
+
+                    b.Property<Guid>("MerchantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("merchant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_page_snapshots");
+
+                    b.HasIndex("MerchantId", "FetchedOnUtc")
+                        .HasDatabaseName("ix_page_snapshots_merchant_id_fetched_on_utc");
+
+                    b.ToTable("page_snapshots", "pricing");
+                });
+
             modelBuilder.Entity("Pricely.Modules.Pricing.Domain.CollectionProfiles.CollectionProfile", b =>
                 {
                     b.OwnsMany("Pricely.Modules.Pricing.Domain.CollectionProfiles.PreferredMerchant", "PreferredMerchants", b1 =>
@@ -446,6 +501,16 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_price_observations_offers_offer_id");
+                });
+
+            modelBuilder.Entity("Pricely.Modules.Pricing.Domain.PageSnapshots.PageSnapshot", b =>
+                {
+                    b.HasOne("Pricely.Modules.Pricing.Domain.Merchants.Merchant", null)
+                        .WithMany()
+                        .HasForeignKey("MerchantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_page_snapshots_merchants_merchant_id");
                 });
 #pragma warning restore 612, 618
         }

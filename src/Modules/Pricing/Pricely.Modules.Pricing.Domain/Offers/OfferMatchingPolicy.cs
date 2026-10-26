@@ -26,6 +26,20 @@ public static class OfferMatchingPolicy
         return null;
     }
 
+    /// <summary>
+    /// Identifier by identifier, what the reviewer of a proposed offer compares (same normalization as
+    /// <see cref="Evaluate"/>): null when the merchant page does not show it.
+    /// </summary>
+    public static MatchComparison Compare(ProductIdentity product, MatchEvidence evidence) =>
+        new(
+            NormalizeGtin(evidence.ObservedGtin) is null ? null : HaveSameGtin(product.Gtin, evidence.ObservedGtin),
+            NormalizeCode(evidence.ObservedBrand).Length == 0
+                ? null
+                : string.Equals(NormalizeCode(product.Brand), NormalizeCode(evidence.ObservedBrand), StringComparison.Ordinal),
+            NormalizeCode(evidence.ObservedManufacturerReference).Length == 0
+                ? null
+                : string.Equals(NormalizeCode(product.ManufacturerReference), NormalizeCode(evidence.ObservedManufacturerReference), StringComparison.Ordinal));
+
     private static bool HaveSameGtin(string? productGtin, string? observedGtin)
     {
         string? left = NormalizeGtin(productGtin);
@@ -63,7 +77,7 @@ public static class OfferMatchingPolicy
     /// <summary>
     /// Keeps letters and digits only, upper-cased: "CEM-II 32,5" and "cem ii 325" are equal.
     /// </summary>
-    private static string NormalizeCode(string? value)
+    internal static string NormalizeCode(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
         {

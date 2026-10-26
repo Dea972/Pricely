@@ -17,5 +17,8 @@ internal sealed class ProductRepository(CatalogDbContext context) : IProductRepo
             p => p.Gtin == gtin && (excludedProductId == null || p.Id != excludedProductId),
             cancellationToken);
 
+    public Task<Product?> FindByGtinAsync(Gtin gtin, CancellationToken cancellationToken = default) =>
+        context.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Gtin == gtin, cancellationToken);
+
     public void Insert(Product product) => context.Products.Add(product);
 }

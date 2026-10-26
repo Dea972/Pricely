@@ -18,7 +18,7 @@ Le code utilise la colonne « Code » (anglais). L'interface et les échanges ut
 
 | Code | Français | Définition |
 |---|---|---|
-| `Merchant` | Enseigne | Vendeur dont on collecte les prix (site web). Peut être désactivée (`IsActive`). |
+| `Merchant` | Enseigne | Vendeur dont on collecte les prix (site web). Peut être désactivée puis réactivée (`IsActive`) : une enseigne inactive n'est plus interrogée. |
 | `CollectionProfile` | Profil de collecte | Paramétrage de la collecte pour une typologie : enseignes favorites et instructions. |
 | `PreferredMerchant` | Enseigne favorite | Enseigne à interroger pour une typologie, avec une `Priority` (1 = d'abord). |
 | `Instructions` | Instructions de collecte | Consignes destinées au collecteur (« prompt orienté »), propres à la typologie. |
@@ -31,6 +31,10 @@ Le code utilise la colonne « Code » (anglais). L'interface et les échanges ut
 | `OfferConfirmationMethod` | Mode de confirmation | `Gtin`, `ManufacturerReference` (automatiques) ou `Manual` (validé par une personne). |
 | `OfferMatchingPolicy` | Politique de rapprochement | Règle qui décide si une offre est confirmée sans revue. |
 | `PriceObservation` | Relevé de prix | Prix, disponibilité et date lus sur une offre. Historique séparé de l'offre. |
+| `PageSnapshot` | Instantané de page | Texte d'une page du site d'une enseigne tel que Pricely l'a lu ; un prix soumis par un agent doit y figurer (ADR-017). |
+| `Suggest…Command` | Proposition (paramétrage assisté) | Ce que l'IA propose à partir d'une page (enseigne, produit) ou d'une liste de tarifs : rien n'est enregistré avant que l'utilisateur valide (ADR-020, ADR-021). |
+| `PriceSource` | Origine d'un tarif | `Manual` (saisi), `LiteLlm` (liste publique de LiteLLM appliquée), `AiReading` (lu par l'IA sur la page du fournisseur, à vérifier). |
+| `SearchTemplate` | Page de recherche de l'enseigne | Adresse du site de l'enseigne avec `{query}`, où l'agent de collecte cherche le produit. |
 | `Money` | Prix | Montant strictement positif dans une devise ISO 4217. |
 | `Availability` | Disponibilité | `InStock`, `OutOfStock`, `Unknown`. |
 | `PriceAnomalyPolicy` | Garde-fou prix | Signale un relevé qui s'écarte de plus de 40 % de la médiane des autres offres confirmées. |

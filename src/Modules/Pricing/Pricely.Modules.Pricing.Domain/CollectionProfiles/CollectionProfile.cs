@@ -68,6 +68,21 @@ public sealed class CollectionProfile : Entity
         return Result.Success();
     }
 
+    /// <summary>
+    /// Adds a merchant last by priority. A profile without merchants of its own inherits them: it starts from the
+    /// <paramref name="inheritedMerchantIds"/>, so that adding one does not drop the others.
+    /// </summary>
+    public Result AddPreferredMerchant(Guid merchantId, IReadOnlyList<Guid> inheritedMerchantIds)
+    {
+        List<Guid> merchants = _preferredMerchants.Count > 0 ? [.. PreferredMerchants.Select(m => m.MerchantId)] : [.. inheritedMerchantIds];
+        if (!merchants.Contains(merchantId))
+        {
+            merchants.Add(merchantId);
+        }
+
+        return Update(merchants, Instructions);
+    }
+
     private void ReplacePreferredMerchants(IReadOnlyList<Guid> merchantIdsByPriority)
     {
         _preferredMerchants.RemoveAll(existing => !merchantIdsByPriority.Contains(existing.MerchantId));

@@ -22,7 +22,27 @@
     }
     else
     {
-        <div class="table-scroll">
+        <ul class="compact-list" aria-label="Prix par enseigne">
+            @foreach ((MerchantPriceDto price, int index) in Prices.Select((p, i) => (p, i)))
+            {
+                <li class="@RowClass(price, index)">
+                    <div>
+                        <div><ExternalLink Address="@price.ProductPage">@price.MerchantName</ExternalLink></div>
+                        <div class="small muted">@Format.Availability(price.Availability) · @Format.Ago(price.ObservedOnUtc, Clock.GetUtcNow())</div>
+                        @if (index == 0 && !price.IsFlaggedAsAnomaly)
+                        {
+                            <span class="badge badge-accent">Moins cher</span>
+                        }
+                        @if (price.IsFlaggedAsAnomaly)
+                        {
+                            <SuspectBadge />
+                        }
+                    </div>
+                    <div class="num">@Format.Price(price.Amount, price.Currency)</div>
+                </li>
+            }
+        </ul>
+        <div class="table-scroll wide-only">
             <table class="data">
                 <thead>
                     <tr>

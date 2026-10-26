@@ -1,7 +1,12 @@
 IDistributedApplicationBuilder builder = DistributedApplication.CreateBuilder(args);
 
+// pgAdmin on a fixed port (http://localhost:5050), the server already registered; persistent like the database so that
+// its settings and saved queries survive a restart of the AppHost.
 IResourceBuilder<PostgresServerResource> postgres = builder.AddPostgres("postgres")
-    .WithLifetime(ContainerLifetime.Persistent);
+    .WithLifetime(ContainerLifetime.Persistent)
+    .WithPgAdmin(pgAdmin => pgAdmin
+        .WithHostPort(5050)
+        .WithLifetime(ContainerLifetime.Persistent));
 
 IResourceBuilder<PostgresDatabaseResource> db = postgres.AddDatabase("pricely-db");
 
@@ -18,9 +23,21 @@ IResourceBuilder<KeycloakResource> keycloak = builder.AddKeycloak("keycloak", 81
     .WithRealmImport("./Realms");
 #pragma warning restore ASPIRECERTIFICATES001
 
+// Brings every module schema up to date, then exits: the API starts only once it has completed (ADR-018).
+IResourceBuilder<ProjectResource> migrations = builder.AddProject<Projects.Pricely_MigrationService>("pricely-migrations")
+    .WithReference(db)
+    .WaitFor(db);
+
+// Local test data (typologies, products, merchants, 13 weeks of prices): started from the dashboard (▶), never on its own.
+// Running it again adds nothing.
+builder.AddProject<Projects.Pricely_DevSeed>("pricely-seed")
+    .WithReference(db)
+    .WaitForCompletion(migrations)
+    .WithExplicitStart();
+
 IResourceBuilder<ProjectResource> api = builder.AddProject<Projects.Pricely_Api>("Pricely-api")
     .WithReference(db)
-    .WaitFor(db)
+    .WaitForCompletion(migrations)
     .WaitFor(keycloak)
     .WithEnvironment("Authentication__Authority", ReferenceExpression.Create($"{keycloak.GetEndpoint("http")}/realms/pricely"));
 

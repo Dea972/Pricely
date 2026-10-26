@@ -6,5 +6,7 @@ public interface IProductRepository
 
     Task<bool> ExistsWithGtinAsync(Gtin gtin, Guid? excludedProductId, CancellationToken cancellationToken = default);
 
+    Task<Product?> FindByGtinAsync(Gtin gtin, CancellationToken cancellationToken = default);
+
     void Insert(Product product);
 }

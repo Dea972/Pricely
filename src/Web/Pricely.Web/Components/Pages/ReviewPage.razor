@@ -1,0 +1,149 @@
+@page "/review"
+@inherits ApiComponentBase
+@inject PricelyApiClient Api
+@inject ReviewQueue Reviews
+@inject TimeProvider Clock
+
+<PageTitle>Offres à valider — Pricely</PageTitle>
+
+<div class="page">
+    <div class="page-head">
+        <div>
+            <h1>Offres à valider</h1>
+            <p class="muted" style="margin: 4px 0 0">Pages enseigne rapprochées sans GTIN ni marque + référence identiques. Confirme si c'est bien le même produit.</p>
+        </div>
+        @if (_offers is not null)
+        {
+            <span class="small muted" role="status">@_offers.Count restante(s) · @(_decided == 0 ? "aucune traitée" : $"{_decided} traitée(s)")</span>
+        }
+    </div>
+
+    <ApiProblemAlert Problem="Problem" />
+
+    @if (_offers is null)
+    {
+        @if (Problem is null)
+        {
+            <p class="muted" role="status">Chargement des offres…</p>
+        }
+    }
+    else if (_offers.Count == 0)
+    {
+        <div class="card"><div class="card-body muted">Aucune offre n'attend de validation.</div></div>
+    }
+    else
+    {
+        @foreach (PendingOfferDto offer in _offers)
+        {
+            <article class="card review-card" aria-labelledby="offer-@offer.OfferId">
+                <div class="card-header">
+                    <div>
+                        <strong id="offer-@offer.OfferId">@offer.MerchantName</strong>
+                        <span class="small muted"> · proposée @Format.Ago(offer.ProposedOnUtc, Clock.GetUtcNow())</span>
+                    </div>
+                    <span class="badge badge-pending">● À valider</span>
+                </div>
+                <div class="review-sides">
+                    <section class="review-side">
+                        <div class="eyebrow">Produit de référence</div>
+                        <div><a href="/products/@offer.ProductId"><strong>@offer.ProductName</strong></a></div>
+                        <dl class="facts compact">
+                            <div><dt>Marque</dt><dd>@(offer.ProductBrand ?? "—")</dd></div>
+                            <div><dt>Réf. fabricant</dt><dd class="mono">@(offer.ProductManufacturerReference ?? "—")</dd></div>
+                            <div><dt>GTIN</dt><dd class="mono">@(offer.ProductGtin ?? "—")</dd></div>
+                        </dl>
+                    </section>
+                    <section class="review-side observed">
+                        <div class="eyebrow">Page enseigne observée</div>
+                        <div><strong>@(offer.ObservedTitle ?? "Titre non relevé")</strong></div>
+                        <dl class="facts compact">
+                            <div><dt>Marque</dt><dd>@(offer.ObservedBrand ?? "non indiquée") <Comparison Same="offer.SameBrand" /></dd></div>
+                            <div><dt>Réf. fabricant</dt><dd><span class="mono">@(offer.ObservedManufacturerReference ?? "non indiquée")</span> <Comparison Same="offer.SameManufacturerReference" /></dd></div>
+                            <div><dt>GTIN</dt><dd><span class="mono">@(offer.ObservedGtin ?? "non indiqué")</span> <Comparison Same="offer.SameGtin" /></dd></div>
+                            <div><dt>Prix relevé</dt><dd class="mono">@Format.Price(offer.LatestAmount, offer.LatestCurrency)</dd></div>
+                        </dl>
+                        <ExternalLink Address="@offer.ProductPage" TextOnlyWhenValid="true">Ouvrir la page enseigne</ExternalLink>
+                    </section>
+                </div>
+                @if (offer.AiRationale is not null || offer.AiSimilarity is not null)
+                {
+                    <div class="card-body ai-opinion">
+                        <strong>Avis IA@(offer.AiSimilarity is decimal similarity ? $" ({Format.Similarity(similarity)})" : null) :</strong>
+                        @(offer.AiRationale ?? "pas de justification.")
+                    </div>
+                }
+                <div class="card-body action-buttons">
+                    <button type="button" class="btn btn-primary" disabled="@(_busy is not null)" @onclick="() => ConfirmAsync(offer)">Confirmer</button>
+                    <button type="button" class="btn btn-secondary" disabled="@(_busy is not null)" @onclick="() => RejectAsync(offer)">Rejeter</button>
+                </div>
+                @if (_messages.TryGetValue(offer.OfferId, out string? message))
+                {
+                    <div class="card-body"><div class="alert alert-warn" role="alert">@message</div></div>
+                }
+            </article>
+        }
+    }
+
+    <p class="small muted">Une offre rejetée n'accepte plus de relevés de prix. Une offre confirmée entre dans le comparatif et le calcul de la médiane.</p>
+</div>
+
+@code {
+    private readonly Dictionary<Guid, string> _messages = [];
+    private List<PendingOfferDto>? _offers;
+    private Guid? _busy;
+    private int _decided;
+
+    protected override async Task OnInitializedAsync()
+    {
+        IReadOnlyList<PendingOfferDto>? offers = await CallAsync(() => Api.GetOffersPendingReviewAsync(CancellationToken.None));
+        _offers = offers?.ToList();
+        if (_offers is not null)
+        {
+            Reviews.Set(_offers.Count);
+        }
+    }
+
+    private Task ConfirmAsync(PendingOfferDto offer) => DecideAsync(offer, () => Api.ConfirmOfferAsync(offer.OfferId, CancellationToken.None));
+
+    private Task RejectAsync(PendingOfferDto offer) => DecideAsync(offer, () => Api.RejectOfferAsync(offer.OfferId, CancellationToken.None));
+
+    private async Task DecideAsync(PendingOfferDto offer, Func<Task> decide)
+    {
+        if (_busy is not null || _offers is null)
+        {
+            return;
+        }
+
+        _busy = offer.OfferId;
+        _messages.Remove(offer.OfferId);
+        Problem = null;
+
+        try
+        {
+            if (await CallAsync(async () => { await decide(); return offer; }) is not null)
+            {
+                _offers.Remove(offer);
+                _decided++;
+                Reviews.Set(_offers.Count);
+            }
+            else if (Problem?.Exception is PricelyApiException refused && MessageFor(refused) is string message)
+            {
+                _messages[offer.OfferId] = message;
+                Problem = null;
+            }
+        }
+        finally
+        {
+            _busy = null;
+        }
+    }
+
+    private static string? MessageFor(PricelyApiException refused) =>
+        refused.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Forbidden => "Il te manque le droit de revue des offres (scope pricely.review).",
+            System.Net.HttpStatusCode.Conflict or System.Net.HttpStatusCode.BadRequest => "Cette offre n'est plus à valider : elle a déjà été traitée.",
+            System.Net.HttpStatusCode.NotFound => "Cette offre n'existe plus.",
+            _ => null
+        };
+}

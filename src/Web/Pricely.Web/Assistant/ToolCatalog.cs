@@ -19,11 +19,15 @@ public static class ToolCatalog
     public const string GetCollectionPlan = "get_collection_plan";
     public const string ListOffersPendingReview = "list_offers_pending_review";
     public const string CollectProductOffers = "collect_product_offers";
+    public const string ConfirmOffer = "confirm_offer";
+    public const string RejectOffer = "reject_offer";
 
     public static string TitleOf(string toolName) =>
         toolName switch
         {
             CollectProductOffers => "Collecter les offres du produit",
+            ConfirmOffer => "Confirmer l'offre",
+            RejectOffer => "Rejeter l'offre",
             _ => toolName
         };
 
@@ -32,15 +36,25 @@ public static class ToolCatalog
         toolName switch
         {
             CollectProductOffers => "Nouvelles offres à valider, nouveaux relevés de prix",
+            ConfirmOffer => "Ses prix entrent dans le comparatif et le calcul de la médiane",
+            RejectOffer => "L'offre n'accepte plus de relevés de prix",
             _ => null
         };
 
+    /// <summary>Whether a write tool decides on one offer to review (<c>offerId</c> argument).</summary>
+    public static bool IsOfferReview(string toolName) => toolName is ConfirmOffer or RejectOffer;
+
     /// <summary>The <c>productId</c> argument of a call, if any.</summary>
-    public static Guid? ProductIdOf(JsonElement? arguments) =>
+    public static Guid? ProductIdOf(JsonElement? arguments) => GuidArgument(arguments, "productId");
+
+    /// <summary>The <c>offerId</c> argument of a call, if any.</summary>
+    public static Guid? OfferIdOf(JsonElement? arguments) => GuidArgument(arguments, "offerId");
+
+    private static Guid? GuidArgument(JsonElement? arguments, string name) =>
         arguments is { ValueKind: JsonValueKind.Object } value
-            && value.TryGetProperty("productId", out JsonElement productId)
-            && productId.ValueKind == JsonValueKind.String
-            && productId.TryGetGuid(out Guid id)
+            && value.TryGetProperty(name, out JsonElement argument)
+            && argument.ValueKind == JsonValueKind.String
+            && argument.TryGetGuid(out Guid id)
                 ? id
                 : null;
 

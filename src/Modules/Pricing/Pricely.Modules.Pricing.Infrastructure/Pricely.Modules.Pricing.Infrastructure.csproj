@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.AI" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
   </ItemGroup>
 
@@ -9,6 +10,10 @@
     <ProjectReference Include="..\Pricely.Modules.Pricing.Presentation\Pricely.Modules.Pricing.Presentation.csproj" />
     <ProjectReference Include="..\..\Catalog\Pricely.Modules.Catalog.IntegrationEvents\Pricely.Modules.Catalog.IntegrationEvents.csproj" />
     <ProjectReference Include="..\..\..\Common\Pricely.Common.Infrastructure\Pricely.Common.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pricely.Modules.Pricing.UnitTests" />
   </ItemGroup>
 
 </Project>

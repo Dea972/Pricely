@@ -155,6 +155,7 @@ public sealed class ComponentTests : BunitContext
         PricelyApiClient api = _session.Api(server);
         Services.AddSingleton(api);
         Services.AddSingleton(new ProductLookup(api));
+        Services.AddSingleton(new ReviewQueue(api));
         Services.AddSingleton<TimeProvider>(_session.Clock);
 
         return server;

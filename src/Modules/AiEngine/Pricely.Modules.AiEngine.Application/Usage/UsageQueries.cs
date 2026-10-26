@@ -5,6 +5,9 @@ namespace Pricely.Modules.AiEngine.Application.Usage;
 /// <summary>Totals of the calls made in [FromUtc, ToUtc[ (unbounded side when null).</summary>
 public sealed record GetUsageSummaryQuery(DateTime? FromUtc, DateTime? ToUtc) : IQuery<UsageSummaryResponse>;
 
+/// <summary>Totals of the calls of one session (a conversation of an agent, a collection run).</summary>
+public sealed record GetSessionUsageQuery(string SessionId) : IQuery<UsageSummaryResponse>;
+
 /// <summary>Usage per provider and model in [FromUtc, ToUtc[, most expensive first.</summary>
 public sealed record GetUsageByModelQuery(DateTime? FromUtc, DateTime? ToUtc) : IQuery<IReadOnlyCollection<ModelUsageResponse>>;
 

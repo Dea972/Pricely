@@ -18,6 +18,7 @@ public partial class AssistantPage : IDisposable
     private ConversationView _view = new();
     private IReadOnlyList<ConversationSummaryDto>? _conversations;
     private AgentUsageDto? _usage;
+    private UsageDto? _sessionUsage;
     private CancellationTokenSource? _turn;
     private bool _showConversations;
     private bool _loading;
@@ -75,6 +76,7 @@ public partial class AssistantPage : IDisposable
 
         _view = conversation is null ? new ConversationView() : ConversationView.FromHistory(conversation);
         _loading = false;
+        await LoadUsageAsync();
     }
 
     public void Dispose()
@@ -150,6 +152,12 @@ public partial class AssistantPage : IDisposable
         // The usage is a side panel: only an expired session is worth replacing the message of the conversation.
         Problem = Problem?.IsSessionExpired == true ? Problem : previous;
         _usage = usage?.FirstOrDefault(u => string.Equals(u.AgentName, AgentName, StringComparison.Ordinal));
+
+        // The calls of the conversation are journaled by AiEngine a few seconds after the turn (its inbox).
+        Guid? conversationId = _view.ConversationId;
+        UsageDto? session = conversationId is Guid id ? await CallAsync(() => Api.GetSessionUsageAsync(id, CancellationToken.None)) : null;
+        Problem = Problem?.IsSessionExpired == true ? Problem : previous;
+        _sessionUsage = _view.ConversationId == conversationId ? session : _sessionUsage;
     }
 
     private void CancelTurn()

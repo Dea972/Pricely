@@ -17,6 +17,8 @@
 	</Folder>
 	<Folder Name="/src/API/">
 		<Project Path="src/API/Pricely.Api/Pricely.Api.csproj" />
+		<Project Path="src/API/Pricely.DevSeed/Pricely.DevSeed.csproj" />
+		<Project Path="src/API/Pricely.MigrationService/Pricely.MigrationService.csproj" />
 	</Folder>
 	<Folder Name="/src/Common/">
 		<Project Path="src/Common/Pricely.Common.Application/Pricely.Common.Application.csproj" Id="3f80165b-832b-43c6-aca8-bbf5cc97a6b9" />

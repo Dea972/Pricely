@@ -37,7 +37,7 @@ Des `CollectedOffer` normalisés, jamais de HTML brut :
 - **Scraper dédié** pour une enseigne stratégique ou qui bloque l'agent : `<Merchant>OfferCollector` interne, `HttpClient` typé avec `Microsoft.Extensions.Http.Resilience`, respect du `robots.txt` et des CGU, rate limiting.
 - **Plusieurs implémentations** : un `CompositeOfferCollector` qui choisit par enseigne (configuration ou propriété de `Merchant` à ajouter, à valider avec l'utilisateur) et agrège les résultats.
 
-Enregistrement dans `PricingModule.AddPricingModule` : remplacer `services.TryAddScoped<IOfferCollector, NotConfiguredOfferCollector>();` (le `TryAdd` permet aussi de l'override depuis l'hôte). Activer ensuite le job : `Pricing:Collection:Enabled = true`, `IntervalInMinutes`.
+Enregistrement dans `PricingModule.AddPricingModule` : le collecteur par défaut est l'agent (`services.TryAddScoped<IOfferCollector, AgentOfferCollector>();`, ADR-017) ; un autre collecteur le remplace ou l'enregistre avant (le `TryAdd` permet aussi de l'override depuis l'hôte). Toute lecture d'une page d'enseigne passe par `MerchantPageReader` (site de l'enseigne, garde-fou d'adresse, instantané) et tout prix d'agent par `SubmittedOfferVerifier`. Activer ensuite le job : `Pricing:Collection:Enabled = true`, `IntervalInMinutes`.
 
 ## Exécution hors process
 

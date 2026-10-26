@@ -9,7 +9,7 @@ public sealed record ProductDto(Guid Id, string Name, string Brand, string? Gtin
 
 public sealed record ProductCategoryDto(Guid Id, string Name, Guid? ParentId, int Depth);
 
-public sealed record MerchantDto(Guid Id, string Name, string Website, bool IsActive);
+public sealed record MerchantDto(Guid Id, string Name, string Website, bool IsActive, string? SearchTemplate = null);
 
 /// <summary>A confirmed offer and its latest price (<c>compare_prices</c>, <c>pricing/products/{id}/prices</c>).</summary>
 public sealed record MerchantPriceDto
@@ -128,6 +128,32 @@ public sealed record PendingOfferDto
     public decimal? LatestAmount { get; init; }
 
     public string? LatestCurrency { get; init; }
+
+    public string? ProductBrand { get; init; }
+
+    public string? ProductGtin { get; init; }
+
+    public string? ProductManufacturerReference { get; init; }
+
+    public string? ObservedTitle { get; init; }
+
+    public string? ObservedGtin { get; init; }
+
+    public string? ObservedBrand { get; init; }
+
+    public string? ObservedManufacturerReference { get; init; }
+
+    /// <summary>Similarity given by the collector (0 to 1), if any.</summary>
+    public decimal? AiSimilarity { get; init; }
+
+    public string? AiRationale { get; init; }
+
+    /// <summary>Comparison of the matching policy: null when one side is missing, else whether they are the same.</summary>
+    public bool? SameGtin { get; init; }
+
+    public bool? SameBrand { get; init; }
+
+    public bool? SameManufacturerReference { get; init; }
 }
 
 public sealed record CollectResultDto(int CollectedCount, int ProposedCount, int AutoConfirmedCount, int ObservedCount, int IgnoredCount, int AnomalyCount);
@@ -178,6 +204,125 @@ public sealed record PendingActionDto
 }
 
 public sealed record AgentUsageDto(string AgentName, int Calls, int FailedCalls, long TotalTokens, decimal Cost);
+
+/// <summary>Usage totals of AiEngine (summary, a session, a day, a feature); costs in USD.</summary>
+public record UsageDto
+{
+    public int Calls { get; init; }
+
+    public int FailedCalls { get; init; }
+
+    public int UnpricedCalls { get; init; }
+
+    public long InputTokens { get; init; }
+
+    public long OutputTokens { get; init; }
+
+    public long TotalTokens { get; init; }
+
+    public decimal Cost { get; init; }
+}
+
+public sealed record DailyUsageDto : UsageDto
+{
+    public DateTime Day { get; init; }
+}
+
+public sealed record FeatureUsageDto : UsageDto
+{
+    public string FeatureCode { get; init; } = string.Empty;
+}
+
+/// <param name="Source">0: its own target, 1: the default target, 2: no target (the provider's default model).</param>
+public sealed record AiFeatureDto(string Code, string Label, string? SourceModule, string? DefaultProvider, Guid? OwnModelId, Guid? EffectiveModelId, int Source)
+{
+    public const string DefaultCode = "default";
+}
+
+public sealed record AiModelDto
+{
+    public Guid Id { get; init; }
+
+    public string Provider { get; init; } = string.Empty;
+
+    public string ProviderModelId { get; init; } = string.Empty;
+
+    public string Label { get; init; } = string.Empty;
+
+    public DateTime? PriceValidFrom { get; init; }
+
+    public decimal? InputPerMillion { get; init; }
+
+    public decimal? CachedInputPerMillion { get; init; }
+
+    public decimal? CacheWritePerMillion { get; init; }
+
+    public decimal? OutputPerMillion { get; init; }
+}
+
+/// <param name="Source"><c>Manual</c>, or the proposal applied: <c>LiteLlm</c>, <c>AiReading</c>.</param>
+public sealed record ModelPriceRequest(DateOnly ValidFrom, decimal InputPerMillion, decimal CachedInputPerMillion, decimal CacheWritePerMillion, decimal OutputPerMillion, string? Source = null);
+
+/// <summary>A price found for a model of the catalogue (<c>aiengine/models/price-proposals</c>), nothing saved yet.</summary>
+public sealed record ModelPriceProposalDto(
+    Guid ModelId,
+    string Provider,
+    string ProviderModelId,
+    PriceDto? Current,
+    PriceDto? Proposed,
+    string? Source,
+    bool IsChanged,
+    IReadOnlyList<string> Notes);
+
+public sealed record PriceDto(decimal InputPerMillion, decimal CachedInputPerMillion, decimal CacheWritePerMillion, decimal OutputPerMillion, DateOnly? ValidFrom, string? Source);
+
+public sealed record CollectionProfileSummaryDto(Guid ProductCategoryId, string? CategoryName, int PreferredMerchantCount, bool HasInstructions);
+
+public sealed record EffectiveCollectionProfileDto(
+    IReadOnlyList<Guid> PreferredMerchantIds,
+    Guid? PreferredMerchantsSourceCategoryId,
+    string Instructions,
+    IReadOnlyList<InstructionBlockDto> InstructionBlocks,
+    bool HasOwnProfile,
+    IReadOnlyList<Guid> OwnPreferredMerchantIds,
+    string? OwnInstructions);
+
+public sealed record InstructionBlockDto(Guid ProductCategoryId, string Instructions);
+
+public sealed record ProductRequest(string Name, string Brand, string? Gtin, string? ManufacturerReference, Guid ProductCategoryId);
+
+/// <summary>A reference product proposed from a product page (<c>catalog/products/suggestions</c>), nothing saved yet.</summary>
+public sealed record ProductSuggestionDto(
+    string ProductPage,
+    string? Name,
+    string? Brand,
+    string? Gtin,
+    string? ManufacturerReference,
+    Guid? ProductCategoryId,
+    string? Packaging,
+    string? Rationale,
+    Guid? ExistingProductId,
+    string? ExistingProductName,
+    bool IsAiAnswer);
+
+public sealed record MerchantRequest(string Name, string Website, string? SearchTemplate);
+
+/// <summary>The setup of a merchant proposed from its site (<c>pricing/merchants/suggestions</c>), nothing saved yet.</summary>
+public sealed record MerchantSuggestionDto(
+    string Name,
+    string Website,
+    string? SearchTemplate,
+    IReadOnlyList<string> SearchCandidates,
+    SearchCheckDto? SearchCheck,
+    IReadOnlyList<SuggestedCategoryDto> Categories,
+    string? Rationale,
+    bool IsAiAnswer);
+
+public sealed record SearchCheckDto(string Query, string? TestedAddress, bool IsReachable, bool ShowsQuery, int TextLength);
+
+public sealed record SuggestedCategoryDto(Guid ProductCategoryId, string Name, string? Reason);
+
+public sealed record CollectionProfileRequest(IReadOnlyList<Guid> PreferredMerchantIds, string? Instructions);
 
 /// <summary>Values of <c>Status</c> and <c>ConfirmationMethod</c> as the API writes them.</summary>
 public static class ApiValues

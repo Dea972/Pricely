@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\aspire\Pricely.ServiceDefaults\Pricely.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\..\Adapters\Pricely.Sdk\Pricely.Sdk.csproj" />
+  </ItemGroup>
+
+</Project>

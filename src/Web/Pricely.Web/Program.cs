@@ -18,6 +18,7 @@ builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddPricelyAuthentication(builder.Configuration, builder.Environment);
 builder.Services.AddPricelyApi(builder.Configuration);
 builder.Services.AddScoped<ProductLookup>();
+builder.Services.AddScoped<ReviewQueue>();
 
 WebApplication app = builder.Build();
 

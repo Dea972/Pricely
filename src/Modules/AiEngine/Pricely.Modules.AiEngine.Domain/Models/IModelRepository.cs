@@ -10,5 +10,8 @@ public interface IModelRepository
 
     Task<bool> ExistsAsync(Provider provider, string providerModelId, CancellationToken cancellationToken = default);
 
+    /// <summary>Every model of the catalogue, with its prices.</summary>
+    Task<IReadOnlyCollection<Model>> GetAllAsync(CancellationToken cancellationToken = default);
+
     void Insert(Model model);
 }
