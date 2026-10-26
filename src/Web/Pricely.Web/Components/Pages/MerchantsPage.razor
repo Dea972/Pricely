@@ -1,0 +1,186 @@
+@page "/merchants"
+@inherits ApiComponentBase
+@inject PricelyApiClient Api
+
+<PageTitle>Enseignes — Pricely</PageTitle>
+
+<div class="page">
+    <div>
+        <h1>Enseignes</h1>
+        <p class="muted" style="margin: 4px 0 0">Les sites dont Pricely relève les prix. L'agent de collecte ne lit que le site de chaque enseigne, en partant de sa page de recherche.</p>
+    </div>
+
+    <ApiProblemAlert Problem="Problem" />
+    @if (_message is not null)
+    {
+        <div class="alert alert-info" role="status">@_message</div>
+    }
+
+    <div class="card">
+        <div class="card-header"><div class="eyebrow">Enseignes suivies</div></div>
+        @if (_merchants is null)
+        {
+            <div class="card-body muted" role="status">Chargement…</div>
+        }
+        else if (_merchants.Count == 0)
+        {
+            <div class="card-body muted">Aucune enseigne : ajoute la première ci-dessous.</div>
+        }
+        else
+        {
+            <div class="table-scroll">
+                <table class="data">
+                    <thead>
+                        <tr>
+                            <th scope="col">Enseigne</th>
+                            <th scope="col">Page de recherche</th>
+                            <th scope="col">État</th>
+                            <th scope="col"><span class="visually-hidden">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (MerchantDto merchant in _merchants)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@merchant.Name</strong>
+                                    <div class="small"><ExternalLink Address="@merchant.Website">@merchant.Website</ExternalLink></div>
+                                </td>
+                                <td>
+                                    @if (_editedSearch == merchant.Id)
+                                    {
+                                        <form class="inline-form" @onsubmit="() => SaveSearchAsync(merchant)">
+                                            <label for="search-@merchant.Id" class="visually-hidden">Page de recherche de @merchant.Name</label>
+                                            <input id="search-@merchant.Id" class="field mono" maxlength="500" placeholder="https://…/recherche?q={query}" @bind="_searchTemplate" />
+                                            <button type="submit" class="btn btn-primary btn-small" disabled="@_saving">Enregistrer</button>
+                                            <button type="button" class="btn btn-secondary btn-small" @onclick="() => _editedSearch = null">Annuler</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span class="mono small">@(merchant.SearchTemplate ?? "non configurée")</span>
+                                        <button type="button" class="btn btn-secondary btn-small" @onclick="() => EditSearch(merchant)">Modifier</button>
+                                    }
+                                </td>
+                                <td>
+                                    @if (merchant.IsActive)
+                                    {
+                                        <span class="badge badge-confirmed">● Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-pending">○ Inactive</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (merchant.IsActive)
+                                    {
+                                        <button type="button" class="btn btn-secondary btn-small" disabled="@_saving" @onclick="() => SetActiveAsync(merchant, false)">Désactiver</button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-secondary btn-small" disabled="@_saving" @onclick="() => SetActiveAsync(merchant, true)">Réactiver</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <p class="card-body small muted" style="margin: 0">Une enseigne inactive n'est plus interrogée ; ses offres et ses prix restent dans l'historique.</p>
+        }
+    </div>
+
+    <form class="card card-body form-grid" @onsubmit="RegisterAsync" aria-labelledby="new-merchant">
+        <h2 id="new-merchant">Nouvelle enseigne</h2>
+        <label>Nom <input class="field" maxlength="150" required @bind="_new.Name" /></label>
+        <label>Site web <input class="field mono" type="url" maxlength="500" required placeholder="https://www.enseigne.fr/" @bind="_new.Website" /></label>
+        <label>Page de recherche (facultative) <input class="field mono" maxlength="500" placeholder="https://www.enseigne.fr/recherche?q={query}" @bind="_new.SearchTemplate" /></label>
+        <p class="small muted" style="margin: 0">La page de recherche est une adresse du site de l'enseigne où <span class="mono">{query}</span> sera remplacé par le produit cherché. Sans elle, l'agent ne peut lire que les pages dont il connaît l'adresse.</p>
+        <div><button type="submit" class="btn btn-primary" disabled="@_saving">Ajouter l'enseigne</button></div>
+    </form>
+</div>
+
+@code {
+    private IReadOnlyList<MerchantDto>? _merchants;
+    private MerchantForm _new = new();
+    private Guid? _editedSearch;
+    private string? _searchTemplate;
+    private bool _saving;
+    private string? _message;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync() =>
+        _merchants = await CallAsync(() => Api.GetMerchantsAsync(CancellationToken.None)) ?? _merchants ?? [];
+
+    private void EditSearch(MerchantDto merchant)
+    {
+        _editedSearch = merchant.Id;
+        _searchTemplate = merchant.SearchTemplate;
+    }
+
+    private Task RegisterAsync() =>
+        SaveAsync(async () =>
+        {
+            var merchant = new MerchantRequest(_new.Name.Trim(), _new.Website.Trim(), string.IsNullOrWhiteSpace(_new.SearchTemplate) ? null : _new.SearchTemplate.Trim());
+            await Api.RegisterMerchantAsync(merchant, CancellationToken.None);
+            _new = new MerchantForm();
+
+            return $"Enseigne « {merchant.Name} » ajoutée. Ajoute-la aux profils de collecte des typologies qu'elle vend.";
+        });
+
+    private Task SaveSearchAsync(MerchantDto merchant) =>
+        SaveAsync(async () =>
+        {
+            await Api.ConfigureMerchantSearchAsync(merchant.Id, string.IsNullOrWhiteSpace(_searchTemplate) ? null : _searchTemplate.Trim(), CancellationToken.None);
+            _editedSearch = null;
+
+            return $"Page de recherche de {merchant.Name} enregistrée.";
+        });
+
+    private Task SetActiveAsync(MerchantDto merchant, bool active) =>
+        SaveAsync(async () =>
+        {
+            await (active
+                ? Api.ActivateMerchantAsync(merchant.Id, CancellationToken.None)
+                : Api.DeactivateMerchantAsync(merchant.Id, CancellationToken.None));
+
+            return active ? $"{merchant.Name} est de nouveau interrogée." : $"{merchant.Name} n'est plus interrogée.";
+        });
+
+    /// <summary>One change at a time, then the list again; a refused change shows the error of the API.</summary>
+    private async Task SaveAsync(Func<Task<string>> save)
+    {
+        if (_saving)
+        {
+            return;
+        }
+
+        _saving = true;
+        _message = null;
+        Problem = null;
+
+        try
+        {
+            _message = await CallAsync(save);
+            if (_message is not null)
+            {
+                await LoadAsync();
+            }
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private sealed class MerchantForm
+    {
+        public string Name { get; set; } = string.Empty;
+
+        public string Website { get; set; } = string.Empty;
+
+        public string? SearchTemplate { get; set; }
+    }
+}

@@ -275,6 +275,10 @@ public sealed record EffectiveCollectionProfileDto(
 
 public sealed record InstructionBlockDto(Guid ProductCategoryId, string Instructions);
 
+public sealed record ProductRequest(string Name, string Brand, string? Gtin, string? ManufacturerReference, Guid ProductCategoryId);
+
+public sealed record MerchantRequest(string Name, string Website, string? SearchTemplate);
+
 public sealed record CollectionProfileRequest(IReadOnlyList<Guid> PreferredMerchantIds, string? Instructions);
 
 /// <summary>Values of <c>Status</c> and <c>ConfirmationMethod</c> as the API writes them.</summary>

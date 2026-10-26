@@ -18,7 +18,7 @@ Le code utilise la colonne « Code » (anglais). L'interface et les échanges ut
 
 | Code | Français | Définition |
 |---|---|---|
-| `Merchant` | Enseigne | Vendeur dont on collecte les prix (site web). Peut être désactivée (`IsActive`). |
+| `Merchant` | Enseigne | Vendeur dont on collecte les prix (site web). Peut être désactivée puis réactivée (`IsActive`) : une enseigne inactive n'est plus interrogée. |
 | `CollectionProfile` | Profil de collecte | Paramétrage de la collecte pour une typologie : enseignes favorites et instructions. |
 | `PreferredMerchant` | Enseigne favorite | Enseigne à interroger pour une typologie, avec une `Priority` (1 = d'abord). |
 | `Instructions` | Instructions de collecte | Consignes destinées au collecteur (« prompt orienté »), propres à la typologie. |

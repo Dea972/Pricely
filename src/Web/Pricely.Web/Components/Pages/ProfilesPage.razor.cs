@@ -41,7 +41,7 @@ public partial class ProfilesPage
         _categories = await CallAsync(() => Api.GetCategoriesAsync(CancellationToken.None)) ?? [];
         _merchants = await CallAsync(() => Api.GetMerchantsAsync(CancellationToken.None)) ?? [];
         await LoadProfilesAsync();
-        _tree = DepthFirst(_categories);
+        _tree = CategoryTree.DepthFirst(_categories);
     }
 
     protected override async Task OnParametersSetAsync()
@@ -140,29 +140,4 @@ public partial class ProfilesPage
             { IsActive: false } => "inactive (ignorée)",
             _ => string.Empty
         };
-
-    /// <summary>The tree in reading order: each typology followed by its children, by name.</summary>
-    private static List<(ProductCategoryDto Category, int Depth)> DepthFirst(IReadOnlyList<ProductCategoryDto> categories)
-    {
-        ILookup<Guid?, ProductCategoryDto> children = categories.ToLookup(c => c.ParentId);
-        var ordered = new List<(ProductCategoryDto, int)>();
-        var known = categories.Select(c => c.Id).ToHashSet();
-
-        void Visit(ProductCategoryDto category, int depth)
-        {
-            ordered.Add((category, depth));
-            foreach (ProductCategoryDto child in children[category.Id].OrderBy(c => c.Name, StringComparer.CurrentCulture))
-            {
-                Visit(child, depth + 1);
-            }
-        }
-
-        // Roots, and categories whose parent is unknown (never hidden).
-        foreach (ProductCategoryDto root in categories.Where(c => c.ParentId is null || !known.Contains(c.ParentId.Value)).OrderBy(c => c.Name, StringComparer.CurrentCulture))
-        {
-            Visit(root, 0);
-        }
-
-        return ordered;
-    }
 }

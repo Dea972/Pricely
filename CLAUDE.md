@@ -20,6 +20,8 @@ Lire avant de coder : `docs/architecture/ubiquitous-language.md`, `docs/architec
 aspire/                        AppHost (PostgreSQL, Keycloak) et ServiceDefaults (OpenTelemetry, health checks)
 src/API/Pricely.Api            Host HTTP (n'applique aucune migration)
 src/API/Pricely.MigrationService  Worker lancé avant l'API par l'AppHost : applique les migrations de tous les modules puis s'arrête (ADR-018)
+src/API/Pricely.DevSeed        Jeu d'essai local (typologies, produits, enseignes, profils, 13 semaines de prix) par les commandes des modules ;
+                               ressource `pricely-seed` de l'AppHost, lancée à la main, rejouable sans doublon
 src/Web/Pricely.Web            Front Blazor (ADR-015) : Interactive Server, OIDC côté serveur, appelle l'API en HTTP uniquement
 src/Agents/                    Agents de Pricely (ADR-014) : un projet par agent (Pricely.Agents.Assistant), déclarations sur
                                Common uniquement ; ils sont exécutés par le module Agentic
@@ -131,6 +133,7 @@ dotnet test test/Pricely.ArchitectureTests
 dotnet list Pricely.slnx package --vulnerable --include-transitive
 dotnet ef migrations add <Name> -p src/Modules/<M>/Pricely.Modules.<M>.Infrastructure -s src/API/Pricely.Api -c <M>DbContext -o Database/Migrations   # avec ConnectionStrings__pricely-db défini
 dotnet run --project aspire/Pricely.AppHost   # PostgreSQL + Keycloak + API + front (http://localhost:5180, dev / dev) ; secret : Parameters:anthropic-api-key
+dotnet run --project src/API/Pricely.DevSeed  # jeu d'essai hors AppHost (ConnectionStrings__pricely-db défini) ; dans l'AppHost : ▶ sur pricely-seed
 ```
 
 La CI (`.github/workflows/ci.yml`) restaure, compile en Release et lance tous les projets `*.UnitTests` et `*.ArchitectureTests`. En cas d'échec, elle publie les erreurs en annotations (titres « Build errors », « Error codes », « Vulnerable packages ») et toujours un « Test summary ».
@@ -147,7 +150,7 @@ L'audit NuGet (transitif compris) est **bloquant** : ne jamais ajouter `NU190x` 
 - Le chat client Anthropic lit la réponse en SSE (texte au fil de l'eau) ; l'assistant et l'agent de collecte n'ont été testés qu'avec un faux modèle et contre l'API Anthropic sans clé valide. La lecture réelle d'une page d'enseigne n'a pas pu être exécutée dans l'environnement de développement (pas d'accès direct à Internet, et la lecture n'utilise pas de proxy, ADR-017).
 - Les instantanés de pages ne sont jamais purgés (décision ouverte).
 - Pour créer un module, utiliser le skill `new-module` (pas de template `dotnet new`).
-- Front (ADR-015) : Assistant, fiche produit, recherche, offres à valider (`/review`), profils de collecte (`/profiles`), IA et coûts (`/ai`), badge et raccourci mobile des offres à valider (`ReviewQueue`). Jetons dans `IDistributedCache`, chiffrés (plusieurs instances : cache et clés de protection partagés). Le front ne référence ni module ni Common (`WebBoundaryTests`) : un besoin de donnée = un endpoint de l'API + un DTO dans `Api/Contracts.cs`. Composant d'un nouveau tool : `ToolCatalog` + `ToolResultView`. Dans un `.razor`, un paramètre `string` sans `@` est un littéral.
+- Front (ADR-015) : Assistant, fiche produit, recherche, catalogue (`/catalog` : typologies et produits), enseignes (`/merchants` : ajout, page de recherche, désactivation / réactivation), offres à valider (`/review`), profils de collecte (`/profiles`), IA et coûts (`/ai`), badge et raccourci mobile des offres à valider (`ReviewQueue`). Jetons dans `IDistributedCache`, chiffrés (plusieurs instances : cache et clés de protection partagés). Le front ne référence ni module ni Common (`WebBoundaryTests`) : un besoin de donnée = un endpoint de l'API + un DTO dans `Api/Contracts.cs`. Composant d'un nouveau tool : `ToolCatalog` + `ToolResultView`. Dans un `.razor`, un paramètre `string` sans `@` est un littéral.
 
 ## Méthode de travail
 

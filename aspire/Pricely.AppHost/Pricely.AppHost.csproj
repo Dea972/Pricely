@@ -16,6 +16,8 @@
 		<ProjectReference
 			Include="..\..\src\API\Pricely.Api\Pricely.Api.csproj" />
 		<ProjectReference
+			Include="..\..\src\API\Pricely.DevSeed\Pricely.DevSeed.csproj" />
+		<ProjectReference
 			Include="..\..\src\API\Pricely.MigrationService\Pricely.MigrationService.csproj" />
 		<ProjectReference
 			Include="..\..\src\Web\Pricely.Web\Pricely.Web.csproj" />

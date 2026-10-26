@@ -23,6 +23,13 @@ IResourceBuilder<ProjectResource> migrations = builder.AddProject<Projects.Price
     .WithReference(db)
     .WaitFor(db);
 
+// Local test data (typologies, products, merchants, 13 weeks of prices): started from the dashboard (▶), never on its own.
+// Running it again adds nothing.
+builder.AddProject<Projects.Pricely_DevSeed>("pricely-seed")
+    .WithReference(db)
+    .WaitForCompletion(migrations)
+    .WithExplicitStart();
+
 IResourceBuilder<ProjectResource> api = builder.AddProject<Projects.Pricely_Api>("Pricely-api")
     .WithReference(db)
     .WaitForCompletion(migrations)

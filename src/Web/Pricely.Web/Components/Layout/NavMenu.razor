@@ -21,6 +21,14 @@
             <span class="badge badge-count nav-badge"><span class="visually-hidden">en attente : </span>@Reviews.Count</span>
         }
     </a>
+    <a href="/catalog" class="nav-item" aria-current="@Current(IsCatalog)" @onclick="OnNavigate">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"></path></svg>
+        Catalogue
+    </a>
+    <a href="/merchants" class="nav-item" aria-current="@Current(IsMerchants)" @onclick="OnNavigate">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 9l1.5-5h15L21 9M3 9h18v11H3zM9 20v-6h6v6"></path></svg>
+        Enseignes
+    </a>
     <a href="/profiles" class="nav-item" aria-current="@Current(IsProfiles)" @onclick="OnNavigate">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h6"></path></svg>
         Profils de collecte
@@ -59,6 +67,10 @@
     private bool IsProducts => Path.StartsWith("/products", StringComparison.Ordinal);
 
     private bool IsReview => Path.StartsWith("/review", StringComparison.Ordinal);
+
+    private bool IsCatalog => Path.StartsWith("/catalog", StringComparison.Ordinal);
+
+    private bool IsMerchants => Path.StartsWith("/merchants", StringComparison.Ordinal);
 
     private bool IsProfiles => Path.StartsWith("/profiles", StringComparison.Ordinal);
 

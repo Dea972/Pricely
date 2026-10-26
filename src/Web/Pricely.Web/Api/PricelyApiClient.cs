@@ -14,6 +14,9 @@ internal sealed class PricelyApiClient(HttpClient http, AccessTokenProvider toke
 {
     internal static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
+    /// <summary>The API lists 50 products at most per search.</summary>
+    public const int MaxProductsPerPage = 50;
+
     public Task<IReadOnlyList<ProductDto>> SearchProductsAsync(string text, int limit, CancellationToken cancellationToken) =>
         GetAsync<IReadOnlyList<ProductDto>>($"catalog/products?text={Uri.EscapeDataString(text)}&limit={Number(limit)}", cancellationToken);
 
@@ -106,12 +109,42 @@ internal sealed class PricelyApiClient(HttpClient http, AccessTokenProvider toke
     public Task DefineCollectionProfileAsync(Guid categoryId, CollectionProfileRequest profile, CancellationToken cancellationToken) =>
         SendAsync(HttpMethod.Put, $"pricing/collection-profiles/{categoryId}", profile, cancellationToken);
 
+    public Task<IReadOnlyList<ProductDto>> GetProductsOfCategoryAsync(Guid categoryId, CancellationToken cancellationToken) =>
+        GetAsync<IReadOnlyList<ProductDto>>($"catalog/products?productCategoryId={categoryId}&limit={Number(MaxProductsPerPage)}", cancellationToken);
+
+    public Task<Guid> CreateCategoryAsync(string name, Guid? parentId, CancellationToken cancellationToken) =>
+        SendAsync<Guid>(HttpMethod.Post, "catalog/categories", new { name, parentId }, cancellationToken);
+
+    public Task RenameCategoryAsync(Guid categoryId, string name, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Put, $"catalog/categories/{categoryId}", new { name }, cancellationToken);
+
+    public Task<Guid> RegisterProductAsync(ProductRequest product, CancellationToken cancellationToken) =>
+        SendAsync<Guid>(HttpMethod.Post, "catalog/products", product, cancellationToken);
+
+    public Task UpdateProductAsync(Guid productId, ProductRequest product, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Put, $"catalog/products/{productId}", product, cancellationToken);
+
+    public Task<Guid> RegisterMerchantAsync(MerchantRequest merchant, CancellationToken cancellationToken) =>
+        SendAsync<Guid>(HttpMethod.Post, "pricing/merchants", merchant, cancellationToken);
+
+    public Task ConfigureMerchantSearchAsync(Guid merchantId, string? searchTemplate, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Put, $"pricing/merchants/{merchantId}/search", new { searchTemplate }, cancellationToken);
+
+    public Task DeactivateMerchantAsync(Guid merchantId, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Post, $"pricing/merchants/{merchantId}/deactivate", null, cancellationToken);
+
+    public Task ActivateMerchantAsync(Guid merchantId, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Post, $"pricing/merchants/{merchantId}/activate", null, cancellationToken);
+
     private Task<T> GetAsync<T>(string path, CancellationToken cancellationToken) =>
         SendAsync<T>(HttpMethod.Get, path, cancellationToken);
 
-    private async Task<T> SendAsync<T>(HttpMethod method, string path, CancellationToken cancellationToken)
+    private Task<T> SendAsync<T>(HttpMethod method, string path, CancellationToken cancellationToken) =>
+        SendAsync<T>(method, path, null, cancellationToken);
+
+    private async Task<T> SendAsync<T>(HttpMethod method, string path, object? body, CancellationToken cancellationToken)
     {
-        using HttpResponseMessage response = await SendCoreAsync(method, path, null, cancellationToken);
+        using HttpResponseMessage response = await SendCoreAsync(method, path, body, cancellationToken);
 
         return await response.Content.ReadFromJsonAsync<T>(JsonOptions, cancellationToken)
             ?? throw new PricelyApiException(response.StatusCode, null, "The API returned an empty response.");

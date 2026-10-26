@@ -51,6 +51,18 @@ public sealed class MerchantTests
     }
 
     [Fact]
+    public void ADeactivatedMerchant_ShouldBeActiveAgain_OnceReactivated()
+    {
+        Merchant merchant = Merchant.Register("Quincaillerie", "https://www.quincaillerie.test").Value;
+
+        merchant.Deactivate();
+        merchant.IsActive.Should().BeFalse();
+
+        merchant.Activate();
+        merchant.IsActive.Should().BeTrue();
+    }
+
+    [Fact]
     public void SearchAddress_ShouldBeNull_WithoutTemplate() =>
         Comptoir.SearchAddress("ciment").Should().BeNull();
 }
