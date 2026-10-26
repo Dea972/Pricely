@@ -24,4 +24,11 @@ if (!string.IsNullOrEmpty(builder.Configuration["Parameters:anthropic-api-key"])
     api.WithEnvironment("Ai__Anthropic__ApiKey", builder.AddParameter("anthropic-api-key", secret: true));
 }
 
+// The front (ADR-015): signs the user in with Keycloak (client pricely-web) and calls the API with the user's token.
+builder.AddProject<Projects.Pricely_Web>("pricely-web")
+    .WithReference(api)
+    .WaitFor(api)
+    .WithEnvironment("Authentication__Authority", ReferenceExpression.Create($"{keycloak.GetEndpoint("http")}/realms/pricely"))
+    .WithExternalHttpEndpoints();
+
 await builder.Build().RunAsync();

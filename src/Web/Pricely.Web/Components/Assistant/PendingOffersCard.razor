@@ -1,0 +1,43 @@
+@inject TimeProvider Clock
+
+<div class="card">
+    <div class="card-header">
+        <div class="eyebrow">Offres à valider</div>
+        <span class="badge badge-pending">● @Offers.Count à valider</span>
+    </div>
+    @if (Offers.Count == 0)
+    {
+        <div class="card-body muted">Aucune offre n'attend de validation.</div>
+    }
+    else
+    {
+        <div class="table-scroll">
+            <table class="data">
+                <thead>
+                    <tr>
+                        <th scope="col">Produit</th>
+                        <th scope="col">Enseigne</th>
+                        <th scope="col" class="num">Prix</th>
+                        <th scope="col">Proposée</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (PendingOfferDto offer in Offers)
+                    {
+                        <tr>
+                            <td><a href="/products/@offer.ProductId">@offer.ProductName</a></td>
+                            <td><a href="@Format.ExternalHref(offer.ProductPage)" target="_blank" rel="noopener noreferrer">@offer.MerchantName</a></td>
+                            <td class="num">@Format.Price(offer.LatestAmount, offer.LatestCurrency)</td>
+                            <td class="muted">@Format.Ago(offer.ProposedOnUtc, Clock.GetUtcNow())</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<PendingOfferDto> Offers { get; set; } = [];
+}

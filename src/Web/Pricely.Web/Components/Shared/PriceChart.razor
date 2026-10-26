@@ -1,0 +1,62 @@
+@if (Model.Series.Count == 0)
+{
+    <p class="muted">Aucun relevé de prix sur cette période.</p>
+}
+else
+{
+    <svg class="chart" viewBox="0 0 @PriceChartModel.Width @PriceChartModel.Height" role="img" aria-label="@Model.Description">
+        <g stroke="#E8ECE6" stroke-width="1">
+            @foreach (double y in PriceChartModel.GridLines)
+            {
+                <line x1="56" y1="@Coordinate(y)" x2="630" y2="@Coordinate(y)"></line>
+            }
+        </g>
+        <g fill="#56605A" font-size="11" text-anchor="end">
+            @foreach (ChartTick tick in Model.YTicks)
+            {
+                @Label(48, tick.Position + 4, tick.Label)
+            }
+        </g>
+        <g fill="#56605A" font-size="11" text-anchor="middle">
+            @foreach (ChartTick tick in Model.XTicks)
+            {
+                @Label(tick.Position, 232, tick.Label)
+            }
+        </g>
+        @foreach (ChartSeries series in Model.Series)
+        {
+            (string color, string? dash) = PriceChartModel.SeriesStyles[series.Style];
+            <polyline fill="none" stroke="@color" stroke-width="2.5" stroke-dasharray="@dash" stroke-linecap="round" points="@series.Points"></polyline>
+            <circle cx="@Coordinate(series.LastX)" cy="@Coordinate(series.LastY)" r="4" fill="@color"></circle>
+        }
+    </svg>
+    <ul class="legend">
+        @foreach (ChartSeries series in Model.Series)
+        {
+            (string color, string? dash) = PriceChartModel.SeriesStyles[series.Style];
+            <li>
+                <svg width="22" height="6" aria-hidden="true"><line x1="0" y1="3" x2="22" y2="3" stroke="@color" stroke-width="3" stroke-dasharray="@dash"></line></svg>
+                @series.Name
+            </li>
+        }
+    </ul>
+}
+@if (Model.FlaggedCount > 0)
+{
+    <p class="small muted">@Model.FlaggedCount relevé(s) signalé(s) par le garde-fou de prix, non tracé(s).</p>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<PriceHistoryEntryDto> Entries { get; set; } = [];
+
+    private PriceChartModel Model { get; set; } = PriceChartModel.Build([]);
+
+    protected override void OnParametersSet() => Model = PriceChartModel.Build(Entries);
+
+    // Razor reads <text> as its own tag: the SVG text element is written as markup (encoded label).
+    private static MarkupString Label(double x, double y, string label) =>
+        new($"<text x=\"{Coordinate(x)}\" y=\"{Coordinate(y)}\">{System.Net.WebUtility.HtmlEncode(label)}</text>");
+
+    private static string Coordinate(double value) => value.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+}

@@ -1,0 +1,79 @@
+@inject TimeProvider Clock
+
+<section class="card" aria-labelledby="h-offers">
+    <div class="card-header">
+        <h2 id="h-offers">Offres par enseigne</h2>
+        <span class="small muted">Dernier relevé de chaque offre</span>
+    </div>
+    @if (Offers.Offers.Count == 0)
+    {
+        <div class="card-body muted">Aucune offre pour ce produit : lance une collecte.</div>
+    }
+    else
+    {
+        <div class="table-scroll">
+            <table class="data">
+                <thead>
+                    <tr>
+                        <th scope="col">Enseigne</th>
+                        <th scope="col">Statut</th>
+                        <th scope="col">Rapprochement</th>
+                        <th scope="col" class="num">Prix TTC</th>
+                        <th scope="col" class="num">vs médiane</th>
+                        <th scope="col">Relevé</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (ProductOfferDto offer in Offers.Offers)
+                    {
+                        <tr class="@RowClass(offer)">
+                            <td>
+                                <a href="@Format.ExternalHref(offer.ProductPage)" target="_blank" rel="noopener noreferrer">@offer.MerchantName</a>
+                                @if (offer.OfferId == BestOfferId)
+                                {
+                                    <text> </text><span class="badge badge-accent">Moins cher</span>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge @(offer.Status == ApiValues.Confirmed ? "badge-confirmed" : "badge-pending")">@Format.OfferStatus(offer.Status)</span>
+                            </td>
+                            <td class="muted">@Format.MatchMethod(offer.ConfirmationMethod)</td>
+                            <td class="num">@Format.Price(offer.LatestAmount, offer.LatestCurrency)</td>
+                            <td class="num">
+                                @if (offer.DeviationFromMedian is not decimal deviation)
+                                {
+                                    <span class="muted">—</span>
+                                }
+                                else if (offer.LatestIsFlaggedAsAnomaly)
+                                {
+                                    <span style="color: var(--warn-text); font-weight: 500">⚠ @Format.Deviation(deviation)<span class="visually-hidden"> (prix suspect)</span></span>
+                                }
+                                else
+                                {
+                                    @Format.Deviation(deviation)
+                                }
+                            </td>
+                            <td class="muted">@(offer.LatestObservedOnUtc is DateTime observed ? Format.Ago(observed, Clock.GetUtcNow()) : "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProductOffersDto Offers { get; set; } = default!;
+
+    [Parameter]
+    public Guid? BestOfferId { get; set; }
+
+    private string? RowClass(ProductOfferDto offer) =>
+        (offer.LatestIsFlaggedAsAnomaly, offer.OfferId == BestOfferId) switch
+        {
+            (true, _) => "flagged",
+            (false, true) => "best",
+            _ => null
+        };
+}

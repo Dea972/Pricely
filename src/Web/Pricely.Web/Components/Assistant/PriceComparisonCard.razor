@@ -1,0 +1,86 @@
+@inject ProductLookup Products
+@inject TimeProvider Clock
+
+<div class="card">
+    <div class="card-header">
+        <div>
+            <div class="eyebrow">Comparatif de prix</div>
+            @if (_product is not null)
+            {
+                <div><strong>@_product.Name</strong></div>
+                <div class="small muted">@_product.Brand@(_product.Gtin is null ? null : " · GTIN ")<span class="mono">@_product.Gtin</span></div>
+            }
+        </div>
+        @if (ProductId is Guid id)
+        {
+            <a class="btn btn-secondary btn-small" href="/products/@id">Ouvrir la fiche</a>
+        }
+    </div>
+    @if (Prices.Count == 0)
+    {
+        <div class="card-body muted">Aucune offre confirmée pour ce produit.</div>
+    }
+    else
+    {
+        <div class="table-scroll">
+            <table class="data">
+                <thead>
+                    <tr>
+                        <th scope="col">Enseigne</th>
+                        <th scope="col" class="num">Prix TTC</th>
+                        <th scope="col">Disponibilité</th>
+                        <th scope="col">Relevé</th>
+                        <th scope="col"><span class="visually-hidden">Page</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ((MerchantPriceDto price, int index) in Prices.Select((p, i) => (p, i)))
+                    {
+                        // The API lists the offers cheapest first.
+                        <tr class="@RowClass(price, index)">
+                            <td>
+                                @if (index == 0)
+                                {
+                                    <strong>@price.MerchantName</strong> <span class="badge badge-accent">Moins cher</span>
+                                }
+                                else
+                                {
+                                    @price.MerchantName
+                                }
+                                @if (price.IsFlaggedAsAnomaly)
+                                {
+                                    <text> </text><SuspectBadge />
+                                }
+                            </td>
+                            <td class="num">@Format.Price(price.Amount, price.Currency)</td>
+                            <td>@Format.Availability(price.Availability)</td>
+                            <td class="muted">@Format.Ago(price.ObservedOnUtc, Clock.GetUtcNow())</td>
+                            <td><a href="@Format.ExternalHref(price.ProductPage)" target="_blank" rel="noopener noreferrer">Voir la page</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private ProductDto? _product;
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<MerchantPriceDto> Prices { get; set; } = [];
+
+    [Parameter]
+    public Guid? ProductId { get; set; }
+
+    protected override async Task OnParametersSetAsync() =>
+        _product = ProductId is Guid id ? await Products.FindAsync(id) : null;
+
+    private static string? RowClass(MerchantPriceDto price, int index) =>
+        (price.IsFlaggedAsAnomaly, index) switch
+        {
+            (true, _) => "flagged",
+            (false, 0) => "best",
+            _ => null
+        };
+}

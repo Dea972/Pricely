@@ -1,0 +1,34 @@
+@inject TimeProvider Clock
+
+<nav class="drawer" aria-label="Conversations">
+    @if (Conversations is null)
+    {
+        <p class="small muted" role="status">Chargement des conversations…</p>
+    }
+    else if (Conversations.Count == 0)
+    {
+        <p class="small muted">Aucune conversation pour l'instant.</p>
+    }
+    else
+    {
+        <ul>
+            @foreach (ConversationSummaryDto conversation in Conversations)
+            {
+                <li>
+                    <a href="/assistant/@conversation.Id" aria-current="@(conversation.Id == CurrentId ? "page" : null)">
+                        <span>@conversation.Title</span>
+                        <span class="small muted">@Format.Ago(conversation.LastActivityOnUtc, Clock.GetUtcNow())</span>
+                    </a>
+                </li>
+            }
+        </ul>
+    }
+</nav>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<ConversationSummaryDto>? Conversations { get; set; }
+
+    [Parameter]
+    public Guid? CurrentId { get; set; }
+}

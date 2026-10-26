@@ -168,10 +168,23 @@ Conséquences et choix :
 - **Options du module** (`Agentic`) : `DefaultApprovalScope` (par défaut `write`, un scope que personne n'a), `AccessPolicy` (politique des endpoints du module, `pricely.read` dans Pricely ; tout utilisateur authentifié si absente), `MaximumToolRoundTrips`. Le catalogue des agents échoue au démarrage si un agent cite un tool inexistant.
 - **Bases de développement existantes** : l'ancien schéma `agents` (socle de l'ADR-013) n'est plus utilisé et peut être supprimé (`DROP SCHEMA agents CASCADE`).
 
+## ADR-015 — Front Blazor : Interactive Server, OIDC côté serveur, API en HTTP
+
+**Statut** : acceptée (2026-10-26), décisions du propriétaire du projet (Blazor Web App en rendu Server, OIDC côté serveur, CSS maison, étape 5 en deux PR).
+
+- **Projet** `src/Web/Pricely.Web` dans la solution, lancé par l'AppHost (`pricely-web`, référence à l'API, autorité Keycloak). Rendu **Interactive Server sans prérendu** : chaque page appelle l'API une fois, depuis le circuit. Toutes les pages exigent un utilisateur connecté (`RequireAuthorization` sur les composants) ; la page d'erreur reste statique.
+- **Le front ne parle à l'API qu'en HTTP** : aucune référence à un module, à Common ni au Sdk (`WebBoundaryTests`). Il a ses propres DTO (`Api/Contracts.cs`), lus en JSON ; un champ ajouté par l'API est ignoré tant que le front n'en a pas besoin. Clients typés `PricelyApiClient` (sans nouvel essai sur les POST) et `AgentStreamClient` (SSE, `SseParser`, sans timeout de lecture ni nouvel essai), adresse par la découverte de services d'Aspire (`https+http://pricely-api`).
+- **Authentification** (ADR-010) : flux code + PKCE avec le client public `pricely-web` (PAR quand Keycloak le propose), fait par le serveur Blazor. Le navigateur ne reçoit **aucun jeton**, même chiffré : seul un cookie de session (`pricely`, `HttpOnly`, `SameSite=Lax`, 8 h glissantes) porte une clé `pricely_session`. Les jetons sont gardés en mémoire du serveur (`ServerTokenStore`), rafraîchis une minute avant expiration avec le refresh token (un rafraîchissement à la fois par session), et la session est close si Keycloak refuse. Une seule instance du front : plusieurs demanderaient un cache partagé (et la protection des données partagée). Un redémarrage perd les jetons : l'utilisateur se reconnecte (« Ta session a expiré »). Déconnexion en POST avec jeton antiforgery, puis fin de session Keycloak (`id_token_hint`).
+- **Assistant** : l'écran applique les événements SSE du tour (`ConversationView`) et reconstruit une conversation stockée depuis `agents/conversations/{id}` (la proposition d'action se retrouve par le résultat `pending_approval` de son tool). Chaque tool de lecture a son composant (`ToolResultView` : comparatif, produits, historique, prix signalés, plan de collecte, offres à valider, enseignes, typologies) ; un tool inconnu n'apparaît que par sa pastille. La carte « Action proposée » appelle directement `approve` / `reject` (scope de l'action), sans repasser par le modèle, et garde la trace de la décision.
+- **Aucune règle métier dans le front** : médiane, écart, prix suspect, mode de rapprochement, ordre « moins cher d'abord » viennent de l'API. Le front se limite à l'affichage (libellés, mise en forme française, géométrie du graphique, écart max. parmi les écarts fournis). Les relevés signalés ne sont pas tracés dans l'historique (comptés à part). Les liens vers les pages des enseignes, données collectées, ne sont rendus que s'ils sont en `http(s)`.
+- **Style** : CSS maison à partir des tokens de `docs/design` (`wwwroot/app.css`), IBM Plex depuis Google Fonts, aucune bibliothèque de composants. Accessibilité : focus visible, `aria-current`, cibles de 44 px, une couleur n'est jamais le seul signal.
+- **Découpage** : 5a (socle, Assistant, fiche produit, recherche) ; 5b (offres à valider, profils de collecte, IA et coûts, finitions mobile).
+
 ## Décisions ouvertes
 
 - Application des migrations en production (job de déploiement, script SQL idempotent) : ADR-011 l'interdit à l'API, le mécanisme reste à choisir.
 - Filtrage des tools MCP par scope (annotations ou attribut dédié) et approbation côté client MCP : aujourd'hui `/mcp` n'expose que les tools en lecture (ADR-013).
-- Front Blazor : Blazor Server ou Blazor Web App en rendu interactif automatique ; projet de la solution (`src/Web/Pricely.Web`) ou application séparée.
+- Front sur plusieurs instances : cache partagé des jetons (Redis…) et clés de protection des données partagées (ADR-015).
+- Consommation affichée par conversation : AiEngine ne donne aujourd'hui l'usage que par agent, fonctionnalité, modèle ou jour ; le panneau de l'assistant montre l'usage du jour de l'agent.
 - API de recherche web pour l'agent de collecte (Brave, Tavily, Bing…).
 - Plusieurs conditionnements d'un même produit chez une enseigne : aujourd'hui un produit de référence par conditionnement.

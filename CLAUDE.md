@@ -12,13 +12,14 @@ Lire avant de coder : `docs/architecture/ubiquitous-language.md`, `docs/architec
 - PostgreSQL (Npgsql) : EF Core 10 (écriture) + Dapper (lecture), un `DbContext` et un schéma par module, `UseSnakeCaseNamingConvention()`
 - MediatR (commandes / requêtes / pipeline behaviors), FluentValidation
 - MassTransit in-memory + outbox / inbox maison (tables par module) traitées par des jobs Quartz
-- Tests : xUnit, FluentAssertions, NetArchTest.Rules, Bogus
+- Tests : xUnit, FluentAssertions, NetArchTest.Rules, Bogus, bUnit (composants du front)
 
 ## Structure
 
 ```
 aspire/                        AppHost (PostgreSQL, Keycloak) et ServiceDefaults (OpenTelemetry, health checks)
 src/API/Pricely.Api            Host HTTP
+src/Web/Pricely.Web            Front Blazor (ADR-015) : Interactive Server, OIDC côté serveur, appelle l'API en HTTP uniquement
 src/Agents/                    Agents de Pricely (ADR-014) : un projet par agent (Pricely.Agents.Assistant), déclarations sur
                                Common uniquement ; ils sont exécutés par le module Agentic
 src/Adapters/Pricely.Sdk       Composition : AddPricelyAsync() enregistre tous les modules, MapPricelyEndpoints() sous /api
@@ -126,7 +127,7 @@ dotnet test src/Modules/Pricing/test/Pricely.Modules.Pricing.UnitTests
 dotnet test test/Pricely.ArchitectureTests
 dotnet list Pricely.slnx package --vulnerable --include-transitive
 dotnet ef migrations add <Name> -p src/Modules/<M>/Pricely.Modules.<M>.Infrastructure -s src/API/Pricely.Api -c <M>DbContext -o Database/Migrations   # avec ConnectionStrings__pricely-db défini
-dotnet run --project aspire/Pricely.AppHost   # PostgreSQL + Keycloak + API ; secret : Parameters:anthropic-api-key
+dotnet run --project aspire/Pricely.AppHost   # PostgreSQL + Keycloak + API + front (http://localhost:5180, dev / dev) ; secret : Parameters:anthropic-api-key
 ```
 
 La CI (`.github/workflows/ci.yml`) restaure, compile en Release et lance tous les projets `*.UnitTests` et `*.ArchitectureTests`. En cas d'échec, elle publie les erreurs en annotations (titres « Build errors », « Error codes », « Vulnerable packages ») et toujours un « Test summary ».
@@ -143,6 +144,7 @@ L'audit NuGet (transitif compris) est **bloquant** : ne jamais ajouter `NU190x` 
 - Le streaming du fournisseur LLM est émulé (pas de jetons au fil de l'eau) ; l'assistant n'a été testé qu'avec un faux modèle et contre l'API Anthropic sans clé valide.
 - Les tests d'intégration hérités (Users, solution) sont exclus de la solution : ils référencent un module `Ticketing` inexistant.
 - Pour créer un module, utiliser le skill `new-module` (pas de template `dotnet new`).
+- Front (ADR-015) : étape 5a faite (Assistant, fiche produit, recherche) ; 5b à faire (offres à valider, profils de collecte, IA et coûts, finitions mobile). Le front ne référence ni module ni Common (`WebBoundaryTests`) : un besoin de donnée = un endpoint de l'API + un DTO dans `Api/Contracts.cs`. Composant d'un nouveau tool : `ToolCatalog` + `ToolResultView`. Dans un `.razor`, un paramètre `string` sans `@` est un littéral.
 
 ## Méthode de travail
 

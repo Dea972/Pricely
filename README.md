@@ -8,6 +8,8 @@ Price comparison and price monitoring platform, built as a .NET modular monolith
 aspire/                 .NET Aspire AppHost and ServiceDefaults
 src/
   API/Pricely.Api       HTTP host
+  Web/Pricely.Web       Blazor front (Interactive Server), talks to the API over HTTP only
+  Agents/               The agents of Pricely, run by the Agentic module
   Adapters/Pricely.Sdk  Shared composition helpers
   Common/               Shared Domain / Application / Infrastructure / Presentation building blocks
   Modules/<Module>/     One Clean Architecture slice per module (Domain, Application, Infrastructure, Presentation, IntegrationEvents)
@@ -49,7 +51,9 @@ dotnet user-secrets set "Parameters:anthropic-api-key" "<key>" --project aspire/
 dotnet run --project aspire/Pricely.AppHost
 ```
 
-The AppHost starts PostgreSQL (`pricely-db`), Keycloak (http://localhost:8080, realm `pricely` imported from `aspire/Pricely.AppHost/Realms/pricely-realm.json`) and the API (http://localhost:5136). In Development the API applies the EF Core migrations of every module at startup. The Keycloak admin credentials are the generated Aspire parameters (dashboard).
+The AppHost starts PostgreSQL (`pricely-db`), Keycloak (http://localhost:8080, realm `pricely` imported from `aspire/Pricely.AppHost/Realms/pricely-realm.json`), the API (http://localhost:5136) and the front (http://localhost:5180, sign in with `dev` / `dev`). In Development the API applies the EF Core migrations of every module at startup. The Keycloak admin credentials are the generated Aspire parameters (dashboard).
+
+Without the AppHost, run the front against an API already started: `Authentication__Authority=http://localhost:8080/realms/pricely PricelyApi__BaseAddress=<api address> dotnet run --project src/Web/Pricely.Web`.
 
 ## Authentication
 

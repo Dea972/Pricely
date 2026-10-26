@@ -15,6 +15,8 @@
 	<ItemGroup>
 		<ProjectReference
 			Include="..\..\src\API\Pricely.Api\Pricely.Api.csproj" />
+		<ProjectReference
+			Include="..\..\src\Web\Pricely.Web\Pricely.Web.csproj" />
 	</ItemGroup>
 
   <!-- Security: patched version of an Aspire.Hosting dependency (StreamJsonRpc) -->

@@ -1,0 +1,77 @@
+@inherits ApiComponentBase
+
+<article class="action-card @(Action.IsPending ? null : "decided")" aria-label="Action proposée par l'assistant">
+    <div class="action-head">
+        <span class="action-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 2"></path><circle cx="12" cy="12" r="9"></circle></svg>
+        </span>
+        <div style="flex: 1; min-width: 0">
+            <div class="eyebrow" style="color: var(--warn)">Action proposée</div>
+            <div><strong>@ToolCatalog.TitleOf(Action.ToolName)</strong></div>
+            <div class="small muted mono">@Action.ToolName · écriture</div>
+        </div>
+    </div>
+
+    <dl class="facts">
+        @if (_plan is not null)
+        {
+            <div><dt>Produit</dt><dd>@_plan.Product.Name</dd></div>
+            <div>
+                <dt>Enseignes (par priorité)</dt>
+                <dd>@(_plan.Merchants.Count == 0 ? "Aucune enseigne active" : string.Join(", ", _plan.Merchants.OrderBy(m => m.Priority).Select(m => m.Name)))</dd>
+            </div>
+        }
+        else if (_productName is not null)
+        {
+            <div><dt>Produit</dt><dd>@_productName</dd></div>
+        }
+        else
+        {
+            @foreach (JsonProperty argument in Arguments)
+            {
+                <div><dt>@argument.Name</dt><dd class="mono">@argument.Value.ToString()</dd></div>
+            }
+        }
+        @if (ToolCatalog.EffectOf(Action.ToolName) is string effect)
+        {
+            <div><dt>Effet</dt><dd>@effect</dd></div>
+        }
+    </dl>
+
+    @switch (Action.Status)
+    {
+        case ApiValues.Pending:
+            <div class="action-buttons">
+                <button type="button" class="btn btn-primary" disabled="@_busy" @onclick="ApproveAsync">Valider et lancer</button>
+                <button type="button" class="btn btn-secondary" disabled="@_busy" @onclick="RejectAsync">Refuser</button>
+            </div>
+            break;
+        case ApiValues.Executed:
+            <div class="action-outcome" role="status">
+                <span class="badge badge-confirmed">✓ Validée par toi</span>
+                <span>@ExecutedSummary</span>
+            </div>
+            break;
+        case ApiValues.Failed:
+            <div class="action-outcome" role="status">
+                <span class="badge badge-pending">Validée, mais l'exécution a échoué</span>
+                <span class="small muted">@Action.Error</span>
+            </div>
+            break;
+        case ApiValues.Rejected:
+            <div class="action-outcome" role="status">
+                <span class="badge badge-pending">Refusée</span>
+                <span>Rien n'a été modifié.</span>
+            </div>
+            break;
+        default:
+            <div class="action-outcome" role="status"><span class="muted">En cours de traitement…</span></div>
+            break;
+    }
+
+    @if (_message is not null)
+    {
+        <div class="alert alert-warn" role="alert">@_message</div>
+    }
+    <ApiProblemAlert Problem="Problem" />
+</article>

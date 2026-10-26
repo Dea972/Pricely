@@ -1,0 +1,72 @@
+@page "/products"
+@inherits ApiComponentBase
+@inject PricelyApiClient Api
+@inject NavigationManager Navigation
+
+<PageTitle>Produits — Pricely</PageTitle>
+
+<div class="page">
+    <div>
+        <h1>Produits</h1>
+        <p class="muted" style="margin: 4px 0 0">Recherche par nom, marque, référence fabricant ou GTIN exact.</p>
+    </div>
+
+    <form class="search" role="search" @onsubmit="SearchAsync">
+        <label for="product-search" class="visually-hidden">Rechercher un produit</label>
+        <input id="product-search" class="field" type="search" maxlength="200" placeholder="Ex. ciment CEM II, 03456789012344…" @bind="_text" />
+        <button type="submit" class="btn btn-primary" disabled="@_searching">Rechercher</button>
+    </form>
+
+    <ApiProblemAlert Problem="Problem" />
+
+    @if (_results is not null)
+    {
+        <ProductListCard Products="_results" Title="Résultats" />
+    }
+</div>
+
+@code {
+    private string _text = string.Empty;
+    private string? _loadedQuery;
+    private IReadOnlyList<ProductDto>? _results;
+    private bool _searching;
+
+    [SupplyParameterFromQuery(Name = "q")]
+    public string? Query { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(Query) && !string.Equals(Query, _loadedQuery, StringComparison.Ordinal))
+        {
+            _text = Query;
+            await LoadAsync();
+        }
+    }
+
+    private Task SearchAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_text))
+        {
+            return Task.CompletedTask;
+        }
+
+        // The search is in the address (shared, back with « Précédent »): the new address loads it.
+        string text = _text.Trim();
+        if (string.Equals(text, _loadedQuery, StringComparison.Ordinal))
+        {
+            return LoadAsync();
+        }
+
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameter("q", text));
+
+        return Task.CompletedTask;
+    }
+
+    private async Task LoadAsync()
+    {
+        _searching = true;
+        _loadedQuery = _text.Trim();
+        _results = await CallAsync(() => Api.SearchProductsAsync(_text.Trim(), 20, CancellationToken.None));
+        _searching = false;
+    }
+}

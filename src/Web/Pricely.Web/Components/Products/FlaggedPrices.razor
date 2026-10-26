@@ -1,0 +1,32 @@
+@inject TimeProvider Clock
+
+<section class="card grow-1" aria-labelledby="h-anomalies">
+    <div class="card-body" style="display: flex; flex-direction: column; gap: 12px">
+        <h2 id="h-anomalies">Prix signalés</h2>
+        @if (!Flagged.Any())
+        {
+            <p class="muted" style="margin: 0">Aucun prix signalé sur les derniers relevés.</p>
+        }
+        @foreach (ProductOfferDto offer in Flagged)
+        {
+            <div class="flag">
+                <div><strong>@offer.MerchantName — @Format.Price(offer.LatestAmount, offer.LatestCurrency)</strong></div>
+                <div class="small muted">
+                    Relevé @(offer.LatestObservedOnUtc is DateTime observed ? Format.Ago(observed, Clock.GetUtcNow()) : "—")
+                    · médiane des offres confirmées @Format.Price(Offers.ConfirmedMedianAmount, Offers.Currency)
+                </div>
+                <div style="margin-top: 10px">
+                    <a class="btn btn-secondary btn-small" href="@Format.ExternalHref(offer.ProductPage)" target="_blank" rel="noopener noreferrer">Voir la page</a>
+                </div>
+            </div>
+        }
+        <p class="small muted" style="margin: 0">Règle : un relevé qui s'écarte de plus de 40 % de la médiane des autres offres confirmées est signalé, jamais supprimé.</p>
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProductOffersDto Offers { get; set; } = default!;
+
+    private IEnumerable<ProductOfferDto> Flagged => Offers.Offers.Where(o => o.LatestIsFlaggedAsAnomaly);
+}

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>Pricely.Web</RootNamespace>
+    <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
+  </ItemGroup>
+
+  <!-- The front talks to the API over HTTP only: no reference to a module nor to Common (ADR-015). -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\aspire\Pricely.ServiceDefaults\Pricely.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pricely.Web.UnitTests" />
+  </ItemGroup>
+
+</Project>

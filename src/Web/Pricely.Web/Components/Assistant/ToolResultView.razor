@@ -1,0 +1,39 @@
+@* The component of each read tool: the model's text is only a comment around these results. *@
+@switch (Output.ToolName)
+{
+    case ToolCatalog.ComparePrices when ToolCatalog.Read<List<MerchantPriceDto>>(Output.Result) is { } prices:
+        <PriceComparisonCard Prices="prices" ProductId="ToolCatalog.ProductIdOf(Output.Arguments)" />
+        break;
+    case ToolCatalog.SearchProducts when ToolCatalog.Read<List<ProductDto>>(Output.Result) is { } products:
+        <ProductListCard Products="products" Title="Recherche de produits" />
+        break;
+    case ToolCatalog.GetProduct when ToolCatalog.Read<ProductDto>(Output.Result) is { } product:
+        <ProductListCard Products="[product]" Title="Fiche produit" />
+        break;
+    case ToolCatalog.GetPriceHistory when ToolCatalog.Read<List<PriceHistoryEntryDto>>(Output.Result) is { } entries:
+        <PriceHistoryCard Entries="entries" ProductId="ToolCatalog.ProductIdOf(Output.Arguments)" />
+        break;
+    case ToolCatalog.ListPriceAnomalies when ToolCatalog.Read<List<PriceAnomalyDto>>(Output.Result) is { } anomalies:
+        <AnomaliesCard Anomalies="anomalies" />
+        break;
+    case ToolCatalog.GetCollectionPlan when ToolCatalog.Read<CollectionPlanDto>(Output.Result) is { } plan:
+        <CollectionPlanCard Plan="plan" />
+        break;
+    case ToolCatalog.ListOffersPendingReview when ToolCatalog.Read<List<PendingOfferDto>>(Output.Result) is { } offers:
+        <PendingOffersCard Offers="offers" />
+        break;
+    case ToolCatalog.ListMerchants when ToolCatalog.Read<List<MerchantDto>>(Output.Result) is { } merchants:
+        <MerchantsCard Merchants="merchants" />
+        break;
+    case ToolCatalog.GetCategoryTree when ToolCatalog.Read<List<ProductCategoryDto>>(Output.Result) is { } categories:
+        <CategoryTreeCard Categories="categories" />
+        break;
+    default:
+        @* A tool without component (or a result of another shape): its chip says it was used. *@
+        break;
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public ToolOutput Output { get; set; } = default!;
+}

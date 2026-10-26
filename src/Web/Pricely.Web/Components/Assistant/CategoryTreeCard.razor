@@ -1,0 +1,32 @@
+<div class="card">
+    <div class="card-header">
+        <div class="eyebrow">Typologies de produits</div>
+    </div>
+    <div class="card-body">
+        <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px">
+            @foreach (ProductCategoryDto category in Ordered)
+            {
+                <li style="padding-left: @(category.Depth * 20)px">@category.Name</li>
+            }
+        </ul>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ProductCategoryDto> Categories { get; set; } = [];
+
+    /// <summary>Each category under its parent, depth first.</summary>
+    private IEnumerable<ProductCategoryDto> Ordered
+    {
+        get
+        {
+            ILookup<Guid?, ProductCategoryDto> children = Categories.ToLookup(c => c.ParentId);
+
+            IEnumerable<ProductCategoryDto> Walk(Guid? parentId) =>
+                children[parentId].OrderBy(c => c.Name, StringComparer.CurrentCulture).SelectMany(c => Walk(c.Id).Prepend(c));
+
+            return Walk(null);
+        }
+    }
+}
