@@ -8,6 +8,9 @@ namespace Pricely.Modules.AiEngine.Domain.AgentActivities;
 /// </summary>
 public sealed class AgentActivity : Entity
 {
+    /// <summary>Longest name of a kind or a decision, stored as text.</summary>
+    public const int EnumMaxLength = 20;
+
     public const int SessionIdMaxLength = 100;
 
     public const int FeatureCodeMaxLength = 100;

@@ -152,6 +152,47 @@ public sealed class AgentTurnTests
     }
 
     [Fact]
+    public async Task Decision_TakenWhileTheTurnRuns_ShouldBeNotedAfterTheProposal()
+    {
+        using var chat = new ScriptedChatClient(ToolCalls(), Answer("Je propose la collecte."), Answer("C'est noté."));
+        await using ServiceProvider services = TestServices.Build(chat, new RecordingEventBus(), new ToolProbe(), Owner(), new TickingClock());
+        List<AgentEvent> events = await RunAsync(services, null, "Collecte");
+        var proposed = (ActionProposedEvent)events.Single(e => e.Type == AgentEvent.ActionProposed).Data;
+
+        await SendAsync(services, new RejectActionCommand(proposed.ActionId));
+        await DecideBeforeTheTurnWasSavedAsync(services, proposed.ActionId);
+        await RunAsync(services, ConversationId(events), "Et maintenant ?");
+
+        List<ChatMessage> replayed = chat.Requests[2];
+        replayed[^2].Text.Should().StartWith("[Note de l'application");
+        replayed[..^2].Should().Contain(m => m.Contents.OfType<FunctionResultContent>().Any(r => r.CallId == "c2"));
+    }
+
+    [Fact]
+    public async Task Turn_ShouldBeSaved_WhenTheClientStopsReading()
+    {
+        using var chat = new ScriptedChatClient(ToolCalls(), Answer("Voici le comparatif."));
+        await using ServiceProvider services = TestServices.Build(chat, new RecordingEventBus(), new ToolProbe(), Owner());
+        Result<TurnStartedResponse> started = await SendStartAsync(services, null, "Compare le ciment");
+
+        using (IServiceScope scope = services.CreateScope())
+        {
+            ISender sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            await foreach (AgentEvent agentEvent in sender.CreateStream(new RunTurnStreamRequest(started.Value.ConversationId, "Compare le ciment")))
+            {
+                if (agentEvent.Type == AgentEvent.ToolResult)
+                {
+                    break;
+                }
+            }
+        }
+
+        AgentConversation conversation = await LoadConversationAsync(services);
+        conversation.Messages.OrderBy(m => m.Sequence).Select(m => m.Role).Should().Equal(
+            AgentMessageRole.User, AgentMessageRole.Assistant, AgentMessageRole.Tool);
+    }
+
+    [Fact]
     public async Task Turn_StoppedByTheRoundTripLimit_ShouldNotLeaveUnansweredToolCalls()
     {
         ChatResponse[] loop = Enumerable.Range(0, 11)
@@ -276,6 +317,16 @@ public sealed class AgentTurnTests
         using IServiceScope scope = services.CreateScope();
 
         return scope.ServiceProvider.GetRequiredService<AgenticDbContext>().Conversations.Single().Id;
+    }
+
+    /// <summary>As if the action had been decided while its turn was still running.</summary>
+    private static async Task DecideBeforeTheTurnWasSavedAsync(ServiceProvider services, Guid actionId)
+    {
+        using IServiceScope scope = services.CreateScope();
+        AgenticDbContext dbContext = scope.ServiceProvider.GetRequiredService<AgenticDbContext>();
+        PendingAction action = await dbContext.PendingActions.SingleAsync(a => a.Id == actionId);
+        dbContext.Entry(action).Property(a => a.DecidedOnUtc).CurrentValue = action.ProposedOnUtc.AddMilliseconds(1);
+        await dbContext.SaveChangesAsync();
     }
 
     private static async Task<Guid> InsertActionAsync(ServiceProvider services, string toolName, string arguments)

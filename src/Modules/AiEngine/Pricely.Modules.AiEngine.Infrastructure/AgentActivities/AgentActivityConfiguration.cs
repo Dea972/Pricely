@@ -16,13 +16,13 @@ internal sealed class AgentActivityConfiguration : IEntityTypeConfiguration<Agen
         builder.Property(a => a.Id).ValueGeneratedNever();
         builder.Ignore(a => a.DomainEvents);
 
-        builder.Property(a => a.Kind).HasConversion<string>().HasMaxLength(20);
+        builder.Property(a => a.Kind).HasConversion<string>().HasMaxLength(AgentActivity.EnumMaxLength);
         builder.Property(a => a.SessionId).HasMaxLength(AgentActivity.SessionIdMaxLength);
         builder.Property(a => a.FeatureCode).HasMaxLength(AgentActivity.FeatureCodeMaxLength);
         builder.Property(a => a.AgentName).HasMaxLength(AgentActivity.AgentNameMaxLength);
         builder.Property(a => a.ToolName).HasMaxLength(AgentActivity.ToolNameMaxLength);
         builder.Property(a => a.UserId).HasMaxLength(AgentActivity.UserIdMaxLength);
-        builder.Property(a => a.Decision).HasConversion<string>().HasMaxLength(20);
+        builder.Property(a => a.Decision).HasConversion<string>().HasMaxLength(AgentActivity.EnumMaxLength);
         builder.Property(a => a.ErrorMessage).HasMaxLength(AgentActivity.ErrorMessageMaxLength);
 
         builder.HasIndex(a => a.OccurredOnUtc);

@@ -161,11 +161,26 @@ internal sealed class RunTurnStreamRequestHandler(
 
         return conversation.Messages
             .Select(m => (At: m.CreatedOnUtc, Order: m.Sequence, Message: ChatMessageSerializer.Deserialize(m.Content)))
-            .Concat(decided.Select(a => (At: a.DecidedOnUtc!.Value, Order: int.MaxValue, Message: ConversationNotes.ForDecision(a))))
+            .Concat(decided.Select(a => (At: NoteTime(conversation, a), Order: int.MaxValue, Message: ConversationNotes.ForDecision(a))))
             .OrderBy(m => m.At)
             .ThenBy(m => m.Order)
             .Select(m => m.Message)
             .ToList();
+    }
+
+    /// <summary>
+    /// An action can be decided while the turn that proposed it is still running, before that turn's messages are
+    /// saved: its note never comes before them (the model would read the decision before the proposal).
+    /// </summary>
+    private static DateTime NoteTime(AgentConversation conversation, PendingAction action)
+    {
+        DateTime decidedOnUtc = action.DecidedOnUtc!.Value;
+        DateTime? proposingTurnSavedOnUtc = conversation.Messages
+            .Where(m => m.Role != AgentMessageRole.User && m.CreatedOnUtc >= action.ProposedOnUtc)
+            .Select(m => (DateTime?)m.CreatedOnUtc)
+            .Min();
+
+        return proposingTurnSavedOnUtc > decidedOnUtc ? proposingTurnSavedOnUtc.Value : decidedOnUtc;
     }
 
     /// <summary>
@@ -180,9 +195,11 @@ internal sealed class RunTurnStreamRequestHandler(
     {
         conversation.Append(AgentMessageRole.User, ChatMessageSerializer.Serialize(userMessage), userMessageOnUtc);
 
+        // One time for everything the model produced in the turn: the notes of its actions go after all of it.
+        DateTime producedOnUtc = dateTimeProvider.UtcNow;
         foreach (ChatMessage produced in CloseUnansweredToolCalls(updates.ToChatResponse().Messages))
         {
-            conversation.Append(ChatMessageSerializer.ToRole(produced.Role), ChatMessageSerializer.Serialize(produced), dateTimeProvider.UtcNow);
+            conversation.Append(ChatMessageSerializer.ToRole(produced.Role), ChatMessageSerializer.Serialize(produced), producedOnUtc);
         }
 
         try

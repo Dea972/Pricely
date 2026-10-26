@@ -29,7 +29,8 @@ internal sealed class PendingActionDecidedDomainEventHandler(
             {
                 ActionId = action.Id,
                 SessionId = action.ConversationId.ToString(),
-                FeatureCode = agent?.Feature.Code ?? $"agents.{action.AgentName}",
+                // An agent removed since the proposal: its feature is unknown, the module does not guess it.
+                FeatureCode = agent?.Feature.Code ?? string.Empty,
                 SourceModule = agent?.Feature.SourceModule,
                 AgentName = action.AgentName,
                 ToolName = action.ToolName,

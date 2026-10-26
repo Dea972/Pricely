@@ -146,11 +146,24 @@ internal sealed class FixedClock : IDateTimeProvider
     public DateTime UtcNow { get; } = new(2026, 10, 26, 9, 0, 0, DateTimeKind.Utc);
 }
 
+/// <summary>A second later at each reading: the order of the timestamps matters.</summary>
+internal sealed class TickingClock : IDateTimeProvider
+{
+    private int _ticks;
+
+    public DateTime UtcNow => new DateTime(2026, 10, 26, 9, 0, 0, DateTimeKind.Utc).AddSeconds(Interlocked.Increment(ref _ticks));
+}
+
 internal static class TestServices
 {
     public const string WriteScope = "pricely.write";
 
-    public static ServiceProvider Build(ScriptedChatClient chatClient, RecordingEventBus eventBus, ToolProbe probe, FakeCurrentUser user)
+    public static ServiceProvider Build(
+        ScriptedChatClient chatClient,
+        RecordingEventBus eventBus,
+        ToolProbe probe,
+        FakeCurrentUser user,
+        IDateTimeProvider? clock = null)
     {
         var services = new ServiceCollection();
         string database = Guid.NewGuid().ToString();
@@ -162,7 +175,7 @@ internal static class TestServices
         services.AddMediatR(configuration => configuration.RegisterServicesFromAssembly(Application.AssemblyReference.Assembly));
         services.AddAgent(TestAgent.Definition);
         services.AddAgentTools(McpServerExtensions.ToAgentTools([typeof(TestTools).Assembly]));
-        services.AddSingleton<IDateTimeProvider, FixedClock>();
+        services.AddSingleton(clock ?? new FixedClock());
         services.AddSingleton<IEventBus>(eventBus);
         services.AddSingleton<ICurrentUser>(user);
         services.AddSingleton<IToolProbe>(probe);
