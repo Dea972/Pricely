@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.Http.Resilience;
 
@@ -22,7 +23,10 @@ internal static class AuthenticationExtensions
         OidcSettings settings = configuration.GetSection(OidcSettings.SectionName).Get<OidcSettings>()
             ?? throw new InvalidOperationException($"The section '{OidcSettings.SectionName}' is not configured.");
 
-        services.AddMemoryCache();
+        // In memory by default; several instances need a shared cache (AddStackExchangeRedisCache...) and shared data
+        // protection keys, so that each one reads the tokens of the others (ADR-015).
+        services.AddDistributedMemoryCache();
+        services.AddDataProtection().SetApplicationName("Pricely.Web");
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<ServerTokenStore>();
         services.AddSingleton<TokenRefresher>();
@@ -101,8 +105,8 @@ internal static class AuthenticationExtensions
                 if (context.User.FindFirst(PricelyClaims.Session)?.Value is string sessionKey)
                 {
                     // The id token is still needed by Keycloak's end-session endpoint: read it before removing.
-                    context.Items[nameof(TokenSet.IdToken)] = store.Get(sessionKey)?.IdToken;
-                    store.Remove(sessionKey);
+                    context.Items[nameof(TokenSet.IdToken)] = (await store.GetAsync(sessionKey, context.RequestAborted))?.IdToken;
+                    await store.RemoveAsync(sessionKey, context.RequestAborted);
                 }
 
                 return TypedResults.SignOut(
@@ -114,23 +118,21 @@ internal static class AuthenticationExtensions
         return app;
     }
 
-    private static Task StoreTokensAsync(TokenValidatedContext context)
+    private static async Task StoreTokensAsync(TokenValidatedContext context)
     {
         if (context.TokenEndpointResponse is null || context.Principal?.Identity is not ClaimsIdentity identity)
         {
             context.Fail("Keycloak returned no tokens.");
 
-            return Task.CompletedTask;
+            return;
         }
 
         IServiceProvider services = context.HttpContext.RequestServices;
         TokenSet tokens = services.GetRequiredService<TokenRefresher>().FromSignIn(context.TokenEndpointResponse);
         string sessionKey = Guid.NewGuid().ToString("N");
 
-        services.GetRequiredService<ServerTokenStore>().Set(sessionKey, tokens);
+        await services.GetRequiredService<ServerTokenStore>().SetAsync(sessionKey, tokens, context.HttpContext.RequestAborted);
         identity.AddClaim(new Claim(PricelyClaims.Session, sessionKey));
-
-        return Task.CompletedTask;
     }
 
     private static Task AddIdTokenHintAsync(RedirectContext context)

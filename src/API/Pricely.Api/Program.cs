@@ -27,10 +27,8 @@ app.MapDefaultEndpoints();
 
 if (app.Environment.IsDevelopment())
 {
+    // The schemas are brought up to date by Pricely.MigrationService, before the API starts (ADR-018).
     app.MapOpenApi();
-
-    // The local database is created empty by the AppHost: bring every module schema up to date.
-    await app.Services.ApplyMigrationsAsync();
 }
 else
 {

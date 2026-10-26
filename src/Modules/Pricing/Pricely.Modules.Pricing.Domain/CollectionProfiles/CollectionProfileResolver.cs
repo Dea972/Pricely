@@ -33,14 +33,19 @@ public static class CollectionProfileResolver
             }
         }
 
-        IEnumerable<string> instructionsFromRoot = categoryLineage
+        InstructionBlock[] blocksFromRoot = [.. categoryLineage
             .Reverse()
-            .Select(categoryId => profilesByCategory.GetValueOrDefault(categoryId)?.Instructions)
-            .OfType<string>();
+            .Select(categoryId => (categoryId, profilesByCategory.GetValueOrDefault(categoryId)?.Instructions))
+            .Where(block => block.Instructions is not null)
+            .Select(block => new InstructionBlock(block.categoryId, block.Instructions!))];
 
         return new ResolvedCollectionProfile(
             preferredMerchantIds,
             sourceCategoryId,
-            string.Join(InstructionsSeparator, instructionsFromRoot));
+            string.Join(InstructionsSeparator, blocksFromRoot.Select(b => b.Instructions)))
+        {
+            InstructionBlocks = blocksFromRoot,
+            OwnProfile = categoryLineage.Count > 0 ? profilesByCategory.GetValueOrDefault(categoryLineage[0]) : null
+        };
     }
 }

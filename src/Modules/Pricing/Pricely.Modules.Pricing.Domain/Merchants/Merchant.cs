@@ -101,11 +101,14 @@ public sealed class Merchant : Entity
 
     /// <summary>
     /// Whether an address belongs to the merchant's site: http(s), same host as the website or one of its sub-domains
-    /// (<c>www.</c> aside). The collection agent never reads a page elsewhere (ADR-009).
+    /// (<c>www.</c> aside), default port or the website's. The collection agent never reads a page elsewhere (ADR-009).
     /// </summary>
     public bool Owns(Uri address)
     {
-        if (!address.IsAbsoluteUri || address.Scheme is not ("http" or "https") || !string.IsNullOrEmpty(address.UserInfo))
+        if (!address.IsAbsoluteUri
+            || address.Scheme is not ("http" or "https")
+            || !string.IsNullOrEmpty(address.UserInfo)
+            || !(address.IsDefaultPort || address.Port == Website.Port))
         {
             return false;
         }

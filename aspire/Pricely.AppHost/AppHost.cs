@@ -18,9 +18,14 @@ IResourceBuilder<KeycloakResource> keycloak = builder.AddKeycloak("keycloak", 81
     .WithRealmImport("./Realms");
 #pragma warning restore ASPIRECERTIFICATES001
 
+// Brings every module schema up to date, then exits: the API starts only once it has completed (ADR-018).
+IResourceBuilder<ProjectResource> migrations = builder.AddProject<Projects.Pricely_MigrationService>("pricely-migrations")
+    .WithReference(db)
+    .WaitFor(db);
+
 IResourceBuilder<ProjectResource> api = builder.AddProject<Projects.Pricely_Api>("Pricely-api")
     .WithReference(db)
-    .WaitFor(db)
+    .WaitForCompletion(migrations)
     .WaitFor(keycloak)
     .WithEnvironment("Authentication__Authority", ReferenceExpression.Create($"{keycloak.GetEndpoint("http")}/realms/pricely"));
 

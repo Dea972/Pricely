@@ -20,18 +20,18 @@ internal sealed class AccessTokenProvider(
         AuthenticationState state = await authenticationStateProvider.GetAuthenticationStateAsync();
         string sessionKey = state.User.FindFirst(PricelyClaims.Session)?.Value ?? throw new SessionExpiredException();
 
-        TokenSet tokens = store.Get(sessionKey) ?? throw new SessionExpiredException();
+        TokenSet tokens = await store.GetAsync(sessionKey, cancellationToken) ?? throw new SessionExpiredException();
         if (IsFresh(tokens))
         {
             return tokens.AccessToken;
         }
 
-        SemaphoreSlim gate = store.LockFor(sessionKey);
+        SemaphoreSlim gate = ServerTokenStore.LockFor(sessionKey);
         await gate.WaitAsync(cancellationToken);
         try
         {
             // Another circuit of the same session may have refreshed them in the meantime.
-            tokens = store.Get(sessionKey) ?? throw new SessionExpiredException();
+            tokens = await store.GetAsync(sessionKey, cancellationToken) ?? throw new SessionExpiredException();
             if (IsFresh(tokens))
             {
                 return tokens.AccessToken;
@@ -40,12 +40,12 @@ internal sealed class AccessTokenProvider(
             TokenSet? refreshed = await refresher.RefreshAsync(tokens);
             if (refreshed is null)
             {
-                store.Remove(sessionKey);
+                await store.RemoveAsync(sessionKey, cancellationToken);
 
                 throw new SessionExpiredException();
             }
 
-            store.Set(sessionKey, refreshed);
+            await store.SetAsync(sessionKey, refreshed, cancellationToken);
 
             return refreshed.AccessToken;
         }

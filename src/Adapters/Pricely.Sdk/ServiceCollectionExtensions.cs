@@ -78,7 +78,7 @@ public static class ServiceCollectionExtensions
         // Keep this section as the single place to aggregate module additions.
 
 
-        // MCP server over HTTP (/mcp): the read-only tools declared by the modules (ADR-009).
+        // MCP server over HTTP (/mcp): the tools declared by the modules, listed by the scopes of the token (ADR-009, ADR-016).
         System.Reflection.Assembly[] toolAssemblies = [CatalogModule.ToolAssembly, PricingModule.ToolAssembly];
         services.AddPricelyMcpServer(toolAssemblies);
 

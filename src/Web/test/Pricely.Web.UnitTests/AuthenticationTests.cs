@@ -29,7 +29,7 @@ public sealed class AuthenticationTests
         refresh.RequestUri.Should().Be(TestSession.TokenEndpoint);
         keycloak.Bodies[0].Should().Contain("grant_type=refresh_token").And.Contain("refresh_token=refresh-1").And.Contain("client_id=pricely-web");
 
-        TokenSet stored = session.Store.Get(TestSession.SessionKey)!;
+        TokenSet stored = (await session.Store.GetAsync(TestSession.SessionKey))!;
         stored.RefreshToken.Should().Be("refresh-2");
         stored.IdToken.Should().Be("id-1", "Keycloak does not always send a new id token: the one of the sign-in is kept for the sign-out");
         stored.ExpiresAt.Should().Be(session.Clock.GetUtcNow().AddSeconds(900));
@@ -43,7 +43,7 @@ public sealed class AuthenticationTests
         Func<Task> act = () => session.Tokens.GetAccessTokenAsync(CancellationToken.None);
 
         await act.Should().ThrowAsync<SessionExpiredException>();
-        session.Store.Get(TestSession.SessionKey).Should().BeNull();
+        (await session.Store.GetAsync(TestSession.SessionKey)).Should().BeNull();
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public sealed class AuthenticationTests
         Func<Task> act = () => session.Tokens.GetAccessTokenAsync(CancellationToken.None);
 
         await act.Should().ThrowAsync<HttpRequestException>();
-        session.Store.Get(TestSession.SessionKey).Should().NotBeNull("the next call tries the refresh again");
+        (await session.Store.GetAsync(TestSession.SessionKey)).Should().NotBeNull("the next call tries the refresh again");
     }
 
     [Fact]

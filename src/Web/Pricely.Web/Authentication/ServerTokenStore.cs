@@ -1,48 +1,59 @@
-using System.Collections.Concurrent;
-using Microsoft.Extensions.Caching.Memory;
+using System.Text.Json;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace Pricely.Web.Authentication;
 
 /// <summary>
-/// Tokens of the signed-in users, in the memory of the server, by session key (a claim of the authentication cookie).
-/// The browser never receives a token, not even encrypted in the cookie. A restart loses them: the user signs in again
-/// (one instance only; several would need a shared cache, ADR-015).
+/// Tokens of the signed-in users, on the server only, by session key (a claim of the authentication cookie). The browser
+/// never receives a token, not even encrypted in the cookie. They live in the distributed cache, encrypted with the data
+/// protection keys: in memory by default (a restart signs the users out), shared by every instance once a shared cache
+/// and shared keys are configured (ADR-015).
 /// </summary>
-internal sealed class ServerTokenStore(IMemoryCache cache)
+internal sealed class ServerTokenStore(IDistributedCache cache, IDataProtectionProvider dataProtection)
 {
     /// <summary>Same lifetime as the authentication cookie.</summary>
     public static readonly TimeSpan SessionLifetime = TimeSpan.FromHours(8);
 
-    private readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new(StringComparer.Ordinal);
+    /// <summary>
+    /// One refresh at a time per session on this instance (two circuits of the same user must not race on the refresh
+    /// token): a fixed set of locks, picked by session, so that expired sessions leave nothing behind.
+    /// </summary>
+    private static readonly SemaphoreSlim[] RefreshLocks = [.. Enumerable.Range(0, 64).Select(_ => new SemaphoreSlim(1, 1))];
 
-    public TokenSet? Get(string sessionKey) => cache.Get<TokenSet>(Key(sessionKey));
+    private readonly IDataProtector _protector = dataProtection.CreateProtector("Pricely.Web.Tokens");
 
-    public void Set(string sessionKey, TokenSet tokens)
+    public async Task<TokenSet?> GetAsync(string sessionKey, CancellationToken cancellationToken = default)
     {
-        var options = new MemoryCacheEntryOptions { SlidingExpiration = SessionLifetime };
-
-        // A session that just expires also gives back its lock.
-        options.RegisterPostEvictionCallback((_, _, reason, _) =>
+        byte[]? stored = await cache.GetAsync(Key(sessionKey), cancellationToken);
+        if (stored is null)
         {
-            if (reason is EvictionReason.Expired or EvictionReason.Removed or EvictionReason.Capacity)
-            {
-                _locks.TryRemove(sessionKey, out _);
-            }
-        });
+            return null;
+        }
 
-        cache.Set(Key(sessionKey), tokens, options);
+        try
+        {
+            return JsonSerializer.Deserialize<TokenSet>(_protector.Unprotect(stored));
+        }
+        catch (System.Security.Cryptography.CryptographicException)
+        {
+            // Encrypted with keys this instance does not have (keys not shared, or rotated away): the user signs in again.
+            return null;
+        }
     }
 
-    public void Remove(string sessionKey)
-    {
-        cache.Remove(Key(sessionKey));
+    public Task SetAsync(string sessionKey, TokenSet tokens, CancellationToken cancellationToken = default) =>
+        cache.SetAsync(
+            Key(sessionKey),
+            _protector.Protect(JsonSerializer.SerializeToUtf8Bytes(tokens)),
+            new DistributedCacheEntryOptions { SlidingExpiration = SessionLifetime },
+            cancellationToken);
 
-        // Not disposed: a refresh may still be waiting on it (a SemaphoreSlim without wait handle holds no resource).
-        _locks.TryRemove(sessionKey, out _);
-    }
+    public Task RemoveAsync(string sessionKey, CancellationToken cancellationToken = default) =>
+        cache.RemoveAsync(Key(sessionKey), cancellationToken);
 
-    /// <summary>One refresh at a time per session: two circuits of the same user must not race on the refresh token.</summary>
-    public SemaphoreSlim LockFor(string sessionKey) => _locks.GetOrAdd(sessionKey, _ => new SemaphoreSlim(1, 1));
+    public static SemaphoreSlim LockFor(string sessionKey) =>
+        RefreshLocks[(int)((uint)StringComparer.Ordinal.GetHashCode(sessionKey) % RefreshLocks.Length)];
 
-    private static string Key(string sessionKey) => "tokens:" + sessionKey;
+    private static string Key(string sessionKey) => "pricely-web:tokens:" + sessionKey;
 }

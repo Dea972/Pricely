@@ -25,9 +25,15 @@ internal sealed class GetEffectiveCollectionProfileQueryHandler(
             return Result.Failure<EffectiveCollectionProfileResponse>(profile.Error);
         }
 
+        ResolvedCollectionProfile resolved = profile.Value;
+
         return new EffectiveCollectionProfileResponse(
-            profile.Value.PreferredMerchantIds,
-            profile.Value.PreferredMerchantsSourceCategoryId,
-            profile.Value.Instructions);
+            resolved.PreferredMerchantIds,
+            resolved.PreferredMerchantsSourceCategoryId,
+            resolved.Instructions,
+            [.. resolved.InstructionBlocks.Select(b => new InstructionBlockResponse(b.ProductCategoryId, b.Instructions))],
+            resolved.OwnProfile is not null,
+            [.. resolved.OwnProfile?.PreferredMerchants.Select(m => m.MerchantId) ?? []],
+            resolved.OwnProfile?.Instructions);
     }
 }
