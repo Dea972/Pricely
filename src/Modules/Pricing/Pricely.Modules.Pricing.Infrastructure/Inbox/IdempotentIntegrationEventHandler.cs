@@ -35,17 +35,15 @@ internal sealed class IdempotentIntegrationEventHandler<TIntegrationEvent>(
         DbConnection dbConnection,
         InboxMessageConsumer inboxMessageConsumer)
     {
-       
-
-                        const string sql =
-                $"""
-                SELECT EXISTS (
-                    SELECT 1
-                    FROM {Schemas.Pricing}.inbox_message_consumers
-                    WHERE inbox_message_id = @InboxMessageId AND
-                          name = @Name
-                )
-                """;
+        const string sql =
+            $"""
+            SELECT EXISTS (
+                SELECT 1
+                FROM {Schemas.Pricing}.inbox_message_consumers
+                WHERE inbox_message_id = @InboxMessageId AND
+                      name = @Name
+            )
+            """;
 
         return await dbConnection.ExecuteScalarAsync<bool>(sql, inboxMessageConsumer);
     }

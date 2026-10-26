@@ -25,7 +25,7 @@ Soit `<M>` le nom du module (PascalCase, pluriel ou nom de contexte : `Alerts`, 
    - `Infrastructure/Database/Schemas.cs` (`internal const string <M> = "<m>";` en minuscules)
    - `Infrastructure/Database/<M>DbContext.cs` : `HasDefaultSchema`, configurations outbox (`OutboxMessage`, `OutboxMessageConsumer`) et inbox (`InboxMessage`, `InboxMessageConsumer`), puis celles du module. Implémente `IUnitOfWork`.
    - `Infrastructure/Outbox/*` : copier depuis `Catalog.Infrastructure/Outbox` en remplaçant le namespace, `Schemas.Catalog` et `ModuleName`.
-   - Si le module consomme des événements : copier aussi `Pricing.Infrastructure/Inbox/*` (attention, le SQL de l'inbox Users contient `::json` PostgreSQL ; la copie Pricing est corrigée).
+   - Si le module consomme des événements : copier aussi `Pricing.Infrastructure/Inbox/*`.
    - `Infrastructure/<M>Module.cs` : modèle `CatalogModule.cs` / `PricingModule.cs` (`HandlerAssemblies`, `Add<M>Module`, `AddDbContext` `UseNpgsql` + snake_case + `InsertOutboxMessagesInterceptor` + historique de migrations dans le schéma, repositories, `AddDomainEventHandlers`, `AddIntegrationEventHandlers` si consommateur, `AddEndpoints`, options Outbox / Inbox, `ConfigureConsumers` si consommateur).
 3. **Composition** :
    - `src/Adapters/Pricely.Sdk/Pricely.Sdk.csproj` : référence vers `<M>.Infrastructure`.

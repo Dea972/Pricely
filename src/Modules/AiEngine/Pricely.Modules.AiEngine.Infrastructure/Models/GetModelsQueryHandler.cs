@@ -34,7 +34,7 @@ internal sealed class GetModelsQueryHandler(IDbConnectionFactory dbConnectionFac
                  SELECT p.valid_from, p.input_per_million, p.cached_input_per_million,
                               p.cache_write_per_million, p.output_per_million
                  FROM aiengine.model_prices p
-                 WHERE p.model_id = m.id AND p.valid_from <= @Today
+                 WHERE p.model_id = m.id AND p.valid_from <= CAST(CAST(@Today AS timestamptz) AT TIME ZONE 'UTC' AS date)
                  ORDER BY p.valid_from DESC
                  LIMIT 1
              ) price ON TRUE
@@ -42,7 +42,7 @@ internal sealed class GetModelsQueryHandler(IDbConnectionFactory dbConnectionFac
              """;
 
         IEnumerable<ModelResponse> models = await connection.QueryAsync<ModelResponse>(
-            new CommandDefinition(sql, new { Today = dateTimeProvider.UtcNow.Date }, cancellationToken: cancellationToken));
+            new CommandDefinition(sql, new { Today = dateTimeProvider.UtcNow }, cancellationToken: cancellationToken));
 
         return Result.Success<IReadOnlyCollection<ModelResponse>>(models.ToList());
     }

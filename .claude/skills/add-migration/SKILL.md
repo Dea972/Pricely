@@ -9,7 +9,7 @@ Chaque module a son `DbContext` (`CatalogDbContext`, `PricingDbContext`, `UsersD
 
 ## Prérequis
 
-L'option A du choix initial est en place (ADR-011) : `dotnet ef` construit l'hôte `Pricely.Api` (`Program.cs` + `Microsoft.EntityFrameworkCore.Design`). Il faut définir une chaîne de connexion SQL Server, même factice, rien ne s'y connecte pour ajouter une migration :
+L'option A du choix initial est en place (ADR-011) : `dotnet ef` construit l'hôte `Pricely.Api` (`Program.cs` + `Microsoft.EntityFrameworkCore.Design`). Il faut définir une chaîne de connexion PostgreSQL, même factice, rien ne s'y connecte pour ajouter une migration :
 
 ```bash
 export "ConnectionStrings__pricely-db=Host=localhost;Database=pricely-db;Username=postgres;Password=x"
