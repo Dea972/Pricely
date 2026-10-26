@@ -1,7 +1,12 @@
 IDistributedApplicationBuilder builder = DistributedApplication.CreateBuilder(args);
 
+// pgAdmin on a fixed port (http://localhost:5050), the server already registered; persistent like the database so that
+// its settings and saved queries survive a restart of the AppHost.
 IResourceBuilder<PostgresServerResource> postgres = builder.AddPostgres("postgres")
-    .WithLifetime(ContainerLifetime.Persistent);
+    .WithLifetime(ContainerLifetime.Persistent)
+    .WithPgAdmin(pgAdmin => pgAdmin
+        .WithHostPort(5050)
+        .WithLifetime(ContainerLifetime.Persistent));
 
 IResourceBuilder<PostgresDatabaseResource> db = postgres.AddDatabase("pricely-db");
 

@@ -17,7 +17,7 @@ Lire avant de coder : `docs/architecture/ubiquitous-language.md`, `docs/architec
 ## Structure
 
 ```
-aspire/                        AppHost (PostgreSQL, Keycloak) et ServiceDefaults (OpenTelemetry, health checks)
+aspire/                        AppHost (PostgreSQL + pgAdmin, Keycloak) et ServiceDefaults (OpenTelemetry, health checks)
 src/API/Pricely.Api            Host HTTP (n'applique aucune migration)
 src/API/Pricely.MigrationService  Worker lancé avant l'API par l'AppHost : applique les migrations de tous les modules puis s'arrête (ADR-018)
 src/API/Pricely.DevSeed        Jeu d'essai local (typologies, produits, enseignes, profils, 13 semaines de prix) par les commandes des modules ;
@@ -135,7 +135,7 @@ dotnet test src/Modules/Pricing/test/Pricely.Modules.Pricing.UnitTests
 dotnet test test/Pricely.ArchitectureTests
 dotnet list Pricely.slnx package --vulnerable --include-transitive
 dotnet ef migrations add <Name> -p src/Modules/<M>/Pricely.Modules.<M>.Infrastructure -s src/API/Pricely.Api -c <M>DbContext -o Database/Migrations   # avec ConnectionStrings__pricely-db défini
-dotnet run --project aspire/Pricely.AppHost   # PostgreSQL + Keycloak + API + front (http://localhost:5180, dev / dev) ; secret : Parameters:anthropic-api-key
+dotnet run --project aspire/Pricely.AppHost   # PostgreSQL + pgAdmin (http://localhost:5050) + Keycloak + API + front (http://localhost:5180, dev / dev) ; secret : Parameters:anthropic-api-key
 dotnet run --project src/API/Pricely.DevSeed  # jeu d'essai hors AppHost (ConnectionStrings__pricely-db défini) ; dans l'AppHost : ▶ sur pricely-seed
 ```
 

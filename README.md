@@ -51,7 +51,7 @@ dotnet user-secrets set "Parameters:anthropic-api-key" "<key>" --project aspire/
 dotnet run --project aspire/Pricely.AppHost
 ```
 
-The AppHost starts PostgreSQL (`pricely-db`), Keycloak (http://localhost:8180, realm `pricely` imported from `aspire/Pricely.AppHost/Realms/pricely-realm.json`), the API (http://localhost:5136) and the front (http://localhost:5180, sign in with `dev` / `dev`). `pricely-migrations` (`src/API/Pricely.MigrationService`) applies the EF Core migrations of every module, then the API starts (ADR-018). Outside the AppHost, run the migration service with the same `ConnectionStrings__pricely-db` before the API.
+The AppHost starts PostgreSQL (`pricely-db`) with pgAdmin (http://localhost:5050, the server already registered), Keycloak (http://localhost:8180, realm `pricely` imported from `aspire/Pricely.AppHost/Realms/pricely-realm.json`), the API (http://localhost:5136) and the front (http://localhost:5180, sign in with `dev` / `dev`). `pricely-migrations` (`src/API/Pricely.MigrationService`) applies the EF Core migrations of every module, then the API starts (ADR-018). Outside the AppHost, run the migration service with the same `ConnectionStrings__pricely-db` before the API.
 
 Test data: start the `pricely-seed` resource from the Aspire dashboard (▶), or `dotnet run --project src/API/Pricely.DevSeed` with `ConnectionStrings__pricely-db` set. It adds 10 typologies, 9 products, 5 fictitious merchants (`.example` sites, one inactive), the collection profiles and 13 weeks of prices, through the commands of the modules: the matching policy confirms 22 offers, leaves 3 to review, and the price guard flags a pack price. Running it again adds nothing. The Keycloak admin credentials are the generated Aspire parameters (dashboard).
 
