@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.AspNetCore.Authentication;
 using ModelContextProtocol.Authentication;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 using Pricely.Common.Application.Authorization;
 
 namespace Pricely.Common.Presentation.Mcp;
@@ -24,13 +25,17 @@ public static class McpServerExtensions
     /// </summary>
     public static IServiceCollection AddPricelyMcpServer(this IServiceCollection services, Assembly[] toolAssemblies)
     {
-        IMcpServerBuilder builder = services
+        services
             .AddMcpServer(options => options.ServerInfo = new Implementation { Name = "pricely", Version = "0.1.0" })
             .WithHttpTransport(options => options.Stateless = true);
 
-        foreach (Assembly toolAssembly in toolAssemblies)
+        // Read-only tools only: write tools need a human approval, which only the internal agent provides (ADR-008),
+        // and per-scope filtering of the MCP tools is not in place yet (ADR-013).
+        foreach (MethodInfo method in ReadOnlyToolMethods(toolAssemblies))
         {
-            builder.WithToolsFromAssembly(toolAssembly);
+            services.AddSingleton(serviceProvider => McpServerTool.Create(
+                method,
+                options: new McpServerToolCreateOptions { Services = serviceProvider }));
         }
 
         // Tokens are validated by the JWT bearer scheme; the MCP scheme only answers the challenge and serves the metadata.
@@ -53,6 +58,22 @@ public static class McpServerExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Static methods marked <c>[McpServerTool(ReadOnly = true)]</c> of the <c>[McpServerToolType]</c> classes.
+    /// </summary>
+    public static IEnumerable<MethodInfo> ReadOnlyToolMethods(IEnumerable<Assembly> toolAssemblies) =>
+        ToolMethods(toolAssemblies).Where(method => method.GetCustomAttribute<McpServerToolAttribute>()!.ReadOnly);
+
+    /// <summary>
+    /// Static methods marked <c>[McpServerTool]</c> of the <c>[McpServerToolType]</c> classes of the assemblies.
+    /// </summary>
+    public static IEnumerable<MethodInfo> ToolMethods(IEnumerable<Assembly> toolAssemblies) =>
+        toolAssemblies
+            .SelectMany(assembly => assembly.GetTypes())
+            .Where(type => type.GetCustomAttribute<McpServerToolTypeAttribute>() is not null)
+            .SelectMany(type => type.GetMethods(BindingFlags.Public | BindingFlags.Static))
+            .Where(method => method.GetCustomAttribute<McpServerToolAttribute>() is not null);
 
     /// <summary>
     /// Maps the MCP endpoint. Requires the <c>pricely.read</c> scope (ADR-010).

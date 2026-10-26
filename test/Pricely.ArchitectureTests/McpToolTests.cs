@@ -3,6 +3,7 @@ using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Server;
+using Pricely.Common.Presentation.Mcp;
 using Pricely.Modules.Catalog.Infrastructure;
 using Pricely.Modules.Pricing.Infrastructure;
 
@@ -46,16 +47,28 @@ public sealed class McpToolTests
         }
     }
 
+    [Fact]
+    public void WriteTools_ShouldBeDeclared_ButNotExposedOverMcp()
+    {
+        Assembly[] assemblies = [CatalogModule.ToolAssembly, PricingModule.ToolAssembly];
+
+        McpServerExtensions.ToolMethods(assemblies)
+            .Select(m => m.GetCustomAttribute<McpServerToolAttribute>()!)
+            .Where(a => !a.ReadOnly)
+            .Select(a => a.Name)
+            .Should().Contain("collect_product_offers");
+
+        using ServiceProvider serviceProvider = BuildServices(assemblies);
+
+        serviceProvider.GetServices<McpServerTool>().Select(t => t.ProtocolTool.Name).Should().NotContain("collect_product_offers");
+    }
+
     private static ServiceProvider BuildServices(params Assembly[] toolAssemblies)
     {
         ServiceCollection services = new();
         services.AddMediatR(configuration => configuration.RegisterServicesFromAssemblies(toolAssemblies));
 
-        IMcpServerBuilder builder = services.AddMcpServer();
-        foreach (Assembly toolAssembly in toolAssemblies)
-        {
-            builder.WithToolsFromAssembly(toolAssembly);
-        }
+        services.AddPricelyMcpServer(toolAssemblies);
 
         return services.BuildServiceProvider();
     }
