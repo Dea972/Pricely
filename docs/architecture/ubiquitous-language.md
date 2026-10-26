@@ -58,6 +58,9 @@ Le code utilise la colonne « Code » (anglais). L'interface et les échanges ut
 | Code | Français | Définition |
 |---|---|---|
 | Tool | Outil | Capacité offerte aux agents (MCP et agent interne), fine, adossée à une requête ou une commande. |
+| `IAgentDefinition` | Agent | Agent de Pricely (dans `src/Agents`) : instructions, fonctionnalité IA, tools autorisés. Ex. `assistant`. |
+| `AgentConversation` | Conversation | Échanges d'un utilisateur avec un agent, rejouables ; visibles par leur seul propriétaire. |
+| `PendingAction` | Action proposée | Appel d'un tool d'écriture par un agent, en attente de la décision de l'utilisateur ; exécutée seulement après « Valider ». |
 | `ReadOnly` / `Destructive` | Lecture / action sensible | Annotations d'un tool ; un tool qui n'est pas en lecture seule exige une approbation de l'agent interne. |
 
 ## Identité et accès

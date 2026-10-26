@@ -66,7 +66,7 @@ public class PermissionServiceTests
     }
 
     [Fact]
-    public async Task Resolve_ShouldRethrow_WhenTheDatabaseFailureIsNotARace()
+    public async Task Resolve_ShouldFail_WhenTheEmailBelongsToAnotherIdentity()
     {
         var sender = new FakeSender
         {
@@ -74,9 +74,9 @@ public class PermissionServiceTests
             ProvisionFailure = new PricelyException("ProvisionUserCommand", innerException: new DbUpdateException("duplicate email"))
         };
 
-        Func<Task> act = () => new PermissionService(sender).ResolveCallerAsync(Identity);
+        Result<PermissionsResponse> result = await new PermissionService(sender).ResolveCallerAsync(Identity);
 
-        await act.Should().ThrowAsync<PricelyException>();
+        result.Error.Should().Be(UserErrors.EmailAlreadyLinked);
     }
 
     private static Result<PermissionsResponse> NotFound => Result.Failure<PermissionsResponse>(UserErrors.NotFound("kc-sub-1"));

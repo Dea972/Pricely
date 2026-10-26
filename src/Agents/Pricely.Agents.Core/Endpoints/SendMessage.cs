@@ -26,11 +26,16 @@ internal sealed class SendMessage : IEndpoint
             "agents/{agentName}/messages",
             async (string agentName, Request request, ClaimsPrincipal user, AgentRunner runner, CancellationToken cancellationToken) =>
             {
+                if (user.FindUserId() is not Guid userId)
+                {
+                    return Results.Forbid();
+                }
+
                 Result<AgentConversation> conversation = await runner.PrepareAsync(
                     agentName,
                     request.ConversationId,
                     request.Message,
-                    user.GetUserId(),
+                    userId,
                     cancellationToken);
 
                 return conversation.IsFailure

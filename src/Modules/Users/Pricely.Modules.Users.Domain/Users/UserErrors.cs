@@ -23,6 +23,10 @@ public static class UserErrors
         "Users.MissingEmail",
         "The identity has no email address.");
 
+    public static readonly Error EmailAlreadyLinked = Error.Conflict(
+        "Users.EmailAlreadyLinked",
+        "The email address already belongs to another identity.");
+
     public static Error InvalidRole(string roleName) =>
         Error.Problem("Users.InvalidRole", $"The role '{roleName}' is not valid");
 

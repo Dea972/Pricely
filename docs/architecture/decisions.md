@@ -132,10 +132,24 @@ Conséquences et choix :
 - Les épingles de sécurité `System.Security.Cryptography.Pkcs` (qui venaient de `Microsoft.Data.SqlClient`) sont retirées.
 - Point de vigilance hérité, non modifié : l'index unique des typologies `(parent_id, name)` n'empêche pas deux racines de même nom (valeurs nulles distinctes, comme avec le filtre SQL Server d'origine).
 
+## ADR-013 — Agents : dossier `src/Agents`, socle commun, approbation des écritures
+
+**Statut** : acceptée (2026-10-26), décisions du propriétaire du projet (dossier `src/Agents`, socle + un projet par agent, persistance dans PostgreSQL). Met en œuvre l'ADR-008.
+
+- **Emplacement** : les agents ne sont pas un module. Ils vivent dans `src/Agents`, au même niveau que `src/API` : `Pricely.Agents.Core` (socle) et un projet par agent (`Pricely.Agents.Assistant`, plus tard l'agent de collecte). Un agent est un `IAgentDefinition` (nom de route, `AiFeature`, instructions, noms des tools autorisés) enregistré par `AddAgent<T>()`.
+- **Frontières** : les agents ne référencent aucun module. Ils utilisent les tools des modules (ADR-009), dont les assemblies sont passées par la composition (`Pricely.Sdk`), comme pour le serveur MCP. Vérifié par `AgentsBoundaryTests`.
+- **Boucle** : `LlmClient.AsChatClient(session, user)` donne un `IChatClient` du fournisseur ciblé (Anthropic : tool use de l'API Messages), journalisé à chaque appel (`LlmCalledIntegrationEvent`, session = conversation). `FunctionInvokingChatClient` exécute les tools ; les méthodes `[McpServerTool]` deviennent des `AIFunction` dont les paramètres de service (`ISender`) sont résolus dans le scope de la requête. Le streaming fournisseur est émulé (réponse complète découpée) : le client reçoit les événements de l'agent au fil de l'eau, pas les jetons.
+- **Écritures** : un tool qui n'est pas `ReadOnly` n'est jamais exécuté par le modèle. Son appel crée une `PendingAction` (outil, arguments, scope requis) et le modèle reçoit « en attente de validation ». Le propriétaire de la conversation valide (`POST agents/actions/{id}/approve`, avec le scope requis, `pricely.write` par défaut) : l'API exécute alors directement le tool avec les arguments enregistrés, sans repasser par le modèle, puis note la décision dans la conversation. Refus : rien n'est modifié.
+- **MCP** : `/mcp` n'expose que les tools `ReadOnly`, faute d'approbation humaine côté client MCP et de filtrage par scope ; `collect_product_offers` n'est donc disponible que pour l'agent interne.
+- **Persistance** : schéma `agents` (`AgentsDbContext`, migration propre) : `conversations`, `messages` (message du modèle sérialisé, rejouable), `pending_actions`. Clé étrangère seulement à l'intérieur du schéma ; `user_id` est un `Guid` simple. Code applicatif sans MediatR (services du socle) : les agents orchestrent, ils n'ont pas de règles métier propres.
+- **Endpoints** : `POST agents/{agent}/messages` (server-sent events : `conversation`, `tool_call`, `tool_result`, `action_proposed`, `text`, `error`, `done`), `GET agents/conversations`, `GET agents/conversations/{id}`, `POST agents/actions/{id}/approve|reject`.
+- **Scopes (comble l'écart de l'ADR-011)** : les lectures des modules exigent `pricely.read`, les mutations `pricely.write`, la confirmation et le rejet d'offres `pricely.review`.
+- **Utilisateur de développement** : son identifiant est fixé dans le realm (`sub` stable à chaque réimport de Keycloak). Si un e-mail appartient déjà à une autre identité, l'utilisateur n'est pas rattaché automatiquement (`Users.EmailAlreadyLinked`, pas de permission ni d'accès aux agents) : c'est une décision d'administrateur.
+
 ## Décisions ouvertes
 
 - Application des migrations en production (job de déploiement, script SQL idempotent) : ADR-011 l'interdit à l'API, le mécanisme reste à choisir.
-- Filtrage des tools MCP par scope (annotations ou attribut dédié), avec les tools d'écriture.
+- Filtrage des tools MCP par scope (annotations ou attribut dédié) et approbation côté client MCP : aujourd'hui `/mcp` n'expose que les tools en lecture (ADR-013).
 - Front Blazor : Blazor Server ou Blazor Web App en rendu interactif automatique ; projet de la solution (`src/Web/Pricely.Web`) ou application séparée.
 - API de recherche web pour l'agent de collecte (Brave, Tavily, Bing…).
 - Plusieurs conditionnements d'un même produit chez une enseigne : aujourd'hui un produit de référence par conditionnement.

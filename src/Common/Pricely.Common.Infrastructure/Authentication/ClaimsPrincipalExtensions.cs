@@ -18,6 +18,12 @@ public static class ClaimsPrincipalExtensions
             throw new PricelyException("User identifier is unavailable");
     }
 
+    /// <summary>
+    /// The internal user id, or null when the caller could not be resolved to a Pricely user (see the claims transformation).
+    /// </summary>
+    public static Guid? FindUserId(this ClaimsPrincipal? principal) =>
+        Guid.TryParse(principal?.FindFirst(CustomClaims.UserId)?.Value, out Guid userId) ? userId : null;
+
     public static string GetIdentityId(this ClaimsPrincipal? principal)
     {
         return principal?.FindFirst(CustomClaims.Sub)?.Value ??

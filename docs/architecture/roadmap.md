@@ -31,11 +31,12 @@ Chaque étape fait l'objet d'une PR sur `main`, CI verte, revue `architecture-re
 - Serveur MCP en transport HTTP sur `/mcp`, protégé par les jetons Keycloak (ADR-010) : métadonnée `/.well-known/oauth-protected-resource`, scopes par tool ; remplace l'amorce stdio du template.
 - Critère : interroger Pricely depuis Claude Desktop / Claude Code.
 
-## Étape 4 — Agent interne (ADR-008)
+## Étape 4 — Agent interne (ADR-008, ADR-013) — fait, sans streaming des jetons
 
 - Passerelle : `IChatClient` par fonctionnalité, `FunctionInvokingChatClient`, journalisation `LlmCalled` conservée.
 - `AgentConversation` (messages, appels d'outils, résultats), actions en attente pour les tools soumis à approbation.
 - Fonctionnalité `pricing.assistant` ; endpoint de conversation en streaming.
+- Fait : `src/Agents` (socle + agent `assistant`, fonctionnalité `agents.assistant`), chat client Anthropic avec tools, actions en attente et validation, endpoint SSE, conversations persistées (schéma `agents`), tool d'écriture `collect_product_offers`, endpoints de lecture des écrans (offres d'un produit, historique, anomalies, plan de collecte, recherche), scopes sur tous les endpoints.
 
 ## Étape 5 — Front Blazor
 

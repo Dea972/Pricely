@@ -45,16 +45,12 @@ internal sealed class PermissionService(ISender sender) : IPermissionService
         }
         catch (PricelyException exception) when (exception.InnerException is DbUpdateException)
         {
-            // A concurrent first request may have created the user (unique identity id): read it back. Any other
-            // database failure (e.g. the email already belongs to another identity) is not a race, rethrow it.
+            // A concurrent first request may have created the user (unique identity id): read it back. Otherwise the
+            // email already belongs to another identity (an account recreated in the identity provider): it is not
+            // linked automatically, an administrator has to decide.
             Result<PermissionsResponse> created = await sender.Send(new GetUserPermissionsQuery(identity.IdentityId), cancellationToken);
 
-            if (created.IsFailure)
-            {
-                throw;
-            }
-
-            return created;
+            return created.IsSuccess ? created : Result.Failure<PermissionsResponse>(UserErrors.EmailAlreadyLinked);
         }
 
         return await sender.Send(new GetUserPermissionsQuery(identity.IdentityId), cancellationToken);

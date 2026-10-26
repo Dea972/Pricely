@@ -22,9 +22,14 @@ internal sealed class ApproveAction : IEndpoint
             "agents/actions/{actionId:guid}/approve",
             async (Guid actionId, ClaimsPrincipal user, AgentActionService actions, CancellationToken cancellationToken) =>
             {
+                if (user.FindUserId() is not Guid userId)
+                {
+                    return Results.Forbid();
+                }
+
                 Result<PendingActionResponse> result = await actions.ApproveAsync(
                     actionId,
-                    user.GetUserId(),
+                    userId,
                     user.GetScopes(),
                     cancellationToken);
 
@@ -48,7 +53,12 @@ internal sealed class RejectAction : IEndpoint
             "agents/actions/{actionId:guid}/reject",
             async (Guid actionId, ClaimsPrincipal user, AgentActionService actions, CancellationToken cancellationToken) =>
             {
-                Result<PendingActionResponse> result = await actions.RejectAsync(actionId, user.GetUserId(), cancellationToken);
+                if (user.FindUserId() is not Guid userId)
+                {
+                    return Results.Forbid();
+                }
+
+                Result<PendingActionResponse> result = await actions.RejectAsync(actionId, userId, cancellationToken);
 
                 return result.Match(Results.Ok, ApiResults.Problem);
             })
