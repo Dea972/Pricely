@@ -20,7 +20,7 @@ public sealed class StartupCompositionTests
 
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
-                ["Authentication:Authority"] = "http://localhost:8080/realms/pricely",
+                ["Authentication:Authority"] = "http://localhost:8180/realms/pricely",
                 ["Authentication:RequireHttpsMetadata"] = "false",
                 ["Ai:Anthropic:ApiKey"] = "test-key",
                 ["Catalog:Outbox:IntervalInSeconds"] = "5",

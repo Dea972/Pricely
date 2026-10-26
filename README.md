@@ -51,9 +51,9 @@ dotnet user-secrets set "Parameters:anthropic-api-key" "<key>" --project aspire/
 dotnet run --project aspire/Pricely.AppHost
 ```
 
-The AppHost starts PostgreSQL (`pricely-db`), Keycloak (http://localhost:8080, realm `pricely` imported from `aspire/Pricely.AppHost/Realms/pricely-realm.json`), the API (http://localhost:5136) and the front (http://localhost:5180, sign in with `dev` / `dev`). In Development the API applies the EF Core migrations of every module at startup. The Keycloak admin credentials are the generated Aspire parameters (dashboard).
+The AppHost starts PostgreSQL (`pricely-db`), Keycloak (http://localhost:8180, realm `pricely` imported from `aspire/Pricely.AppHost/Realms/pricely-realm.json`), the API (http://localhost:5136) and the front (http://localhost:5180, sign in with `dev` / `dev`). In Development the API applies the EF Core migrations of every module at startup. The Keycloak admin credentials are the generated Aspire parameters (dashboard).
 
-Without the AppHost, run the front against an API already started: `Authentication__Authority=http://localhost:8080/realms/pricely PricelyApi__BaseAddress=<api address> dotnet run --project src/Web/Pricely.Web`.
+Without the AppHost, run the front against an API already started: `Authentication__Authority=http://localhost:8180/realms/pricely PricelyApi__BaseAddress=<api address> dotnet run --project src/Web/Pricely.Web`.
 
 ## Authentication
 
@@ -70,7 +70,7 @@ The development user is `dev` / `dev` (`dev@pricely.local`).
 ### Get a token
 
 ```bash
-TOKEN=$(curl -s http://localhost:8080/realms/pricely/protocol/openid-connect/token \
+TOKEN=$(curl -s http://localhost:8180/realms/pricely/protocol/openid-connect/token \
   -d grant_type=password -d client_id=pricely-dev -d username=dev -d password=dev \
   -d "scope=openid pricely.read" | jq -r .access_token)
 
