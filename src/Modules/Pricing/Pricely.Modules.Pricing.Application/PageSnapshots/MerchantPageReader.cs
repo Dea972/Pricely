@@ -39,6 +39,9 @@ public sealed class MerchantPageReader(
             return Result.Failure<PageSnapshot>(PageSnapshotErrors.NoAddress(merchantId));
         }
 
+        // A search that the site redirects to another page (an exact match) lands on that page, not on a result list.
+        Uri? searchPage = address is null ? target : null;
+
         for (int redirects = 0; redirects <= MaxRedirects; redirects++)
         {
             if (!merchant.IsActive)
@@ -59,7 +62,7 @@ public sealed class MerchantPageReader(
 
             if (page.Value.RedirectTo is not Uri next)
             {
-                return await KeepAsync(merchant, page.Value, cancellationToken);
+                return await KeepAsync(merchant, page.Value, page.Value.Address == searchPage, cancellationToken);
             }
 
             target = next;
@@ -68,9 +71,13 @@ public sealed class MerchantPageReader(
         return Result.Failure<PageSnapshot>(PageSnapshotErrors.TooManyRedirects(target));
     }
 
-    private async Task<Result<PageSnapshot>> KeepAsync(Merchant merchant, FetchedPage page, CancellationToken cancellationToken)
+    /// <summary>
+    /// Saves the snapshot alone (one aggregate per save, like <c>CollectedOfferRecorder</c>): the agent reads pages
+    /// during a collection, before any offer is recorded.
+    /// </summary>
+    private async Task<Result<PageSnapshot>> KeepAsync(Merchant merchant, FetchedPage page, bool isSearchPage, CancellationToken cancellationToken)
     {
-        Result<PageSnapshot> snapshot = PageSnapshot.Capture(merchant, page.Address, page.Text, dateTimeProvider.UtcNow);
+        Result<PageSnapshot> snapshot = PageSnapshot.Capture(merchant, page.Address, page.Text, dateTimeProvider.UtcNow, isSearchPage);
         if (snapshot.IsFailure)
         {
             return snapshot;

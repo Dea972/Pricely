@@ -44,7 +44,36 @@ public sealed class AgentOfferCollectorTests
         offer.Availability.Should().Be(Domain.Offers.Availability.InStock);
         offer.Evidence.ObservedTitle.Should().Be("Ciment CEM II 35 kg");
         offer.Evidence.AiRationale.Should().Be("Même GTIN.");
+        offer.Evidence.ObservedGtin.Should().BeNull("the page does not show it: a GTIN the collector did not read would confirm the offer");
         _site.Requested.Should().Equal(new Uri("https://www.comptoir.test/recherche?q=ciment%20CEM%20II"), new Uri(ProductPage));
+    }
+
+    [Fact]
+    public async Task Collect_ShouldKeepAnIdentifier_ThatThePageShows()
+    {
+        _site.Text = "Ciment CEM II 35 kg\nEAN : 3456789012344\n9,40 € TTC";
+        using var model = new ScriptedModel(
+            _ => Call("fetch_merchant_page", new() { ["merchantId"] = _comptoir.Id, ["address"] = ProductPage }),
+            history => Call("submit_offer", new() { ["offer"] = Offer(LastSnapshotId(history), 9.40m) }),
+            _ => Answer("Comptoir : 9,40 €."));
+
+        Result<IReadOnlyCollection<CollectedOffer>> result = await CollectAsync(model);
+
+        result.Value.Should().ContainSingle().Which.Evidence.ObservedGtin.Should().Be("3456789012344");
+    }
+
+    [Fact]
+    public async Task Collect_ShouldRefuseAnOffer_ReadOnTheSearchPage()
+    {
+        using var model = new ScriptedModel(
+            _ => Call("fetch_merchant_page", new() { ["merchantId"] = _comptoir.Id, ["searchText"] = "ciment" }),
+            history => Call("submit_offer", new() { ["offer"] = Offer(LastSnapshotId(history), 9.40m) }),
+            history => Answer(LastResult(history)));
+
+        Result<IReadOnlyCollection<CollectedOffer>> result = await CollectAsync(model);
+
+        result.Value.Should().BeEmpty();
+        model.LastAnswer.Should().Contain("PageSnapshots.SearchPage");
     }
 
     [Fact]
@@ -195,11 +224,13 @@ public sealed class AgentOfferCollectorTests
 
         public Uri? RedirectTo { get; set; }
 
+        public string Text { get; set; } = "Ciment CEM II 35 kg\n9,40 € TTC\nEn stock";
+
         public Task<Result<FetchedPage>> FetchAsync(Uri address, CancellationToken cancellationToken = default)
         {
             Requested.Add(address);
 
-            return Task.FromResult(Result.Success(new FetchedPage(address, "Ciment CEM II 35 kg\n9,40 € TTC\nEn stock", RedirectTo)));
+            return Task.FromResult(Result.Success(new FetchedPage(address, Text, RedirectTo)));
         }
     }
 

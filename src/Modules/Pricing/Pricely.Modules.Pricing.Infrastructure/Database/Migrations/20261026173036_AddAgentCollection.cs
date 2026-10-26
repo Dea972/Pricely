@@ -44,7 +44,8 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                     merchant_id = table.Column<Guid>(type: "uuid", nullable: false),
                     address = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
                     content = table.Column<string>(type: "character varying(200000)", maxLength: 200000, nullable: false),
-                    fetched_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    fetched_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    is_search_page = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {

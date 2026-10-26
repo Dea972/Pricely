@@ -23,6 +23,8 @@ public static class PageSnapshotErrors
     public static Error Unreadable(Uri address, string reason) =>
         Error.Problem("PageSnapshots.Unreadable", $"The page {address} could not be read: {reason}");
 
-    public static Error OtherMerchant(Guid snapshotId) =>
-        Error.Problem("PageSnapshots.OtherMerchant", $"The page snapshot {snapshotId} belongs to another merchant");
+    public static Error SearchPage(Guid snapshotId) =>
+        Error.Problem(
+            "PageSnapshots.SearchPage",
+            $"The page snapshot {snapshotId} is a search page: open the page of the product and submit the offer read on it");
 }

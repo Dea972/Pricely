@@ -77,7 +77,7 @@ public static class OfferMatchingPolicy
     /// <summary>
     /// Keeps letters and digits only, upper-cased: "CEM-II 32,5" and "cem ii 325" are equal.
     /// </summary>
-    private static string NormalizeCode(string? value)
+    internal static string NormalizeCode(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
         {

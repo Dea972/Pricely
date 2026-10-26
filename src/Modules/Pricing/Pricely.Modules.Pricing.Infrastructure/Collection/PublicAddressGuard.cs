@@ -46,10 +46,7 @@ internal static class PublicAddressGuard
 
         if (address.AddressFamily == AddressFamily.InterNetworkV6)
         {
-            byte first = address.GetAddressBytes()[0];
-
-            // Link-local, site-local, unique local (fc00::/7) and multicast.
-            return !(address.IsIPv6LinkLocal || address.IsIPv6SiteLocal || address.IsIPv6Multicast || (first & 0xFE) == 0xFC);
+            return IsPublicIPv6(address);
         }
 
         byte[] bytes = address.GetAddressBytes();
@@ -60,9 +57,33 @@ internal static class PublicAddressGuard
             100 when bytes[1] is >= 64 and <= 127 => false,
             169 when bytes[1] == 254 => false,
             172 when bytes[1] is >= 16 and <= 31 => false,
-            192 when bytes[1] == 168 => false,
+            192 when bytes[1] == 168 || bytes[1] == 0 && bytes[2] is 0 or 2 => false,
+            198 when bytes[1] is 18 or 19 || bytes[1] == 51 && bytes[2] == 100 => false,
+            203 when bytes[1] == 0 && bytes[2] == 113 => false,
             >= 224 => false,
             _ => true
         };
+    }
+
+    /// <summary>
+    /// Link-local, site-local, unique local (fc00::/7), multicast, documentation (2001:db8::/32), and the prefixes that
+    /// carry an IPv4 address (IPv4-compatible ::/96, NAT64 64:ff9b::/96, 6to4 2002::/16): never reached.
+    /// </summary>
+    private static bool IsPublicIPv6(IPAddress address)
+    {
+        byte[] bytes = address.GetAddressBytes();
+        bool ipv4Compatible = bytes.AsSpan(0, 12).IndexOfAnyExcept((byte)0) < 0;
+        bool nat64 = bytes[0] == 0x00 && bytes[1] == 0x64 && bytes[2] == 0xFF && bytes[3] == 0x9B;
+        bool sixToFour = bytes[0] == 0x20 && bytes[1] == 0x02;
+        bool documentation = bytes[0] == 0x20 && bytes[1] == 0x01 && bytes[2] == 0x0D && bytes[3] == 0xB8;
+
+        return !(address.IsIPv6LinkLocal
+            || address.IsIPv6SiteLocal
+            || address.IsIPv6Multicast
+            || (bytes[0] & 0xFE) == 0xFC
+            || ipv4Compatible
+            || nat64
+            || sixToFour
+            || documentation);
     }
 }

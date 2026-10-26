@@ -427,6 +427,10 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("fetched_on_utc");
 
+                    b.Property<bool>("IsSearchPage")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_search_page");
+
                     b.Property<Guid>("MerchantId")
                         .HasColumnType("uuid")
                         .HasColumnName("merchant_id");

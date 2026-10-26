@@ -7,7 +7,7 @@ namespace Pricely.Modules.Pricing.Infrastructure.Collection;
 
 /// <summary>
 /// Reads a merchant page over HTTP (anti-corruption layer): no automatic redirect (the caller checks the target is on
-/// the merchant's site), public addresses only (<see cref="PublicAddressGuard"/>), 3 MB at most, text only.
+/// the merchant's site), public addresses only (<see cref="PublicAddressGuard"/>), 3 MB at most, its markup reduced to text (<see cref="HtmlText"/>).
 /// </summary>
 internal sealed class HttpMerchantPageFetcher(IHttpClientFactory httpClientFactory) : IMerchantPageFetcher
 {

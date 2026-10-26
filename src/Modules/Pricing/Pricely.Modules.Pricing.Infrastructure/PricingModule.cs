@@ -82,13 +82,21 @@ public static class PricingModule
         services.AddScoped<SubmittedOfferVerifier>();
 
         services.AddScoped<IMerchantPageFetcher, HttpMerchantPageFetcher>();
+
+        // RemoveAllResilienceHandlers is still an evaluation API of Microsoft.Extensions.Http.Resilience 10.2 (EXTEXP0001).
+#pragma warning disable EXTEXP0001
         services
             .AddHttpClient(HttpMerchantPageFetcher.HttpClientName, client =>
             {
                 client.Timeout = TimeSpan.FromSeconds(20);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(HttpMerchantPageFetcher.UserAgent);
             })
-            .ConfigurePrimaryHttpMessageHandler(HttpMerchantPageFetcher.CreateHandler);
+            .ConfigurePrimaryHttpMessageHandler(HttpMerchantPageFetcher.CreateHandler)
+
+            // One attempt per page: the standard resilience of the service defaults would read a merchant page three
+            // times on a failure, with its own 10 s timeout (ADR-017).
+            .RemoveAllResilienceHandlers();
+#pragma warning restore EXTEXP0001
 
         // The collection agent (ADR-017); dedicated scrapers or partner feeds can replace it.
         services.TryAddScoped<IOfferCollector, AgentOfferCollector>();

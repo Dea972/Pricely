@@ -9,12 +9,19 @@ internal sealed class SubmitCollectedOfferCommandValidator : AbstractValidator<S
     {
         RuleFor(c => c.ProductId).NotEmpty();
         RuleFor(c => c.Offer).NotNull();
-        RuleFor(c => c.Offer.SnapshotId).NotEmpty();
-        RuleFor(c => c.Offer.Price).GreaterThan(0);
-        RuleFor(c => c.Offer.Currency).NotEmpty().Length(3);
-        RuleFor(c => c.Offer.Availability).IsInEnum();
-        RuleFor(c => c.Offer.Similarity).InclusiveBetween(0, 1).When(c => c.Offer.Similarity is not null);
-        RuleFor(c => c.Offer.ObservedTitle).MaximumLength(MatchEvidence.ObservedTitleMaxLength * 2);
-        RuleFor(c => c.Offer.Rationale).MaximumLength(MatchEvidence.AiRationaleMaxLength * 2);
+
+        // Longer texts are cut by the verifier; far longer ones are refused.
+        const int ToleratedLengthFactor = 2;
+
+        When(c => c.Offer is not null, () =>
+        {
+            RuleFor(c => c.Offer.SnapshotId).NotEmpty();
+            RuleFor(c => c.Offer.Price).GreaterThan(0);
+            RuleFor(c => c.Offer.Currency).NotEmpty().Length(3);
+            RuleFor(c => c.Offer.Availability).IsInEnum();
+            RuleFor(c => c.Offer.Similarity).InclusiveBetween(0, 1).When(c => c.Offer.Similarity is not null);
+            RuleFor(c => c.Offer.ObservedTitle).MaximumLength(MatchEvidence.ObservedTitleMaxLength * ToleratedLengthFactor);
+            RuleFor(c => c.Offer.Rationale).MaximumLength(MatchEvidence.AiRationaleMaxLength * ToleratedLengthFactor);
+        });
     }
 }

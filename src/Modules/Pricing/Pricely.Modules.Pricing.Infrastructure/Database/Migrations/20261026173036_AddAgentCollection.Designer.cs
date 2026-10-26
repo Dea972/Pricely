@@ -13,7 +13,7 @@ using Pricely.Modules.Pricing.Infrastructure.Database;
 namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
 {
     [DbContext(typeof(PricingDbContext))]
-    [Migration("20261026170818_AddAgentCollection")]
+    [Migration("20261026173036_AddAgentCollection")]
     partial class AddAgentCollection
     {
         /// <inheritdoc />
@@ -429,6 +429,10 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                     b.Property<DateTime>("FetchedOnUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("fetched_on_utc");
+
+                    b.Property<bool>("IsSearchPage")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_search_page");
 
                     b.Property<Guid>("MerchantId")
                         .HasColumnType("uuid")

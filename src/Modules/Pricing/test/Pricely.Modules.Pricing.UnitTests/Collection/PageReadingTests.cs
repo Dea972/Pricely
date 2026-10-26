@@ -26,6 +26,13 @@ public sealed class PageReadingTests
     [InlineData("fe80::1")]
     [InlineData("fd00::1")]
     [InlineData("::ffff:127.0.0.1")]
+    [InlineData("::127.0.0.1")]
+    [InlineData("64:ff9b::a9fe:a9fe")]
+    [InlineData("2002:a9fe:a9fe::1")]
+    [InlineData("2001:db8::1")]
+    [InlineData("192.0.0.170")]
+    [InlineData("198.18.0.1")]
+    [InlineData("203.0.113.5")]
     public void PublicAddressGuard_ShouldRefuseALocalOrPrivateAddress(string address) =>
         PublicAddressGuard.IsPublic(IPAddress.Parse(address)).Should().BeFalse();
 

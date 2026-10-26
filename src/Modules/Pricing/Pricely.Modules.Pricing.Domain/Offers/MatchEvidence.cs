@@ -13,6 +13,12 @@ public sealed record MatchEvidence(
     string? ObservedManufacturerReference,
     decimal? AiSimilarity)
 {
+    public const int ObservedGtinMaxLength = 14;
+
+    public const int ObservedBrandMaxLength = 150;
+
+    public const int ObservedManufacturerReferenceMaxLength = 100;
+
     public const int ObservedTitleMaxLength = 300;
 
     public const int AiRationaleMaxLength = 1000;

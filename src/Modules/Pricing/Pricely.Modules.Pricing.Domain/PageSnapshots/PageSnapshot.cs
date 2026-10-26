@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using Pricely.Common.Domain;
 using Pricely.Modules.Pricing.Domain.Merchants;
+using Pricely.Modules.Pricing.Domain.Offers;
 
 namespace Pricely.Modules.Pricing.Domain.PageSnapshots;
 
@@ -30,7 +31,10 @@ public sealed partial class PageSnapshot : Entity
 
     public DateTime FetchedOnUtc { get; private set; }
 
-    public static Result<PageSnapshot> Capture(Merchant merchant, Uri address, string content, DateTime fetchedOnUtc)
+    /// <summary>The search page of the merchant (several products): an offer is never read on it.</summary>
+    public bool IsSearchPage { get; private set; }
+
+    public static Result<PageSnapshot> Capture(Merchant merchant, Uri address, string content, DateTime fetchedOnUtc, bool isSearchPage = false)
     {
         if (!merchant.IsActive)
         {
@@ -48,7 +52,8 @@ public sealed partial class PageSnapshot : Entity
             MerchantId = merchant.Id,
             Address = address,
             Content = content.Length > ContentMaxLength ? content[..ContentMaxLength] : content,
-            FetchedOnUtc = fetchedOnUtc
+            FetchedOnUtc = fetchedOnUtc,
+            IsSearchPage = isSearchPage
         };
     }
 
@@ -61,6 +66,25 @@ public sealed partial class PageSnapshot : Entity
         decimal expected = decimal.Round(amount, 2);
 
         return Amounts().Matches(Content).Any(match => Parse(match.Value) == expected);
+    }
+
+    /// <summary>
+    /// Whether the page shows an identifier (GTIN, brand, reference), compared letters and digits only, upper-cased, like
+    /// <see cref="OfferMatchingPolicy"/>. A GTIN is also found without its leading zeros (« 03456789012344 » in
+    /// « EAN 3456789012344 »). An identifier the page does not show is never kept: the policy could confirm on it.
+    /// </summary>
+    public bool ShowsIdentifier(string? identifier)
+    {
+        string expected = OfferMatchingPolicy.NormalizeCode(identifier);
+        if (expected.Length == 0)
+        {
+            return false;
+        }
+
+        string content = OfferMatchingPolicy.NormalizeCode(Content);
+        string withoutLeadingZeros = expected.All(char.IsAsciiDigit) ? expected.TrimStart('0') : expected;
+
+        return withoutLeadingZeros.Length > 0 && content.Contains(withoutLeadingZeros, StringComparison.Ordinal);
     }
 
     private static decimal? Parse(string written)
