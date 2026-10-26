@@ -1,0 +1,54 @@
+@implements IDisposable
+@inject NavigationManager Navigation
+
+<nav id="main-nav" class="sidebar @(Open ? "open" : null)" aria-label="Navigation principale">
+    <div class="sidebar-logo"><Logo /></div>
+
+    <a href="/" class="nav-item" aria-current="@Current(IsAssistant)" @onclick="OnNavigate">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        Assistant
+    </a>
+    <a href="/products" class="nav-item" aria-current="@Current(IsProducts)" @onclick="OnNavigate">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 16V8l-9-5-9 5v8l9 5z"></path><path d="M3.3 7 12 12l8.7-5M12 22V12"></path></svg>
+        Produits
+    </a>
+
+    <div class="sidebar-spacer"></div>
+
+    <AuthorizeView>
+        <div class="user">
+            <span class="avatar" aria-hidden="true">@Format.Initials(DisplayName(context.User))</span>
+            <span class="user-name">@DisplayName(context.User)</span>
+        </div>
+        <form method="post" action="authentication/logout" class="logout">
+            <AntiforgeryToken />
+            <button type="submit" class="nav-item nav-button">Se déconnecter</button>
+        </form>
+    </AuthorizeView>
+</nav>
+
+@code {
+    [Parameter]
+    public bool Open { get; set; }
+
+    [Parameter]
+    public EventCallback OnNavigate { get; set; }
+
+    // The site is served at the root.
+    private string Path => new Uri(Navigation.Uri).AbsolutePath;
+
+    private bool IsAssistant => Path == "/" || Path.StartsWith("/assistant", StringComparison.Ordinal);
+
+    private bool IsProducts => Path.StartsWith("/products", StringComparison.Ordinal);
+
+    protected override void OnInitialized() => Navigation.LocationChanged += OnLocationChanged;
+
+    public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
+
+    private static string? Current(bool active) => active ? "page" : null;
+
+    private static string DisplayName(System.Security.Claims.ClaimsPrincipal user) =>
+        user.Identity?.Name ?? user.FindFirst(Pricely.Web.Authentication.PricelyClaims.PreferredUserName)?.Value ?? "Utilisateur";
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(StateHasChanged);
+}

@@ -1,0 +1,60 @@
+@page "/"
+@page "/assistant/{ConversationId:guid}"
+@inherits ApiComponentBase
+@implements IDisposable
+
+<PageTitle>Assistant — Pricely</PageTitle>
+
+<div class="assistant">
+    <section class="conversation" aria-label="Conversation">
+        <header class="conversation-header">
+            <div>
+                <h1>Assistant</h1>
+                <p class="small muted" style="margin: 0">@(_view.Title ?? "Nouvelle conversation")</p>
+            </div>
+            <div class="header-actions">
+                <button type="button" class="btn btn-secondary btn-small" aria-expanded="@_showConversations" @onclick="ToggleConversationsAsync">Conversations</button>
+                <a class="btn btn-primary btn-small" href="/">Nouvelle conversation</a>
+            </div>
+        </header>
+
+        @if (_showConversations)
+        {
+            <ConversationList Conversations="_conversations" CurrentId="_view.ConversationId" />
+        }
+
+        <div class="messages" role="log" aria-live="polite" aria-relevant="additions">
+            <ApiProblemAlert Problem="Problem" />
+
+            @if (_loading)
+            {
+                <p class="muted" role="status">Chargement de la conversation…</p>
+            }
+            else if (_view.Entries.Count == 0)
+            {
+                <div class="answer">
+                    <p class="answer-text">Pose une question sur un produit : comparatif de prix, historique, prix suspects, plan de collecte. Toute écriture (collecte d'offres…) te sera proposée avant d'être lancée.</p>
+                </div>
+            }
+
+            @foreach (ChatEntry entry in _view.Entries)
+            {
+                switch (entry)
+                {
+                    case UserEntry message:
+                        <div class="bubble-user">@message.Text</div>
+                        break;
+                    case AgentEntry answer:
+                        <ChatAnswer Answer="answer" OnActionDecided="OnActionDecided" />
+                        break;
+                    default:
+                        break;
+                }
+            }
+        </div>
+
+        <Composer Disabled="@(_view.IsRunning || _loading)" Suggestions="Suggestions" Prefill="@Prompt" OnSend="SendAsync" />
+    </section>
+
+    <ContextPanel ProductId="_view.CurrentProductId" Tools="_view.ToolsUsed" Usage="_usage" />
+</div>

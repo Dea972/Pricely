@@ -1,0 +1,57 @@
+<div class="stats">
+    <div class="stat">
+        <div class="small muted">Meilleur prix</div>
+        @if (Best is not null)
+        {
+            <div class="stat-value">@Format.Price(Best.Amount, Best.Currency)</div>
+            <div class="small muted">@Best.MerchantName@(Best.IsFlaggedAsAnomaly ? " · prix suspect" : null)</div>
+        }
+        else
+        {
+            <div class="stat-value">—</div>
+            <div class="small muted">Aucune offre confirmée</div>
+        }
+    </div>
+    <div class="stat">
+        <div class="small muted">Médiane des offres confirmées</div>
+        <div class="stat-value">@Format.Price(Offers.ConfirmedMedianAmount, Offers.Currency)</div>
+        <div class="small muted">@(MaxDeviation is decimal deviation ? "Écart max. " + Format.Deviation(deviation).TrimStart('+') : "Pas d'écart calculé")</div>
+    </div>
+    <div class="stat">
+        <div class="small muted">Offres</div>
+        <div class="stat-value">@Confirmed <span class="stat-sub">+ @Proposed à valider</span></div>
+        <div class="small muted">@(ActiveMerchantCount is int count ? $"sur {count} enseigne(s) active(s)" : null)</div>
+    </div>
+    <div class="stat @(Flagged > 0 ? "stat-warn" : null)">
+        <div class="small">Prix signalés</div>
+        <div class="stat-value">@Flagged</div>
+        <div class="small">par le garde-fou de prix</div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProductOffersDto Offers { get; set; } = default!;
+
+    /// <summary>The confirmed offers, cheapest first (API).</summary>
+    [Parameter]
+    public IReadOnlyList<MerchantPriceDto>? Prices { get; set; }
+
+    [Parameter]
+    public int? ActiveMerchantCount { get; set; }
+
+    private MerchantPriceDto? Best => Prices?.FirstOrDefault();
+
+    private int Confirmed => Offers.Offers.Count(o => o.Status == ApiValues.Confirmed);
+
+    private int Proposed => Offers.Offers.Count(o => o.Status == ApiValues.Proposed);
+
+    private int Flagged => Offers.Offers.Count(o => o.LatestIsFlaggedAsAnomaly);
+
+    /// <summary>The largest deviation from the median among the prices not flagged by the price guard.</summary>
+    private decimal? MaxDeviation =>
+        Offers.Offers
+            .Where(o => o.Status == ApiValues.Confirmed && !o.LatestIsFlaggedAsAnomaly && o.DeviationFromMedian is not null)
+            .Select(o => (decimal?)Math.Abs(o.DeviationFromMedian!.Value))
+            .Max();
+}

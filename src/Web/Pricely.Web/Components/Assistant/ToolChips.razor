@@ -1,0 +1,49 @@
+@if (Tools.Count > 0)
+{
+    <ul class="chips" aria-label="Outils utilisés" style="margin: 0; padding: 0; list-style: none">
+        @foreach (ToolUse tool in Tools)
+        {
+            <li class="chip @ChipClass(tool.State)">
+                @switch (tool.State)
+                {
+                    case ToolUseState.Succeeded:
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+                        break;
+                    case ToolUseState.Failed:
+                        <span aria-hidden="true">!</span>
+                        break;
+                    case ToolUseState.AwaitingApproval:
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 8v4l3 2"></path><circle cx="12" cy="12" r="9"></circle></svg>
+                        break;
+                    default:
+                        <span aria-hidden="true">…</span>
+                        break;
+                }
+                @tool.Name
+                <span class="visually-hidden">(@StateLabel(tool.State))</span>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ToolUse> Tools { get; set; } = [];
+
+    private static string? ChipClass(ToolUseState state) =>
+        state switch
+        {
+            ToolUseState.Failed => "chip-failed",
+            ToolUseState.AwaitingApproval => "chip-pending",
+            _ => null
+        };
+
+    private static string StateLabel(ToolUseState state) =>
+        state switch
+        {
+            ToolUseState.Succeeded => "terminé",
+            ToolUseState.Failed => "échec",
+            ToolUseState.AwaitingApproval => "à valider",
+            _ => "en cours"
+        };
+}

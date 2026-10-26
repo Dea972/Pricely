@@ -10,7 +10,7 @@ public sealed class IdentityProviderOptions
 {
     public const string SectionName = "Authentication";
 
-    /// <summary>Issuer of the tokens, e.g. <c>http://localhost:8080/realms/pricely</c>; metadata is discovered from it.</summary>
+    /// <summary>Issuer of the tokens, e.g. <c>http://localhost:8180/realms/pricely</c>; metadata is discovered from it.</summary>
     [Required]
     public Uri? Authority { get; init; }
 

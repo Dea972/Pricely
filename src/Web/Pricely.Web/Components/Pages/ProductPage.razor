@@ -1,0 +1,84 @@
+@page "/products/{ProductId:guid}"
+@inherits ApiComponentBase
+
+<PageTitle>@(_product?.Name ?? "Produit") — Pricely</PageTitle>
+
+<div class="page">
+    <ApiProblemAlert Problem="Problem" />
+
+    @if (_product is null)
+    {
+        @if (Problem is null)
+        {
+            <p class="muted" role="status">Chargement du produit…</p>
+        }
+    }
+    else
+    {
+        <div>
+            <nav class="breadcrumb" aria-label="Fil d'Ariane"><a href="/products">Produits</a>@(_categoryPath is null ? null : CategoryPath.Separator + _categoryPath)</nav>
+            <div class="product-head">
+                <div>
+                    <h1 class="product-title">@_product.Name</h1>
+                    <div class="product-facts">
+                        <span>Marque <strong>@_product.Brand</strong></span>
+                        @if (_product.Gtin is not null)
+                        {
+                            <span>GTIN <strong class="mono">@_product.Gtin</strong></span>
+                        }
+                        @if (_product.ManufacturerReference is not null)
+                        {
+                            <span>Réf. fabricant <strong class="mono">@_product.ManufacturerReference</strong></span>
+                        }
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <a class="btn btn-secondary" href="@AskAssistantAddress">Demander à l'assistant</a>
+                    <button type="button" class="btn btn-primary" disabled="@_collecting" @onclick="CollectAsync">
+                        @(_collecting ? "Collecte en cours…" : "Collecter les offres")
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        @if (_collected is not null)
+        {
+            <div class="alert alert-info" role="status">
+                Collecte terminée : @_collected.CollectedCount offre(s) collectée(s), @_collected.ProposedCount à valider,
+                @_collected.AutoConfirmedCount confirmée(s) automatiquement, @_collected.ObservedCount relevé(s), @_collected.AnomalyCount prix signalé(s).
+            </div>
+        }
+
+        @if (_offers is not null)
+        {
+            <ProductStats Offers="_offers" Prices="_prices" ActiveMerchantCount="_activeMerchants" />
+            <OffersTable Offers="_offers" BestOfferId="BestOfferId" />
+
+            <div class="row">
+                <section class="card grow-2" aria-labelledby="h-history">
+                    <div class="card-body">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px">
+                            <h2 id="h-history">Historique des prix</h2>
+                            <div class="segmented" role="group" aria-label="Période">
+                                @foreach (HistoryPeriod period in Enum.GetValues<HistoryPeriod>())
+                                {
+                                    <button type="button" aria-pressed="@(period == _period ? "true" : "false")" @onclick="() => ChangePeriodAsync(period)">@Label(period)</button>
+                                }
+                            </div>
+                        </div>
+                        @if (_history is null)
+                        {
+                            <p class="muted" role="status">Chargement de l'historique…</p>
+                        }
+                        else
+                        {
+                            <PriceChart Entries="_history" />
+                        }
+                    </div>
+                </section>
+
+                <FlaggedPrices Offers="_offers" />
+            </div>
+        }
+    }
+</div>

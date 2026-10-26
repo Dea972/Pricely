@@ -38,9 +38,11 @@ Chaque étape fait l'objet d'une PR sur `main`, CI verte, revue `architecture-re
 - Fonctionnalité `pricing.assistant` ; endpoint de conversation en streaming.
 - Fait : module générique `Agentic` (ADR-014) et agent `assistant` dans `src/Agents` (fonctionnalité `agents.assistant`), journal des tools et décisions dans AiEngine, chat client Anthropic avec tools, actions en attente et validation, endpoint SSE, conversations persistées (schéma `agentic`), tool d'écriture `collect_product_offers`, endpoints de lecture des écrans (offres d'un produit, historique, anomalies, plan de collecte, recherche), scopes sur tous les endpoints.
 
-## Étape 5 — Front Blazor
+## Étape 5 — Front Blazor (ADR-015)
 
 - Chat en streaming ; composants de réponse typés (comparatif de prix, offres à valider, plan de collecte, anomalies, historique) ; boutons d'action qui appellent directement les commandes ; validation des actions en attente.
+- 5a — fait : `src/Web/Pricely.Web` (Interactive Server, OIDC côté serveur avec `pricely-web`, jetons gardés sur le serveur), lancé par l'AppHost ; Assistant (événements SSE, pastilles d'outils, composants typés, carte « Action proposée » avec validation / refus, conversations, panneau de contexte) ; fiche produit (offres, médiane, historique sur 1 mois / 3 mois / 1 an, prix signalés, collecte) ; recherche de produits.
+- 5b : offres à valider (référence vs page observée, confirmer / rejeter), profils de collecte, IA et coûts, finitions mobile (badge « Offres à valider », comparatif compacté).
 
 ## Étape 6 — Collecte par l'agent
 

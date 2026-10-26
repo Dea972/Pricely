@@ -1,0 +1,22 @@
+<div class="card">
+    <div class="card-header">
+        <div class="eyebrow">Enseignes suivies</div>
+        <span class="small muted">@Merchants.Count(m => m.IsActive) active(s)</span>
+    </div>
+    <ul class="result-list">
+        @foreach (MerchantDto merchant in Merchants)
+        {
+            <li>
+                <ExternalLink Address="@merchant.Website">
+                    <strong>@merchant.Name</strong>
+                    <span class="small muted">@(merchant.IsActive ? "Active" : "Désactivée")</span>
+                </ExternalLink>
+            </li>
+        }
+    </ul>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<MerchantDto> Merchants { get; set; } = [];
+}

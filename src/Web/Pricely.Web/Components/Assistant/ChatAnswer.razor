@@ -1,0 +1,36 @@
+<article class="answer" aria-label="Réponse de l'assistant" aria-busy="@(!Answer.IsComplete)">
+    <ToolChips Tools="Answer.Tools" />
+
+    @if (!string.IsNullOrWhiteSpace(Answer.Text))
+    {
+        <p class="answer-text">@Answer.Text</p>
+    }
+
+    @foreach (ToolOutput output in Answer.Outputs)
+    {
+        <ToolResultView @key="output.CallId" Output="output" />
+    }
+
+    @foreach (ProposedAction action in Answer.Actions)
+    {
+        <ProposedActionCard @key="action.ActionId" Action="action" OnDecided="OnActionDecided" />
+    }
+
+    @if (Answer.Error is not null)
+    {
+        <div class="alert alert-warn" role="alert">@Answer.Error</div>
+    }
+
+    @if (!Answer.IsComplete)
+    {
+        <p class="typing" role="status">L'assistant travaille…</p>
+    }
+</article>
+
+@code {
+    [Parameter, EditorRequired]
+    public AgentEntry Answer { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<ProposedAction> OnActionDecided { get; set; }
+}

@@ -1,0 +1,40 @@
+<div class="card">
+    <div class="card-header">
+        <div>
+            <div class="eyebrow">Plan de collecte</div>
+            <div><strong>@Plan.Product.Name</strong></div>
+            <div class="small muted">@Plan.Product.Brand</div>
+        </div>
+        <a class="btn btn-secondary btn-small" href="/products/@Plan.Product.ProductId">Ouvrir la fiche</a>
+    </div>
+    <div class="card-body" style="display: flex; flex-direction: column; gap: 12px">
+        <div>
+            <div class="small muted">Enseignes, par priorité</div>
+            @if (Plan.Merchants.Count == 0)
+            {
+                <div>Aucune enseigne active dans le profil de collecte.</div>
+            }
+            else
+            {
+                <ol style="margin: 4px 0 0; padding-left: 20px">
+                    @foreach (CollectionPlanMerchantDto merchant in Plan.Merchants.OrderBy(m => m.Priority))
+                    {
+                        <li>@merchant.Name <span class="small muted">@merchant.Website.Host</span></li>
+                    }
+                </ol>
+            }
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Plan.Instructions))
+        {
+            <div>
+                <div class="small muted">Instructions de collecte</div>
+                <p style="margin: 4px 0 0; white-space: pre-line">@Plan.Instructions</p>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public CollectionPlanDto Plan { get; set; } = default!;
+}

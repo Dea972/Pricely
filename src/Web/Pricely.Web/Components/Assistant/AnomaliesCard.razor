@@ -1,0 +1,34 @@
+@inject TimeProvider Clock
+
+<div class="card card-warn">
+    <div class="card-header">
+        <div class="eyebrow">Prix signalés</div>
+        <span class="small muted">relevés signalés par le garde-fou de prix</span>
+    </div>
+    @if (Anomalies.Count == 0)
+    {
+        <div class="card-body muted">Aucun prix signalé.</div>
+    }
+    else
+    {
+        <div class="card-body" style="display: flex; flex-direction: column; gap: 10px">
+            @foreach (PriceAnomalyDto anomaly in Anomalies)
+            {
+                <div class="flag">
+                    <div><strong>@anomaly.MerchantName — @Format.Price(anomaly.Amount, anomaly.Currency)</strong></div>
+                    <div class="small muted">
+                        <a href="/products/@anomaly.ProductId">@anomaly.ProductName</a> · relevé @Format.Ago(anomaly.ObservedOnUtc, Clock.GetUtcNow())
+                    </div>
+                    <div style="margin-top: 8px">
+                        <ExternalLink Address="@anomaly.ProductPage" Class="btn btn-secondary btn-small" TextOnlyWhenValid="true">Voir la page</ExternalLink>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<PriceAnomalyDto> Anomalies { get; set; } = [];
+}

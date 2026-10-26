@@ -1,0 +1,32 @@
+<div class="card">
+    <div class="card-header">
+        <div class="eyebrow">@Title</div>
+        <span class="small muted">@Products.Count produit(s)</span>
+    </div>
+    @if (Products.Count == 0)
+    {
+        <div class="card-body muted">Aucun produit trouvé.</div>
+    }
+    else
+    {
+        <ul class="result-list">
+            @foreach (ProductDto product in Products)
+            {
+                <li>
+                    <a href="/products/@product.Id">
+                        <span><strong>@product.Name</strong><br /><span class="small muted">@product.Brand</span></span>
+                        <span class="small muted mono">@(product.Gtin ?? product.ManufacturerReference)</span>
+                    </a>
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ProductDto> Products { get; set; } = [];
+
+    [Parameter]
+    public string Title { get; set; } = "Produits";
+}

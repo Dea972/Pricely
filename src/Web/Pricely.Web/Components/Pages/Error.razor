@@ -1,0 +1,22 @@
+@page "/error"
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+
+<PageTitle>Erreur — Pricely</PageTitle>
+
+<div class="page">
+    <h1>Une erreur est survenue</h1>
+    <p class="muted">La requête n'a pas abouti. Réessaie dans un instant.</p>
+    @if (RequestId is not null)
+    {
+        <p class="muted">Identifiant de la requête : <code class="mono">@RequestId</code></p>
+    }
+    <a class="btn btn-secondary" href="/">Revenir à l'assistant</a>
+</div>
+
+@code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    private string? RequestId => System.Diagnostics.Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
+}

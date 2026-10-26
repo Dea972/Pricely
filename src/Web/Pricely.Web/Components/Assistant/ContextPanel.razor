@@ -1,0 +1,91 @@
+@inject ProductLookup Products
+
+<aside class="context" aria-label="Contexte de la conversation">
+    <div>
+        <h2>Produit en cours</h2>
+        @if (_product is not null)
+        {
+            <a href="/products/@_product.Id"><strong>@_product.Name</strong></a>
+            <div class="small muted">@_categoryPath</div>
+        }
+        else
+        {
+            <div class="small muted">Aucun produit pour l'instant.</div>
+        }
+    </div>
+
+    <div>
+        <h2>Outils utilisés</h2>
+        @if (Tools.Count == 0)
+        {
+            <div class="small muted">Aucun outil pour l'instant.</div>
+        }
+        else
+        {
+            <ul class="tool-list">
+                @foreach (ToolUse tool in Tools)
+                {
+                    <li>
+                        <span>@tool.Name</span>
+                        @if (tool.IsReadOnly)
+                        {
+                            <span class="muted">lecture</span>
+                        }
+                        else
+                        {
+                            <span style="color: var(--warn)">à valider</span>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+
+    <div>
+        <h2>Consommation</h2>
+        @if (Usage is not null)
+        {
+            <div class="tile-grid">
+                <div class="tile"><div class="small muted">Appels LLM</div><div class="mono">@Format.Count(Usage.Calls)</div></div>
+                <div class="tile"><div class="small muted">Coût</div><div class="mono">@Format.Cost(Usage.Cost)</div></div>
+            </div>
+            <p class="small muted" style="margin: 8px 0 0">Assistant, aujourd'hui (UTC), toutes conversations · modèle ciblé dans IA et coûts</p>
+        }
+        else
+        {
+            <div class="small muted">Pas encore d'appel aujourd'hui.</div>
+        }
+    </div>
+</aside>
+
+@code {
+    private ProductDto? _product;
+    private string? _categoryPath;
+
+    [Parameter]
+    public Guid? ProductId { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<ToolUse> Tools { get; set; } = [];
+
+    [Parameter]
+    public AgentUsageDto? Usage { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ProductId == _product?.Id)
+        {
+            return;
+        }
+
+        Guid? productId = ProductId;
+        ProductDto? product = productId is Guid id ? await Products.FindAsync(id) : null;
+        string? categoryPath = product is null ? null : await Products.CategoryPathAsync(product.ProductCategoryId);
+
+        // The conversation may have moved to another product in the meantime.
+        if (productId == ProductId)
+        {
+            (_product, _categoryPath) = (product, categoryPath);
+        }
+    }
+}

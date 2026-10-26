@@ -1,0 +1,24 @@
+@* A link to a page of a merchant (collected data): rendered only for an http(s) address, plain text otherwise. *@
+@if (Format.ExternalHref(Address) is string href)
+{
+    <a class="@Class" href="@href" target="_blank" rel="noopener noreferrer">@ChildContent</a>
+}
+else if (!TextOnlyWhenValid)
+{
+    <span>@ChildContent</span>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public string? Address { get; set; }
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>For a « Voir la page » button: nothing at all without a valid address.</summary>
+    [Parameter]
+    public bool TextOnlyWhenValid { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

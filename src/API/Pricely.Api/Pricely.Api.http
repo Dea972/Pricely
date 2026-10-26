@@ -1,5 +1,5 @@
 @Pricely.Api_HostAddress = http://localhost:5136
-@Keycloak = http://localhost:8080
+@Keycloak = http://localhost:8180
 
 ### Access token of the development user (realm pricely, client pricely-dev, password grant: local development only)
 # @name token
