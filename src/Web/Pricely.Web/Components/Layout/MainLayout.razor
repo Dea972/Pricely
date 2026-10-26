@@ -1,4 +1,6 @@
 @inherits LayoutComponentBase
+@implements IDisposable
+@inject ReviewQueue Reviews
 
 <div class="shell">
     <header class="mobile-header">
@@ -6,6 +8,13 @@
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
         </button>
         <Logo />
+        <a href="/review" class="mobile-shortcut" aria-label="Offres à valider@(Reviews.Count > 0 ? $" : {Reviews.Count} en attente" : null)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"></path></svg>
+            @if (Reviews.Count > 0)
+            {
+                <span class="badge badge-count" aria-hidden="true">@Reviews.Count</span>
+            }
+        </a>
     </header>
 
     <NavMenu Open="_menuOpen" OnNavigate="CloseMenu" />
@@ -22,6 +31,16 @@
 
 @code {
     private bool _menuOpen;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Reviews.Changed += OnReviewsChanged;
+        await Reviews.RefreshAsync();
+    }
+
+    public void Dispose() => Reviews.Changed -= OnReviewsChanged;
+
+    private void OnReviewsChanged() => InvokeAsync(StateHasChanged);
 
     private void ToggleMenu() => _menuOpen = !_menuOpen;
 

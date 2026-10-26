@@ -4,6 +4,10 @@
     <div class="card-header">
         <div class="eyebrow">Offres à valider</div>
         <span class="badge badge-pending">● @Offers.Count à valider</span>
+        @if (Offers.Count > 0)
+        {
+            <a class="btn btn-secondary btn-small" href="/review">Valider les offres</a>
+        }
     </div>
     @if (Offers.Count == 0)
     {

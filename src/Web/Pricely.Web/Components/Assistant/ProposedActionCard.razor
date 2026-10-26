@@ -21,6 +21,11 @@
                 <dd>@(_plan.Merchants.Count == 0 ? "Aucune enseigne active" : string.Join(", ", _plan.Merchants.OrderBy(m => m.Priority).Select(m => m.Name)))</dd>
             </div>
         }
+        else if (_offer is not null)
+        {
+            <div><dt>Produit</dt><dd>@_offer.ProductName</dd></div>
+            <div><dt>Enseigne</dt><dd>@_offer.MerchantName · <span class="mono">@Format.Price(_offer.LatestAmount, _offer.LatestCurrency)</span></dd></div>
+        }
         else if (_productName is not null)
         {
             <div><dt>Produit</dt><dd>@_productName</dd></div>

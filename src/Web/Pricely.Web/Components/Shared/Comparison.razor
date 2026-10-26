@@ -1,0 +1,18 @@
+@* The comparison of the matching policy (from the API): a label with the sign, never a colour alone. *@
+@switch (Same)
+{
+    case true:
+        <span class="badge badge-confirmed">✓ identique</span>
+        break;
+    case false:
+        <span class="badge badge-pending">✗ différente</span>
+        break;
+    default:
+        <span class="small muted">non comparé</span>
+        break;
+}
+
+@code {
+    [Parameter]
+    public bool? Same { get; set; }
+}

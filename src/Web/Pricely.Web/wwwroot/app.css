@@ -286,5 +286,54 @@ dl.facts dd { margin: 0; }
 .result-list a { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 18px; color: var(--text); text-decoration: none; }
 .result-list a:hover { background: var(--surface-2); }
 
+/* Offers to review, collection profiles, AI and costs */
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.nav-badge { margin-left: auto; }
+.mobile-shortcut { margin-left: auto; position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 44px; height: 44px; color: inherit; text-decoration: none; }
+.review-sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.review-side { padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+.review-side.observed { background: var(--surface-2); border-left: 1px solid var(--separator); }
+dl.facts.compact { grid-template-columns: 1fr; gap: 6px; }
+dl.facts.compact > div { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+dl.facts.compact dt { min-width: 110px; }
+.ai-opinion { border-top: 1px solid var(--separator); background: var(--accent-bg); color: var(--accent-text); font-size: 14px; }
+.review-card .action-buttons { border-top: 1px solid var(--separator); }
+.tree { list-style: none; margin: 0; padding: 8px 0; }
+.tree a { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 0 18px; color: var(--text); text-decoration: none; }
+.tree a:hover { background: var(--surface-2); }
+.tree a[aria-current="page"] { background: var(--accent-bg); color: var(--accent-text); font-weight: 500; }
+.profile-detail { display: flex; flex-direction: column; gap: 20px; }
+.profile-section { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.profile-section + .profile-section { border-top: 1px solid var(--separator); }
+.profile-section h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.merchant-order { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 4px; width: 100%; }
+.merchant-order li { min-height: 32px; }
+.merchant-order li > span:first-child { margin-right: 8px; }
+.order-buttons { display: inline-flex; gap: 2px; }
+.order-buttons .icon-button { color: var(--text-2); }
+.order-buttons .icon-button:disabled { opacity: 0.35; cursor: default; }
+.textarea { width: 100%; padding: 10px 12px; resize: vertical; }
+.prompt-block + .prompt-block { border-top: 1px solid var(--separator); }
+.prompt-text { margin: 6px 0 0; white-space: pre-line; font-family: var(--mono); font-size: 13px; }
+.bars { list-style: none; margin: 0; padding: 8px 18px 16px; display: flex; flex-direction: column; gap: 6px; }
+.bars li { display: grid; grid-template-columns: 64px 1fr auto; align-items: center; gap: 10px; }
+.bar { height: 10px; border-radius: 999px; background: var(--bg); overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--series-1); }
+.price-form { border-top: 1px solid var(--separator); display: flex; flex-direction: column; gap: 12px; }
+.price-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.price-fields label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-2); }
+
+/* Mobile: the comparison becomes a list (docs/design/mockups/mobile.html) */
+.compact-list { display: none; list-style: none; margin: 0; padding: 0; }
+.compact-list li { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--separator); }
+.compact-list li.best { background: var(--accent-bg); }
+.compact-list li.flagged { background: var(--warn-bg); }
+
+@media (max-width: 640px) {
+    .wide-only { display: none; }
+    .compact-list { display: block; }
+    .review-side.observed { border-left: 0; border-top: 1px solid var(--separator); }
+}
+
 #blazor-error-ui { display: none; position: fixed; bottom: 0; left: 0; right: 0; padding: 12px 20px; background: var(--warn-bg); color: var(--warn-text); border-top: 1px solid var(--warn-border); z-index: 1000; }
 #blazor-error-ui .reload { margin-left: 12px; }

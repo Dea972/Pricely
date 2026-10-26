@@ -1,0 +1,147 @@
+@page "/ai"
+@inherits ApiComponentBase
+
+<PageTitle>IA et coûts — Pricely</PageTitle>
+
+<div class="page">
+    <div class="page-head">
+        <div>
+            <h1>IA et coûts</h1>
+            <p class="muted" style="margin: 4px 0 0">Journal des appels LLM (module AiEngine), coût figé au tarif du jour UTC.</p>
+        </div>
+        <div class="segmented" role="group" aria-label="Période">
+            @foreach (UsagePeriod period in Periods)
+            {
+                <button type="button" aria-pressed="@(period == _period ? "true" : "false")" @onclick="() => SelectAsync(period)">@Label(period)</button>
+            }
+        </div>
+    </div>
+
+    <ApiProblemAlert Problem="Problem" />
+
+    @if (_summary is not null)
+    {
+        <div class="stats">
+            <div class="stat"><div class="small muted">Coût total</div><div class="stat-value">@Format.Cost(_summary.Cost)</div><div class="small muted">@Label(_period)</div></div>
+            <div class="stat"><div class="small muted">Appels</div><div class="stat-value">@Format.Count(_summary.Calls)</div><div class="small muted">jetons entrée / sortie : <span class="mono">@Format.Count(_summary.InputTokens) / @Format.Count(_summary.OutputTokens)</span></div></div>
+            <div class="stat @(_summary.FailedCalls > 0 ? "stat-warn" : null)"><div class="small muted">Échecs</div><div class="stat-value">@Format.Count(_summary.FailedCalls)</div></div>
+            <div class="stat @(_summary.UnpricedCalls > 0 ? "stat-warn" : null)"><div class="small muted">Appels sans tarif</div><div class="stat-value">@Format.Count(_summary.UnpricedCalls)</div><div class="small muted">modèle absent du catalogue ou sans tarif ce jour-là</div></div>
+        </div>
+    }
+
+    <div class="row">
+        <div class="card grow-1">
+            <div class="card-header"><div class="eyebrow">Coût par jour</div></div>
+            @if (_daily is { Count: > 0 })
+            {
+                decimal max = Math.Max(_daily.Max(d => d.Cost), 0.0001m);
+                <ul class="bars">
+                    @foreach (DailyUsageDto day in _daily)
+                    {
+                        <li>
+                            <span class="small">@day.Day.ToString("d MMM", Format.French)</span>
+                            <span class="bar" aria-hidden="true"><span style="width: @Percent(day.Cost, max)"></span></span>
+                            <span class="num small">@Format.Cost(day.Cost)</span>
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <div class="card-body muted">Aucun appel sur la période.</div>
+            }
+        </div>
+
+        <div class="card grow-2">
+            <div class="card-header">
+                <div>
+                    <div class="eyebrow">Fonctionnalités IA</div>
+                    <div class="small muted">Modèle ciblé par fonctionnalité ; la cible « default » s'applique sinon.</div>
+                </div>
+            </div>
+            <div class="table-scroll">
+                <table class="data">
+                    <thead>
+                        <tr>
+                            <th scope="col">Fonctionnalité</th>
+                            <th scope="col">Modèle ciblé</th>
+                            <th scope="col" class="num">Coût</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (AiFeatureDto feature in _features)
+                        {
+                            <tr>
+                                <td><div class="mono">@feature.Code</div><div class="small muted">@feature.Label</div></td>
+                                <td>
+                                    <label for="target-@feature.Code" class="visually-hidden">Modèle ciblé par @feature.Code</label>
+                                    <select id="target-@feature.Code" class="field" value="@(feature.OwnModelId?.ToString() ?? string.Empty)" disabled="@_saving" @onchange="e => TargetAsync(feature, e.Value as string)">
+                                        <option value="">@NoTarget(feature)</option>
+                                        @foreach (AiModelDto model in _models)
+                                        {
+                                            <option value="@model.Id">@model.ProviderModelId</option>
+                                        }
+                                    </select>
+                                </td>
+                                <td class="num">@FeatureCost(feature.Code)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><div class="eyebrow">Catalogue des modèles</div></div>
+        <div class="table-scroll">
+            <table class="data">
+                <thead>
+                    <tr>
+                        <th scope="col">Modèle</th>
+                        <th scope="col" class="num">Entrée / 1 M</th>
+                        <th scope="col" class="num">Sortie / 1 M</th>
+                        <th scope="col">Depuis</th>
+                        <th scope="col"><span class="visually-hidden">Tarif</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (AiModelDto model in _models)
+                    {
+                        <tr class="@(model.InputPerMillion is null ? "flagged" : null)">
+                            <td><div class="mono">@model.ProviderModelId</div><div class="small muted">@model.Provider</div></td>
+                            @if (model.InputPerMillion is null)
+                            {
+                                <td colspan="3"><span class="badge badge-pending">⚠ aucun tarif : appels non chiffrés</span></td>
+                            }
+                            else
+                            {
+                                <td class="num">@Format.Usd(model.InputPerMillion)</td>
+                                <td class="num">@Format.Usd(model.OutputPerMillion)</td>
+                                <td class="muted">@(model.PriceValidFrom is DateTime from ? Format.Date(from) : "—")</td>
+                            }
+                            <td><button type="button" class="btn btn-secondary btn-small" @onclick="() => EditPrice(model)">Saisir un tarif</button></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @if (_priceModel is not null)
+        {
+            <form class="card-body price-form" @onsubmit="SavePriceAsync">
+                <div class="small"><strong>Tarif de @_priceModel.ProviderModelId</strong> <span class="muted">(USD par million de jetons, à partir d'un jour UTC)</span></div>
+                <div class="price-fields">
+                    <label>Depuis <input class="field" type="date" @bind="_price.ValidFrom" /></label>
+                    <label>Entrée <input class="field" type="number" min="0" step="0.0001" @bind="_price.InputPerMillion" /></label>
+                    <label>Entrée en cache <input class="field" type="number" min="0" step="0.0001" @bind="_price.CachedInputPerMillion" /></label>
+                    <label>Écriture du cache <input class="field" type="number" min="0" step="0.0001" @bind="_price.CacheWritePerMillion" /></label>
+                    <label>Sortie <input class="field" type="number" min="0" step="0.0001" @bind="_price.OutputPerMillion" /></label>
+                </div>
+                <div class="action-buttons">
+                    <button type="submit" class="btn btn-primary" disabled="@_saving">Enregistrer le tarif</button>
+                    <button type="button" class="btn btn-secondary" @onclick="() => _priceModel = null">Annuler</button>
+                </div>
+            </form>
+        }
+    </div>
+</div>

@@ -72,8 +72,24 @@ public static class Format
             _ => status
         };
 
+    /// <summary>How sure the collector is that it is the same product (0 to 1): « forte, 95 % ».</summary>
+    public static string Similarity(decimal similarity)
+    {
+        string level = similarity switch
+        {
+            >= 0.8m => "forte",
+            >= 0.5m => "moyenne",
+            _ => "faible"
+        };
+
+        return level + ", " + Math.Round(similarity * 100).ToString("N0", French) + " %";
+    }
+
     /// <summary>Cost in USD (AiEngine).</summary>
     public static string Cost(decimal cost) => cost.ToString("N4", French) + " $";
+
+    /// <summary>A price of the model catalogue (USD per million tokens).</summary>
+    public static string Usd(decimal? amount) => amount is decimal value ? value.ToString("N2", French) + " $" : "—";
 
     public static string Count(long value) => value.ToString("N0", French);
 

@@ -14,6 +14,8 @@ namespace Pricely.Web.Components.Assistant;
 public partial class ProposedActionCard
 {
     private CollectionPlanDto? _plan;
+    private PendingOfferDto? _offer;
+    private Guid? _offerId;
     private string? _productName;
     private Guid? _planProductId;
     private bool _busy;
@@ -31,14 +33,31 @@ public partial class ProposedActionCard
     [Inject]
     private ProductLookup Products { get; set; } = default!;
 
+    [Inject]
+    private ReviewQueue Reviews { get; set; } = default!;
+
     private IEnumerable<JsonProperty> Arguments =>
         Action.Arguments.ValueKind == JsonValueKind.Object ? Action.Arguments.EnumerateObject() : [];
 
-    private string ExecutedSummary =>
-        Action.Result is JsonElement result && ToolCatalog.Read<CollectResultDto>(result) is { } collected
-            && string.Equals(Action.ToolName, ToolCatalog.CollectProductOffers, StringComparison.Ordinal)
-            ? $"{collected.CollectedCount} offre(s) collectée(s) · {collected.ProposedCount} à valider · {collected.ObservedCount} relevé(s) · {collected.AnomalyCount} prix signalé(s)"
-            : "L'action a été exécutée.";
+    private string ExecutedSummary
+    {
+        get
+        {
+            if (Action.Result is not JsonElement result)
+            {
+                return "L'action a été exécutée.";
+            }
+
+            if (string.Equals(Action.ToolName, ToolCatalog.CollectProductOffers, StringComparison.Ordinal)
+                && ToolCatalog.Read<CollectResultDto>(result) is { } collected)
+            {
+                return $"{collected.CollectedCount} offre(s) collectée(s) · {collected.ProposedCount} à valider · {collected.ObservedCount} relevé(s) · {collected.AnomalyCount} prix signalé(s)";
+            }
+
+            // Other write tools answer with a sentence (« Offre confirmée. »).
+            return result.ValueKind == JsonValueKind.String ? result.GetString() ?? "L'action a été exécutée." : "L'action a été exécutée.";
+        }
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -55,6 +74,16 @@ public partial class ProposedActionCard
             // Without a plan (no preferred merchant yet), the product alone: it is not an error of the action itself.
             Problem = Problem?.IsSessionExpired == true ? Problem : null;
             _productName = _plan is null ? (await Products.FindAsync(id))?.Name : null;
+        }
+
+        // The offer to confirm or reject, while it waits for a review (display only).
+        Guid? offerId = ToolCatalog.IsOfferReview(Action.ToolName) ? ToolCatalog.OfferIdOf(Action.Arguments) : null;
+        if (offerId is Guid offer && _offerId != offer)
+        {
+            _offerId = offer;
+            IReadOnlyList<PendingOfferDto>? pending = await CallAsync(() => Api.GetOffersPendingReviewAsync(CancellationToken.None));
+            Problem = Problem?.IsSessionExpired == true ? Problem : null;
+            _offer = pending?.FirstOrDefault(o => o.OfferId == offer);
         }
     }
 
@@ -81,6 +110,11 @@ public partial class ProposedActionCard
             {
                 Action.Update(decided);
                 await OnDecided.InvokeAsync(Action);
+
+                if (ToolCatalog.IsOfferReview(Action.ToolName))
+                {
+                    await Reviews.RefreshAsync();
+                }
             }
             else if (Problem?.Exception is PricelyApiException refused)
             {

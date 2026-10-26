@@ -56,5 +56,5 @@
         <Composer Disabled="@(_view.IsRunning || _loading)" Suggestions="Suggestions" Prefill="@Prompt" OnSend="SendAsync" />
     </section>
 
-    <ContextPanel ProductId="_view.CurrentProductId" Tools="_view.ToolsUsed" Usage="_usage" />
+    <ContextPanel ProductId="_view.CurrentProductId" Tools="_view.ToolsUsed" Usage="_usage" SessionUsage="_sessionUsage" />
 </div>
