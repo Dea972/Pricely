@@ -58,7 +58,8 @@ Le code utilise la colonne « Code » (anglais). L'interface et les échanges ut
 | Code | Français | Définition |
 |---|---|---|
 | Tool | Outil | Capacité offerte aux agents (MCP et agent interne), fine, adossée à une requête ou une commande. |
-| `IAgentDefinition` | Agent | Agent de Pricely (dans `src/Agents`) : instructions, fonctionnalité IA, tools autorisés. Ex. `assistant`. |
+| `AgentDefinition` | Agent | Agent déclaré par l'application (dans `src/Agents`) et exécuté par le module Agentic : instructions, fonctionnalité IA, tools autorisés. Ex. `assistant`. |
+| `AgentActivity` | Activité d'agent | Entrée du journal d'AiEngine : un tool exécuté pour un agent, ou une décision sur une action proposée. |
 | `AgentConversation` | Conversation | Échanges d'un utilisateur avec un agent, rejouables ; visibles par leur seul propriétaire. |
 | `PendingAction` | Action proposée | Appel d'un tool d'écriture par un agent, en attente de la décision de l'utilisateur ; exécutée seulement après « Valider ». |
 | `ReadOnly` / `Destructive` | Lecture / action sensible | Annotations d'un tool ; un tool qui n'est pas en lecture seule exige une approbation de l'agent interne. |

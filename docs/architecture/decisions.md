@@ -134,7 +134,7 @@ Conséquences et choix :
 
 ## ADR-013 — Agents : dossier `src/Agents`, socle commun, approbation des écritures
 
-**Statut** : acceptée (2026-10-26), décisions du propriétaire du projet (dossier `src/Agents`, socle + un projet par agent, persistance dans PostgreSQL). Met en œuvre l'ADR-008.
+**Statut** : acceptée (2026-10-26), décisions du propriétaire du projet (dossier `src/Agents`, socle + un projet par agent, persistance dans PostgreSQL). Met en œuvre l'ADR-008. **Emplacement et structure remplacés par l'ADR-014** (le socle devient le module `Agentic`) ; les règles d'approbation, de concurrence et de notes restent valables.
 
 - **Emplacement** : les agents ne sont pas un module. Ils vivent dans `src/Agents`, au même niveau que `src/API` : `Pricely.Agents.Core` (socle) et un projet par agent (`Pricely.Agents.Assistant`, plus tard l'agent de collecte). Un agent est un `IAgentDefinition` (nom de route, `AiFeature`, instructions, noms des tools autorisés) enregistré par `AddAgent<T>()`.
 - **Frontières** : les agents ne référencent aucun module. Ils utilisent les tools des modules (ADR-009), dont les assemblies sont passées par la composition (`Pricely.Sdk`), comme pour le serveur MCP. Vérifié par `AgentsBoundaryTests`.
@@ -148,6 +148,20 @@ Conséquences et choix :
 - **Endpoints** : `POST agents/{agent}/messages` (server-sent events : `conversation`, `tool_call`, `tool_result`, `action_proposed`, `text`, `error`, `done`), `GET agents/conversations`, `GET agents/conversations/{id}`, `POST agents/actions/{id}/approve|reject`.
 - **Scopes (comble l'écart de l'ADR-011)** : les lectures des modules exigent `pricely.read`, les mutations `pricely.write`, la confirmation et le rejet d'offres `pricely.review`.
 - **Utilisateur de développement** : son identifiant est fixé dans le realm (`sub` stable à chaque réimport de Keycloak). Si un e-mail appartient déjà à une autre identité, l'utilisateur n'est pas rattaché automatiquement (`Users.EmailAlreadyLinked`, pas de permission ni d'accès aux agents) : c'est une décision d'administrateur.
+
+## ADR-014 — Module générique Agentic ; journal des agents dans AiEngine
+
+**Statut** : acceptée (2026-10-26), décisions du propriétaire du projet (nom `Agentic`, contrat des agents dans Common, événements outils + décisions). Remplace la partie « emplacement et structure » de l'ADR-013 : le socle `src/Agents/Pricely.Agents.Core` n'existe plus.
+
+- **Le socle est un module** : `Pricely.Modules.Agentic` (Domain, Application, Infrastructure, Presentation ; schéma `agentic` ; outbox), conçu pour être repris tel quel dans un autre projet. Il ne connaît **aucun autre module ni aucun agent** (`ModuleBoundaryTests`, dans les deux sens).
+- **Contrats dans Common** (`Common.Application.AI.Agents`) : `AgentDefinition` (nom, `AiFeature`, instructions, noms des tools) déclaré par `AddAgent`, comme une `AiFeature` ; `AgentTool` (nom, lecture seule, scope d'approbation, `AIFunction`) fourni par `AddAgentTools`. Pricely convertit les méthodes `[McpServerTool]` des modules (`McpServerExtensions.ToAgentTools`) dans le Sdk. L'utilisateur courant passe par `ICurrentUser` (Common.Application, implémenté dans Common.Infrastructure). Le scope d'approbation par défaut est une option du module (`Agentic:DefaultApprovalScope`, `pricely.write` dans Pricely), un tool peut déclarer le sien (`[ToolScope]`).
+- **Agents de Pricely** : `src/Agents/Pricely.Agents.<Nom>` ne référencent que `Common.Application` (`AgentsBoundaryTests`). Un nouvel agent : un `AgentDefinition` et un `AddAgent`, rien dans le module.
+- **Cas d'usage** : `StartTurnCommand` (vérifie, crée la conversation), `RunTurnStreamRequest` (`IStreamRequest` MediatR : le tour en événements), `ApproveActionCommand`, `RejectActionCommand`, requêtes Dapper `GetConversationsQuery` / `GetConversationQuery`. Les règles de l'ADR-013 (approbation enregistrée avant exécution sous `xmin`, notes pour le modèle en tour utilisateur, tours fermés) sont conservées.
+- **Journal dans AiEngine, par les ports de Common** :
+  - chaque appel du modèle reste un `LlmCalledIntegrationEvent` (passerelle `ILlmGateway`), qui porte désormais `AgentName` (session = conversation) ;
+  - nouveau `AiToolInvokedIntegrationEvent` (Common) pour chaque tool exécuté pour un agent (pendant un tour ou après validation), publié directement sur le bus comme `LlmCalled` (statistique, perte acceptée) ;
+  - nouveau `AiActionDecidedIntegrationEvent` (Common) pour chaque décision (`Executed`, `Failed`, `Rejected`), publié par l'outbox du module (événement de domaine `PendingActionDecidedDomainEvent`) : livraison garantie.
+  - AiEngine les consomme par son inbox dans le journal `AgentActivity` (schéma `aiengine`, table `agent_activities`) et expose `aiengine/usage/by-agent` et `aiengine/usage/by-tool`. AiEngine ne dépend pas du module Agentic (les événements sont dans Common).
 
 ## Décisions ouvertes
 

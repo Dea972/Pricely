@@ -19,8 +19,8 @@ Lire avant de coder : `docs/architecture/ubiquitous-language.md`, `docs/architec
 ```
 aspire/                        AppHost (PostgreSQL, Keycloak) et ServiceDefaults (OpenTelemetry, health checks)
 src/API/Pricely.Api            Host HTTP
-src/Agents/                    Agents (ADR-013) : Pricely.Agents.Core (boucle, conversations, actions en attente, schéma agents)
-                               et un projet par agent (Pricely.Agents.Assistant)
+src/Agents/                    Agents de Pricely (ADR-014) : un projet par agent (Pricely.Agents.Assistant), déclarations sur
+                               Common uniquement ; ils sont exécutés par le module Agentic
 src/Adapters/Pricely.Sdk       Composition : AddPricelyAsync() enregistre tous les modules, MapPricelyEndpoints() sous /api
 src/Common/                    Briques partagées : Domain (Entity, Result, Error, DomainEvent), Application (ICommand, IQuery,
                                behaviors, IEventBus, IDbConnectionFactory, IDateTimeProvider, AI : ILlmGateway, AiFeature),
@@ -39,7 +39,8 @@ test/Pricely.Common.UnitTests  Passerelle LLM
 | Users | `User` | Profils, rôles, permissions métier (l'identité est portée par Keycloak, ADR-010) |
 | Catalog | `ProductCategory`, `Product` | Produits de référence (GTIN, marque, référence fabricant) et typologies (arbre de 3 niveaux max) |
 | Pricing | `Merchant`, `CollectionProfile`, `Offer`, `PriceObservation` | Enseignes, profils de collecte par typologie, offres, historique de prix, collecte |
-| AiEngine | `Model` (+ `ModelPrice`), `FeatureSetting`, `LlmCall` | Catalogue des modèles et tarifs, modèle ciblé par fonctionnalité IA, journal des appels LLM et coûts, statistiques d'usage |
+| AiEngine | `Model` (+ `ModelPrice`), `FeatureSetting`, `LlmCall`, `AgentActivity` | Catalogue des modèles et tarifs, modèle ciblé par fonctionnalité IA, journal des appels LLM et coûts, journal des tools et décisions des agents, statistiques d'usage |
+| Agentic | `AgentConversation`, `PendingAction` | Module générique (réutilisable, ne connaît aucun autre module) : exécute les agents déclarés (`AddAgent`) avec les tools fournis (`AddAgentTools`), conversations, actions d'écriture soumises à validation |
 
 Pricing ne lit jamais Catalog : il garde des read models locaux `CatalogProduct` / `CatalogCategory`, alimentés par les événements d'intégration de Catalog (inbox, upsert idempotent sur l'identifiant source).
 
@@ -113,7 +114,7 @@ Le build échoue sur le moindre avertissement (`TreatWarningsAsErrors`, `Analysi
 - **AiEngine** remplace `ILlmTargetResolver` (modèle ciblé par fonctionnalité, cible `default`), journalise les appels via son inbox (`LlmCall`, coût figé au tarif du jour UTC) et expose les statistiques (`aiengine/usage/*`). Les agents hébergés (Foundry, Anthropic Managed Agents) ne sont pas encore repris.
 - **Tools** : classes `public static` `[McpServerToolType]` dans `Presentation/Tools/` de chaque module, une méthode par tool, `[McpServerTool(Name = "snake_case", ReadOnly = ..., Destructive = ...)]` + `[Description]` en français, paramètres `ISender` et `CancellationToken` injectés, une requête ou commande par tool, `result.ValueOrToolError()`. Skill `add-agent-tool`. Jamais de logique métier dans un tool.
 - **MCP** : `AddPricelyMcpServer` (HTTP streamable, stateless) et `MapPricelyMcp` (`/mcp`, authentifié) dans `Pricely.Sdk` ; chaque module expose `ToolAssembly`.
-- **Agents** (ADR-013) : dans `src/Agents`, jamais dans un module, sans référence aux modules (tools passés par le Sdk). Un agent = un projet `Pricely.Agents.<Nom>` avec un `IAgentDefinition` (nom, `AiFeature`, instructions, noms de tools) enregistré par `AddAgent<T>()`. `LlmClient.AsChatClient` + `FunctionInvokingChatClient` ; un tool non `ReadOnly` devient une `PendingAction` que le propriétaire de la conversation valide (`agents/actions/{id}/approve`, scope requis), exécutée sans repasser par le modèle. `/mcp` n'expose que les tools `ReadOnly`.
+- **Agents** (ADR-013, ADR-014) : le module générique `Agentic` exécute les agents ; il ne référence aucun module et aucun module ne le référence. Un agent = un projet `src/Agents/Pricely.Agents.<Nom>` qui ne référence que `Common.Application` et déclare un `AgentDefinition` (nom, `AiFeature`, instructions, noms de tools) par `services.AddAgent(...)`. Les tools viennent de `AddAgentTools` (dans Pricely : `McpServerExtensions.ToAgentTools` sur les assemblies de tools, dans le Sdk) ; `[ToolScope]` fixe le scope d'approbation d'un tool d'écriture (défaut `Agentic:DefaultApprovalScope`). Un tool non `ReadOnly` devient une `PendingAction` que le propriétaire valide (`agents/actions/{id}/approve`), exécutée sans repasser par le modèle. Journal dans AiEngine : `LlmCalled` (avec `AgentName`), `AiToolInvoked` (bus direct), `AiActionDecided` (outbox du module). `/mcp` n'expose que les tools `ReadOnly`.
 - **Authentification** (ADR-010, ADR-011) : Keycloak (OAuth 2.1 / OIDC, realm `pricely` importé par l'AppHost) ; Pricely valide les jetons (`AddJwtBearer`, `Authentication:Authority` / `Audience`) et n'en émet pas. Scopes `pricely.read|write|review` = politiques d'autorisation du même nom (`PricelyScopes`, `.RequireAuthorization(PricelyScopes.Read)`) ; `/mcp` exige `pricely.read`. `sub` = `User.IdentityId`, le `User` est créé (rôle `Member`) à la première requête authentifiée (`ProvisionUserCommand`) ; `CustomClaimsTransformation` ajoute `pricely_user_id` et les permissions métier du module Users.
 
 ## Commandes
@@ -137,7 +138,7 @@ L'audit NuGet (transitif compris) est **bloquant** : ne jamais ajouter `NU190x` 
 ## État connu / à faire
 
 - L'API démarre (`Program.cs` : modules, authentification, `/api` et `/mcp`, validation de la DI) ; en Development elle applique les migrations des quatre modules au démarrage. L'AppHost lui-même (conteneurs Aspire) n'a pas encore été lancé ; la chaîne PostgreSQL 16 + Keycloak 26.6 + API, elle, a été exécutée à la main (migrations, jeton, endpoints, 9 tools MCP, outbox → inbox).
-- Migrations `Initial` de Catalog, Pricing, Users, AiEngine et Agents en place (`Database/Migrations`, `generated_code = true`). Hors Development, aucun mécanisme n'applique les migrations (décision ouverte).
+- Migrations de Catalog, Pricing, Users, AiEngine (`Initial` + `AddAgentActivity`) et Agentic en place (`Database/Migrations`, `generated_code = true`). Hors Development, aucun mécanisme n'applique les migrations (décision ouverte).
 - Endpoints des modules : lecture `PricelyScopes.Read`, mutation `PricelyScopes.Write`, confirmation / rejet d'offre `PricelyScopes.Review` (ADR-013). Un nouvel endpoint suit la même règle. Reste à filtrer les tools MCP par scope.
 - Le streaming du fournisseur LLM est émulé (pas de jetons au fil de l'eau) ; l'assistant n'a été testé qu'avec un faux modèle et contre l'API Anthropic sans clé valide.
 - Les tests d'intégration hérités (Users, solution) sont exclus de la solution : ils référencent un module `Ticketing` inexistant.
