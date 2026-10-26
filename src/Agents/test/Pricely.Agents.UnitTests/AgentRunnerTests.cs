@@ -128,6 +128,67 @@ public sealed class AgentRunnerTests
         (await runner.PrepareAsync("inconnu", null, "Salut", UserId, CancellationToken.None)).Error.Code.Should().Be("Conversations.UnknownAgent");
     }
 
+    [Fact]
+    public async Task Approve_ShouldBeRefused_ToAnotherUser()
+    {
+        using var chat = new ScriptedChatClient(ToolCalls(), Answer("Je propose la collecte."));
+        var probe = new ToolProbe();
+        await using ServiceProvider services = TestServices.Build(chat, new RecordingEventBus(), probe);
+        var proposed = (ActionProposedEvent)(await RunAsync(services, null, "Collecte")).Single(e => e.Type == AgentEvent.ActionProposed).Data;
+
+        using IServiceScope scope = services.CreateScope();
+        AgentActionService actions = scope.ServiceProvider.GetRequiredService<AgentActionService>();
+
+        (await actions.ApproveAsync(proposed.ActionId, Guid.NewGuid(), new HashSet<string> { PricelyScopes.Write }, CancellationToken.None))
+            .Error.Code.Should().Be("Actions.NotFound");
+        (await actions.RejectAsync(proposed.ActionId, Guid.NewGuid(), CancellationToken.None)).Error.Code.Should().Be("Actions.NotFound");
+        probe.Calls.Should().NotContain(c => c.StartsWith("write:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Decision_ShouldBeNotedAsAUserTurn_NotAsASystemInstruction()
+    {
+        using var chat = new ScriptedChatClient(ToolCalls(), Answer("Je propose la collecte."), Answer("C'est noté."));
+        await using ServiceProvider services = TestServices.Build(chat, new RecordingEventBus(), new ToolProbe());
+        List<AgentEvent> events = await RunAsync(services, null, "Collecte");
+        var proposed = (ActionProposedEvent)events.Single(e => e.Type == AgentEvent.ActionProposed).Data;
+
+        using (IServiceScope scope = services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<AgentActionService>().RejectAsync(proposed.ActionId, UserId, CancellationToken.None);
+        }
+
+        await RunAsync(services, ConversationId(events), "Et maintenant ?");
+
+        ChatMessage note = chat.Requests[2][^2];
+        note.Role.Should().Be(ChatRole.User);
+        note.Text.Should().Contain("refusé").And.StartWith("[Note de Pricely");
+        chat.Requests[2].Should().NotContain(m => m.Role == ChatRole.System);
+    }
+
+    [Fact]
+    public async Task Turn_StoppedByTheRoundTripLimit_ShouldNotLeaveUnansweredToolCalls()
+    {
+        ChatResponse[] loop = Enumerable.Range(0, AgentRunner.MaximumToolRoundTrips + 1)
+            .Select(i => new ChatResponse(new ChatMessage(
+                ChatRole.Assistant,
+                [new FunctionCallContent($"c{i}", "read_thing", new Dictionary<string, object?> { ["text"] = "x" })])))
+            .ToArray();
+        using var chat = new ScriptedChatClient(loop);
+        await using ServiceProvider services = TestServices.Build(chat, new RecordingEventBus(), new ToolProbe());
+
+        await RunAsync(services, null, "Boucle");
+
+        using IServiceScope scope = services.CreateScope();
+        AgentConversation conversation = await scope.ServiceProvider.GetRequiredService<AgentsDbContext>()
+            .Conversations.Include(c => c.Messages).SingleAsync();
+        var messages = conversation.Messages.Select(m => ChatMessageSerializer.Deserialize(m.Content)).ToList();
+        IEnumerable<string> calls = messages.SelectMany(m => m.Contents.OfType<FunctionCallContent>()).Select(c => c.CallId);
+        IEnumerable<string> results = messages.SelectMany(m => m.Contents.OfType<FunctionResultContent>()).Select(r => r.CallId);
+
+        results.Should().BeEquivalentTo(calls);
+    }
+
     private static ChatResponse ToolCalls() =>
         new(new ChatMessage(
             ChatRole.Assistant,

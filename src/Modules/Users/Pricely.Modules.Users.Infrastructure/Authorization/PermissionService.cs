@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Pricely.Common.Application.Authorization;
 using Pricely.Common.Application.Exceptions;
 using Pricely.Common.Domain;
@@ -43,14 +44,24 @@ internal sealed class PermissionService(ISender sender) : IPermissionService
                 return Result.Failure<PermissionsResponse>(provisioned.Error);
             }
         }
-        catch (PricelyException exception) when (exception.InnerException is DbUpdateException)
+        catch (PricelyException exception) when (exception.InnerException is DbUpdateException { InnerException: PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } })
         {
             // A concurrent first request may have created the user (unique identity id): read it back. Otherwise the
             // email already belongs to another identity (an account recreated in the identity provider): it is not
             // linked automatically, an administrator has to decide.
             Result<PermissionsResponse> created = await sender.Send(new GetUserPermissionsQuery(identity.IdentityId), cancellationToken);
 
-            return created.IsSuccess ? created : Result.Failure<PermissionsResponse>(UserErrors.EmailAlreadyLinked);
+            if (created.IsSuccess)
+            {
+                return created;
+            }
+
+            if (exception.InnerException.InnerException is PostgresException { ConstraintName: "ix_users_email" })
+            {
+                return Result.Failure<PermissionsResponse>(UserErrors.EmailAlreadyLinked);
+            }
+
+            throw;
         }
 
         return await sender.Send(new GetUserPermissionsQuery(identity.IdentityId), cancellationToken);

@@ -27,7 +27,7 @@ internal sealed class GetUserPermissions : IEndpoint
 
             return result.Match(Results.Ok, ApiResults.Problem);
         })
-        .RequireAuthorization() // ← Juste authentifié (pas besoin de permission spécifique pour voir ses propres permissions)
+        .RequireAuthorization(PricelyScopes.Read)
         .WithTags(Tags.Users)
         .WithName("GetUserPermissions")
         .WithDescription("Get current user permissions");

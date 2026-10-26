@@ -8,6 +8,12 @@ namespace Pricely.Agents.Core.Domain;
 /// </summary>
 public sealed class PendingAction : Entity
 {
+    public const int ToolNameMaxLength = 100;
+
+    public const int ScopeMaxLength = 50;
+
+    public const int ErrorMaxLength = 2000;
+
     private PendingAction()
     {
     }
@@ -57,7 +63,24 @@ public sealed class PendingAction : Entity
             ProposedOnUtc = utcNow
         };
 
-    public Result EnsureCanBeDecidedBy(Guid userId, IReadOnlySet<string> scopes)
+    /// <summary>
+    /// Approves the action. The caller saves this state before running the tool: a second approval then fails.
+    /// </summary>
+    public Result Approve(Guid userId, IReadOnlySet<string> scopes, DateTime utcNow)
+    {
+        Result allowed = EnsureCanBeDecidedBy(userId, scopes);
+        if (allowed.IsFailure)
+        {
+            return allowed;
+        }
+
+        Status = PendingActionStatus.Approved;
+        DecidedOnUtc = utcNow;
+
+        return Common.Domain.Result.Success();
+    }
+
+    private Result EnsureCanBeDecidedBy(Guid userId, IReadOnlySet<string> scopes)
     {
         if (UserId != userId)
         {
@@ -74,18 +97,26 @@ public sealed class PendingAction : Entity
             : Common.Domain.Result.Failure(PendingActionErrors.MissingScope(RequiredScope));
     }
 
-    public void MarkExecuted(string result, DateTime utcNow)
+    public void MarkExecuted(string result)
     {
+        EnsureApproved();
         Status = PendingActionStatus.Executed;
         Result = result;
-        DecidedOnUtc = utcNow;
     }
 
-    public void MarkFailed(string error, DateTime utcNow)
+    public void MarkFailed(string error)
     {
+        EnsureApproved();
         Status = PendingActionStatus.Failed;
-        Error = error;
-        DecidedOnUtc = utcNow;
+        Error = error.Length <= ErrorMaxLength ? error : error[..ErrorMaxLength];
+    }
+
+    private void EnsureApproved()
+    {
+        if (Status != PendingActionStatus.Approved)
+        {
+            throw new InvalidOperationException($"The action {Id} is {Status}, not approved.");
+        }
     }
 
     public Result Reject(Guid userId, DateTime utcNow)

@@ -12,7 +12,7 @@ using Pricely.Agents.Core.Infrastructure;
 namespace Pricely.Agents.Core.Database.Migrations
 {
     [DbContext(typeof(AgentsDbContext))]
-    [Migration("20261026094828_Initial")]
+    [Migration("20261026100653_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -56,6 +56,12 @@ namespace Pricely.Agents.Core.Database.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_conversations");
@@ -159,6 +165,12 @@ namespace Pricely.Agents.Core.Database.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_pending_actions");

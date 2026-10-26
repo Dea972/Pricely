@@ -5,6 +5,9 @@ public enum PendingActionStatus
     /// <summary>Proposed by the agent, waiting for the user's decision.</summary>
     Pending = 0,
 
+    /// <summary>Approved by the user; the tool is running (saved before the tool runs, so that it runs once).</summary>
+    Approved = 4,
+
     /// <summary>Approved and run successfully.</summary>
     Executed = 1,
 

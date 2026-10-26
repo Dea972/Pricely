@@ -23,7 +23,10 @@ public sealed class AgentsDbContext(DbContextOptions<AgentsDbContext> options) :
             builder.ToTable("conversations");
             builder.HasKey(c => c.Id);
             builder.Ignore(c => c.DomainEvents);
-            builder.Property(c => c.AgentName).HasMaxLength(50);
+            builder.Property(c => c.AgentName).HasMaxLength(AgentConversation.AgentNameMaxLength);
+
+            // Optimistic concurrency on xmin: two turns of the same conversation cannot both be saved.
+            builder.Property<uint>("Version").IsRowVersion();
             builder.Property(c => c.Title).HasMaxLength(AgentConversation.TitleMaxLength);
             builder.HasIndex(c => new { c.UserId, c.LastActivityOnUtc });
 
@@ -49,12 +52,15 @@ public sealed class AgentsDbContext(DbContextOptions<AgentsDbContext> options) :
             builder.ToTable("pending_actions");
             builder.HasKey(a => a.Id);
             builder.Ignore(a => a.DomainEvents);
-            builder.Property(a => a.ToolName).HasMaxLength(100);
+            builder.Property(a => a.ToolName).HasMaxLength(PendingAction.ToolNameMaxLength);
+
+            // Optimistic concurrency on xmin: an action is approved once, the tool runs once.
+            builder.Property<uint>("Version").IsRowVersion();
             builder.Property(a => a.Arguments).HasColumnType("text");
-            builder.Property(a => a.RequiredScope).HasMaxLength(50);
+            builder.Property(a => a.RequiredScope).HasMaxLength(PendingAction.ScopeMaxLength);
             builder.Property(a => a.Status).HasConversion<string>().HasMaxLength(20);
             builder.Property(a => a.Result).HasColumnType("text");
-            builder.Property(a => a.Error).HasMaxLength(2000);
+            builder.Property(a => a.Error).HasMaxLength(PendingAction.ErrorMaxLength);
             builder.HasIndex(a => a.ConversationId);
 
             // Same schema: an action belongs to its conversation.

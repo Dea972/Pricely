@@ -22,7 +22,8 @@ internal sealed class AgentRunner(
     AgentsDbContext dbContext,
     IDateTimeProvider dateTimeProvider,
     IServiceProvider services,
-    ILoggerFactory loggerFactory)
+    ILoggerFactory loggerFactory,
+    ILogger<AgentRunner> logger)
 {
     public const int MaximumToolRoundTrips = 10;
 
@@ -91,7 +92,7 @@ internal sealed class AgentRunner(
             AgentTool? tool = toolCatalog.Find(toolName);
             if (tool is not null)
             {
-                tools.Add(tool.IsReadOnly ? tool.Function : new ProposalFunction(tool, (t, arguments) => Propose(conversation, t, arguments, proposals)));
+                tools.Add(tool.IsReadOnly ? tool.Function : new ProposalFunction(tool, (t, arguments, ct) => ProposeAsync(conversation, t, arguments, proposals, ct)));
             }
         }
 
@@ -128,7 +129,8 @@ internal sealed class AgentRunner(
                 }
                 catch (Exception exception) when (exception is not OperationCanceledException)
                 {
-                    failure = exception.Message;
+                    logger.LogWarning(exception, "The turn of conversation {ConversationId} failed", conversation.Id);
+                    failure = "Le modèle n'a pas pu répondre. Réessaie dans un instant.";
                     break;
                 }
 
@@ -146,12 +148,27 @@ internal sealed class AgentRunner(
             yield return new AgentEvent(AgentEvent.Error, new { code = "Agents.ModelFailed", message = failure });
         }
 
-        foreach (ChatMessage produced in updates.ToChatResponse().Messages)
+        foreach (ChatMessage produced in CloseUnansweredToolCalls(updates.ToChatResponse().Messages))
         {
             conversation.Append(ChatMessageSerializer.ToRole(produced.Role), ChatMessageSerializer.Serialize(produced), dateTimeProvider.UtcNow);
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        // Saved even if the client went away: the tools have run and the model calls are billed.
+        string? saveFailure = null;
+        try
+        {
+            await dbContext.SaveChangesAsync(CancellationToken.None);
+        }
+        catch (DbUpdateException exception)
+        {
+            logger.LogWarning(exception, "The turn of conversation {ConversationId} could not be saved", conversation.Id);
+            saveFailure = "La conversation a été modifiée en même temps ailleurs : ce tour n'a pas été enregistré.";
+        }
+
+        if (saveFailure is not null)
+        {
+            yield return new AgentEvent(AgentEvent.Error, new { code = "Conversations.Concurrent", message = saveFailure });
+        }
 
         yield return new AgentEvent(AgentEvent.Done, new { conversationId = conversation.Id });
     }
@@ -159,11 +176,28 @@ internal sealed class AgentRunner(
     private IAgentDefinition? FindAgent(string agentName) =>
         agents.FirstOrDefault(a => string.Equals(a.Name, agentName, StringComparison.OrdinalIgnoreCase));
 
-    private PendingAction Propose(
+    /// <summary>
+    /// A turn stopped by the round-trip limit or by an error can end on tool calls without results, which the model API
+    /// refuses on the next turn: they are answered as not executed.
+    /// </summary>
+    private static IList<ChatMessage> CloseUnansweredToolCalls(IList<ChatMessage> messages)
+    {
+        var answered = messages.SelectMany(m => m.Contents.OfType<FunctionResultContent>()).Select(r => r.CallId).ToHashSet(StringComparer.Ordinal);
+        var unanswered = messages
+            .SelectMany(m => m.Contents.OfType<FunctionCallContent>())
+            .Where(c => !answered.Contains(c.CallId))
+            .Select(c => (AIContent)new FunctionResultContent(c.CallId, "Non exécuté : le tour s'est arrêté avant."))
+            .ToList();
+
+        return unanswered.Count == 0 ? messages : [.. messages, new ChatMessage(ChatRole.Tool, unanswered)];
+    }
+
+    private async Task<PendingAction> ProposeAsync(
         AgentConversation conversation,
         AgentTool tool,
         AIFunctionArguments arguments,
-        Dictionary<string, PendingAction> proposals)
+        Dictionary<string, PendingAction> proposals,
+        CancellationToken cancellationToken)
     {
         var action = PendingAction.Propose(
             conversation.Id,
@@ -175,6 +209,9 @@ internal sealed class AgentRunner(
 
         dbContext.PendingActions.Add(action);
         proposals[FunctionInvokingChatClient.CurrentContext?.CallContent.CallId ?? action.Id.ToString()] = action;
+
+        // Saved now (with the conversation and its first messages): the user can approve it as soon as it is announced.
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         return action;
     }

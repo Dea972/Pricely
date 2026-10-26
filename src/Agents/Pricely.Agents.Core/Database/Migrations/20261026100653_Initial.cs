@@ -24,7 +24,8 @@ namespace Pricely.Agents.Core.Database.Migrations
                     user_id = table.Column<Guid>(type: "uuid", nullable: false),
                     title = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
                     started_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    last_activity_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    last_activity_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    xmin = table.Column<uint>(type: "xid", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -70,7 +71,8 @@ namespace Pricely.Agents.Core.Database.Migrations
                     proposed_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     decided_on_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     result = table.Column<string>(type: "text", nullable: true),
-                    error = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true)
+                    error = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    xmin = table.Column<uint>(type: "xid", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {

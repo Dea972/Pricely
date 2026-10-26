@@ -7,6 +7,8 @@ namespace Pricely.Agents.Core.Domain;
 /// </summary>
 public sealed class AgentConversation : Entity
 {
+    public const int AgentNameMaxLength = 50;
+
     public const int TitleMaxLength = 120;
 
     public const int MessageMaxLength = 8000;

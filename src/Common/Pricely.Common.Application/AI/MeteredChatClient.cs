@@ -50,8 +50,29 @@ internal sealed class MeteredChatClient(
         UsageDetails? usage = null;
         string? modelId = null;
 
-        await foreach (ChatResponseUpdate update in base.GetStreamingResponseAsync(messages, options, cancellationToken))
+        await using IAsyncEnumerator<ChatResponseUpdate> stream = base
+            .GetStreamingResponseAsync(messages, options, cancellationToken)
+            .GetAsyncEnumerator(cancellationToken);
+
+        while (true)
         {
+            ChatResponseUpdate update;
+            try
+            {
+                if (!await stream.MoveNextAsync())
+                {
+                    break;
+                }
+
+                update = stream.Current;
+            }
+            catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+            {
+                // A failed call is journaled too (ADR-007), then the failure goes on to the caller.
+                await publishCallAsync(calledOnUtc, stopwatch.ElapsedMilliseconds, ToLlmResponse(usage, modelId), exception.Message, cancellationToken);
+                throw;
+            }
+
             modelId ??= update.ModelId;
 
             foreach (UsageContent content in update.Contents.OfType<UsageContent>())

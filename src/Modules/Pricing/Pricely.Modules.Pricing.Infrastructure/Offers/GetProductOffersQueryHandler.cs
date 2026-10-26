@@ -69,7 +69,7 @@ internal sealed class GetProductOffersQueryHandler(IDbConnectionFactory dbConnec
              FROM latest l
              INNER JOIN pricing.merchants m ON m.id = l.merchant_id
              LEFT JOIN reference r ON TRUE
-             ORDER BY l.status, l.price_amount NULLS LAST, l.proposed_on_utc
+             ORDER BY CASE l.status WHEN 'Confirmed' THEN 0 ELSE 1 END, l.price_amount NULLS LAST, l.proposed_on_utc
              """;
 
         List<ProductOfferRow> rows = (await connection.QueryAsync<ProductOfferRow>(

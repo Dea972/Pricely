@@ -31,6 +31,20 @@ public sealed class AgentsBoundaryTests
     }
 
     [Fact]
+    public void AgentsDomain_ShouldNotDependOn_PersistenceOrWeb()
+    {
+        TestResult result = Types
+            .InAssembly(typeof(AgentsModule).Assembly)
+            .That()
+            .ResideInNamespace("Pricely.Agents.Core.Domain")
+            .ShouldNot()
+            .HaveDependencyOnAny("Microsoft.EntityFrameworkCore", "Microsoft.AspNetCore", "Microsoft.Extensions.AI", "Npgsql")
+            .GetResult();
+
+        result.FailingTypeNames.Should().BeNullOrEmpty();
+    }
+
+    [Fact]
     public void AgentProjects_ShouldOnlyReference_TheAgentsCore()
     {
         typeof(AssistantAgent).Assembly.GetReferencedAssemblies()

@@ -6,21 +6,31 @@ using Pricely.Common.Domain;
 
 namespace Pricely.Agents.Core.Application;
 
-internal sealed class ConversationQueries(AgentsDbContext dbContext, AgentToolCatalog toolCatalog)
+internal sealed class ConversationQueries(
+    AgentsDbContext dbContext,
+    AgentToolCatalog toolCatalog,
+    IEnumerable<IAgentDefinition> agents)
 {
     public const int MaxConversations = 100;
 
     public async Task<IReadOnlyCollection<ConversationSummaryResponse>> ListAsync(
         Guid userId,
         string? agentName,
-        CancellationToken cancellationToken) =>
-        await dbContext.Conversations
+        CancellationToken cancellationToken)
+    {
+        // Same name matching as the routes of the agents (case-insensitive).
+        string? agent = agentName is null
+            ? null
+            : agents.FirstOrDefault(a => string.Equals(a.Name, agentName, StringComparison.OrdinalIgnoreCase))?.Name ?? agentName;
+
+        return await dbContext.Conversations
             .AsNoTracking()
-            .Where(c => c.UserId == userId && (agentName == null || c.AgentName == agentName))
+            .Where(c => c.UserId == userId && (agent == null || c.AgentName == agent))
             .OrderByDescending(c => c.LastActivityOnUtc)
             .Take(MaxConversations)
             .Select(c => new ConversationSummaryResponse(c.Id, c.AgentName, c.Title, c.StartedOnUtc, c.LastActivityOnUtc))
             .ToListAsync(cancellationToken);
+    }
 
     public async Task<Result<ConversationResponse>> GetAsync(Guid conversationId, Guid userId, CancellationToken cancellationToken)
     {

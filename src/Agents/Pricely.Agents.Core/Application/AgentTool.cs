@@ -3,6 +3,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Server;
 using Pricely.Common.Application.Authorization;
+using Pricely.Common.Presentation.Mcp;
 
 namespace Pricely.Agents.Core.Application;
 
@@ -12,10 +13,11 @@ namespace Pricely.Agents.Core.Application;
 /// </summary>
 public sealed class AgentTool
 {
-    private AgentTool(string name, bool isReadOnly, AIFunction function)
+    private AgentTool(string name, bool isReadOnly, string requiredScope, AIFunction function)
     {
         Name = name;
         IsReadOnly = isReadOnly;
+        RequiredScope = requiredScope;
         Function = function;
     }
 
@@ -24,8 +26,8 @@ public sealed class AgentTool
     /// <summary>A tool that is not read-only only runs after the user's approval.</summary>
     public bool IsReadOnly { get; }
 
-    /// <summary>Scope needed to approve a write tool (ADR-010).</summary>
-    public string RequiredScope => IsReadOnly ? PricelyScopes.Read : PricelyScopes.Write;
+    /// <summary>Scope needed to approve a write tool (ADR-010): <c>[ToolScope]</c>, <c>pricely.write</c> by default.</summary>
+    public string RequiredScope { get; }
 
     public AIFunction Function { get; }
 
@@ -53,6 +55,10 @@ public sealed class AgentTool
                     : default
             });
 
-        return new AgentTool(name, attribute.ReadOnly, function);
+        string requiredScope = attribute.ReadOnly
+            ? PricelyScopes.Read
+            : method.GetCustomAttribute<ToolScopeAttribute>()?.Scope ?? PricelyScopes.Write;
+
+        return new AgentTool(name, attribute.ReadOnly, requiredScope, function);
     }
 }
