@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Pricely — Profils de collecte</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}a{color:#0B5D6B}</style>
+</head>
+<body>
+<div style="min-height: 1040px; display: flex; flex-wrap: wrap; background: #F4F5F2; color: #17201B; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 15px; line-height: 1.5">
+
+  <nav aria-label="Navigation principale" style="flex: 1 1 220px; max-width: 260px; background: #17201B; color: #E8ECE6; padding: 24px 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 24px">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect x="2" y="2" width="24" height="24" rx="6" fill="#0B5D6B"></rect><path d="M9 19V9h6a3.5 3.5 0 0 1 0 7H9" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <span style="font-size: 20px; font-weight: 600">Pricely</span>
+    </div>
+    <a href="main.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #C9D1CB; text-decoration: none">Assistant</a>
+    <a href="product.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #C9D1CB; text-decoration: none">Produits</a>
+    <a href="review.html" style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #C9D1CB; text-decoration: none"><span style="flex: 1">Offres à valider</span><span style="min-width: 24px; padding: 0 8px; border-radius: 999px; background: #F2B27A; color: #17201B; font-size: 13px; font-weight: 600; text-align: center">3</span></a>
+    <a href="profiles.html" aria-current="page" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; background: #2A3630; color: #FFFFFF; text-decoration: none; font-weight: 500">Profils de collecte</a>
+    <a href="ai-usage.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #C9D1CB; text-decoration: none">IA et coûts</a>
+  </nav>
+
+  <aside aria-label="Typologies" style="flex: 1 1 240px; max-width: 300px; background: #FFFFFF; border-right: 1px solid #DDE1DA; padding: 24px 16px; box-sizing: border-box">
+    <h2 style="margin: 0 12px 12px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #56605A">Typologies</h2>
+    <ul role="tree" style="list-style: none; margin: 0; padding: 0; font-size: 14px">
+      <li role="treeitem" aria-expanded="true">
+        <div style="display: flex; align-items: center; justify-content: space-between; min-height: 40px; padding: 0 12px; border-radius: 8px">▾ Gros œuvre <span style="font-size: 12px; color: #0B5D6B">profil</span></div>
+        <ul role="group" style="list-style: none; margin: 0; padding: 0 0 0 18px">
+          <li role="treeitem" aria-selected="true"><div style="display: flex; align-items: center; justify-content: space-between; min-height: 40px; padding: 0 12px; border-radius: 8px; background: #EEF5F6; color: #07404A; font-weight: 600; box-shadow: inset 3px 0 0 #0B5D6B">Ciment <span style="font-size: 12px; font-weight: 400">profil</span></div></li>
+          <li role="treeitem"><div style="display: flex; align-items: center; min-height: 40px; padding: 0 12px">Mortiers et colles</div></li>
+          <li role="treeitem"><div style="display: flex; align-items: center; min-height: 40px; padding: 0 12px">Parpaings</div></li>
+        </ul>
+      </li>
+      <li role="treeitem" aria-expanded="true">
+        <div style="display: flex; align-items: center; min-height: 40px; padding: 0 12px">▾ Plâtrerie et isolation</div>
+        <ul role="group" style="list-style: none; margin: 0; padding: 0 0 0 18px">
+          <li role="treeitem"><div style="display: flex; align-items: center; justify-content: space-between; min-height: 40px; padding: 0 12px">Plaques de plâtre <span style="font-size: 12px; color: #0B5D6B">profil</span></div></li>
+          <li role="treeitem"><div style="display: flex; align-items: center; min-height: 40px; padding: 0 12px">Isolants</div></li>
+        </ul>
+      </li>
+      <li role="treeitem" aria-expanded="false"><div style="display: flex; align-items: center; min-height: 40px; padding: 0 12px">▸ Outillage</div></li>
+      <li role="treeitem" aria-expanded="false"><div style="display: flex; align-items: center; min-height: 40px; padding: 0 12px">▸ Électroménager</div></li>
+    </ul>
+    <p style="margin: 16px 12px 0; font-size: 12px; color: #56605A">3 niveaux maximum. « profil » = la typologie définit son propre profil.</p>
+  </aside>
+
+  <main style="flex: 999 1 480px; min-width: 0; padding: 28px 32px 40px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px">
+    <header style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px">
+      <div>
+        <div style="font-size: 13px; color: #56605A">Gros œuvre › Ciment</div>
+        <h1 style="margin: 0; font-size: 26px; font-weight: 600">Profil de collecte : Ciment</h1>
+      </div>
+      <button type="button" style="min-height: 44px; padding: 0 18px; border: 0; border-radius: 8px; background: #0B5D6B; color: #FFFFFF; font: inherit; font-weight: 500; cursor: pointer">Enregistrer</button>
+    </header>
+
+    <section aria-labelledby="h-merchants" style="background: #FFFFFF; border: 1px solid #DDE1DA; border-radius: 12px; padding: 18px">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px">
+        <h2 id="h-merchants" style="margin: 0; font-size: 17px; font-weight: 600">Enseignes favorites</h2>
+        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; background: #E8ECE6; color: #3E4842; font-size: 13px">↳ Héritées de Gros œuvre</span>
+      </div>
+      <p style="margin: 6px 0 14px; font-size: 14px; color: #56605A">Ciment ne définit pas ses propres enseignes : la liste de la typologie la plus proche s'applique telle quelle.</p>
+      <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+        <li style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid #E8ECE6; border-radius: 8px; background: #F9FAF7"><span style="font-family: 'IBM Plex Mono', monospace; color: #56605A">1</span><span style="flex: 1">Comptoir du Bâtiment</span><span style="font-size: 13px; color: #56605A">active</span></li>
+        <li style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid #E8ECE6; border-radius: 8px; background: #F9FAF7"><span style="font-family: 'IBM Plex Mono', monospace; color: #56605A">2</span><span style="flex: 1">Négoce Atlantique</span><span style="font-size: 13px; color: #56605A">active</span></li>
+        <li style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid #E8ECE6; border-radius: 8px; background: #F9FAF7"><span style="font-family: 'IBM Plex Mono', monospace; color: #56605A">3</span><span style="flex: 1">MatériauxDirect</span><span style="font-size: 13px; color: #56605A">active</span></li>
+        <li style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid #E8ECE6; border-radius: 8px; background: #F9FAF7"><span style="font-family: 'IBM Plex Mono', monospace; color: #56605A">4</span><span style="flex: 1">BricoPlus</span><span style="font-size: 13px; color: #56605A">active</span></li>
+      </ol>
+      <button type="button" style="margin-top: 14px; min-height: 40px; padding: 0 14px; border: 1px solid #C7CDC4; border-radius: 8px; background: #FFFFFF; font: inherit; font-size: 14px; cursor: pointer">Définir une liste propre à Ciment</button>
+    </section>
+
+    <section aria-labelledby="h-instructions" style="background: #FFFFFF; border: 1px solid #DDE1DA; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+      <h2 id="h-instructions" style="margin: 0; font-size: 17px; font-weight: 600">Instructions de collecte</h2>
+      <label for="instr" style="font-size: 14px; color: #56605A">Instructions propres à Ciment (ajoutées après celles des typologies parentes)</label>
+      <textarea id="instr" rows="4" style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #C7CDC4; border-radius: 8px; font: inherit; color: #17201B; resize: vertical">Relever le prix au sac, jamais à la palette. Vérifier la classe de résistance (32,5 R) et le poids du sac. Ignorer les offres « retrait magasin uniquement » hors zone.</textarea>
+      <div>
+        <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #56605A; margin-bottom: 8px">Prompt effectif envoyé à l'agent</div>
+        <div style="border: 1px solid #E8ECE6; border-radius: 8px; background: #F9FAF7; font-size: 14px">
+          <div style="padding: 10px 14px; border-bottom: 1px dashed #DDE1DA"><span style="display: block; font-size: 12px; color: #56605A">Gros œuvre (hérité)</span>Prix TTC livré si disponible, sinon prix à emporter. Noter la disponibilité et le délai.</div>
+          <div style="padding: 10px 14px; box-shadow: inset 3px 0 0 #0B5D6B"><span style="display: block; font-size: 12px; color: #07404A">Ciment (cette typologie)</span>Relever le prix au sac, jamais à la palette. Vérifier la classe de résistance (32,5 R) et le poids du sac. Ignorer les offres « retrait magasin uniquement » hors zone.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>

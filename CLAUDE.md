@@ -4,7 +4,7 @@ Comparateur et veille de prix multi-enseignes. Parti du négoce de matériaux de
 
 Principe : **une offre = un produit × une enseigne → un prix**. On compare les offres d'un même produit de référence.
 
-Lire avant de coder : `docs/architecture/ubiquitous-language.md`, `docs/architecture/decisions.md`, `docs/architecture/model.md`.
+Lire avant de coder : `docs/architecture/ubiquitous-language.md`, `docs/architecture/decisions.md`, `docs/architecture/model.md`. Avant de toucher au front : `docs/design/README.md` (maquettes, tokens, principes de l'assistant).
 
 ## Stack
 
