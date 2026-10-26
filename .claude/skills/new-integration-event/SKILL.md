@@ -42,23 +42,23 @@ public sealed class ProductRegisteredIntegrationEvent : IntegrationEvent
 ## Côté cible (module `<C>`)
 
 1. `Pricely.Modules.<C>.Presentation.csproj` et `Pricely.Modules.<C>.Infrastructure.csproj` : `ProjectReference` vers `Pricely.Modules.<S>.IntegrationEvents` (et **rien d'autre** du module source).
-2. Read model local dans `<C>.Domain/<S>/` (nom `<S>Xxx`, par exemple `CatalogProduct`) : classe simple (pas `Entity`), `Create` / `Update`, repository `GetAsync` + `Insert`, configuration EF `ValueGeneratedNever()` sur l'`Id` (identifiant source).
+2. Read model local (seulement si la copie est justifiée, voir l'en-tête) dans `<C>.Domain/<S>/` (nom `<S>Xxx`, par exemple `CatalogXxx`) : classe simple (pas `Entity`), `Create` / `Update`, repository `GetAsync` + `Insert`, configuration EF `ValueGeneratedNever()` sur l'`Id` (identifiant source).
 3. Commande `Upsert<X>Command` dans `<C>.Application/<S>/` : `GetAsync` puis `Insert` ou `Update`, `SaveChangesAsync`. Doit être idempotente (rejouable).
 4. `<C>.Presentation/<S>/<Fait>IntegrationEventHandler.cs` :
 
 ```csharp
-internal sealed class ProductRegisteredIntegrationEventHandler(ISender sender)
-    : IntegrationEventHandler<ProductRegisteredIntegrationEvent>
+internal sealed class XxxRegisteredIntegrationEventHandler(ISender sender)
+    : IntegrationEventHandler<XxxRegisteredIntegrationEvent>
 {
     public override async Task Handle(
-        ProductRegisteredIntegrationEvent integrationEvent,
+        XxxRegisteredIntegrationEvent integrationEvent,
         CancellationToken cancellationToken = default)
     {
-        Result result = await sender.Send(new UpsertCatalogProductCommand(...), cancellationToken);
+        Result result = await sender.Send(new UpsertCatalogXxxCommand(...), cancellationToken);
 
         if (result.IsFailure)
         {
-            throw new PricelyException(nameof(UpsertCatalogProductCommand), result.Error);
+            throw new PricelyException(nameof(UpsertCatalogXxxCommand), result.Error);
         }
     }
 }
