@@ -40,9 +40,9 @@ public static class CatalogModule
     {
         services.AddDbContext<CatalogDbContext>((serviceProvider, options) =>
             options
-                .UseSqlServer(
+                .UseNpgsql(
                     connectionString,
-                    sqlServerOptions => sqlServerOptions.MigrationsHistoryTable(
+                    npgsqlOptions => npgsqlOptions.MigrationsHistoryTable(
                         HistoryRepository.DefaultTableName,
                         Schemas.Catalog))
                 .UseSnakeCaseNamingConvention()

@@ -45,6 +45,7 @@ public static class ServiceCollectionExtensions
         [
             .. CatalogModule.HandlerAssemblies,
             .. PricingModule.HandlerAssemblies,
+            .. UsersModule.HandlerAssemblies,
             .. AiEngineModule.HandlerAssemblies
         ]);
 
@@ -54,12 +55,12 @@ public static class ServiceCollectionExtensions
         // Register the LLM providers and the gateway (every LLM call goes through ILlmGateway, ADR-007).
         services.AddAiProviders(configuration);
 
-        // Register authentication (JWT Bearer) and authorization (permission-based policies).
-        await services.AddAuthenticationInternalAsync(configuration);
+        // Register authentication (JWT access tokens issued by Keycloak) and authorization (scope and permission policies).
+        services.AddAuthenticationInternal();
         services.AddAuthorizationInternal();
 
-        // Register Users module (authentication, authorization, user management).
-        await services.AddUsersModuleAsync(configuration);
+        // Users module: profiles, roles and business permissions (identity is held by Keycloak, ADR-010).
+        services.AddUsersModule(configuration, connectionString);
 
         // Catalog module: reference products and product typologies.
         services.AddCatalogModule(configuration, connectionString);

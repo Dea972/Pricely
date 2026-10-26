@@ -43,9 +43,9 @@ public static class AiEngineModule
     {
         services.AddDbContext<AiEngineDbContext>(options =>
             options
-                .UseSqlServer(
+                .UseNpgsql(
                     connectionString,
-                    sqlServerOptions => sqlServerOptions.MigrationsHistoryTable(
+                    npgsqlOptions => npgsqlOptions.MigrationsHistoryTable(
                         HistoryRepository.DefaultTableName,
                         Schemas.AiEngine))
                 .UseSnakeCaseNamingConvention());

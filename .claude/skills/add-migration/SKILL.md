@@ -5,16 +5,19 @@ description: Create or apply an EF Core migration for one Pricely module DbConte
 
 # Migration EF Core par module
 
-Chaque module a son `DbContext` (`CatalogDbContext`, `PricingDbContext`, `UsersDbContext`), son schéma (`catalog`, `pricing`, `users`) et sa table `__EFMigrationsHistory` dans ce schéma (`MigrationsHistoryTable(HistoryRepository.DefaultTableName, Schemas.X)`). Les noms SQL sont en snake_case (`UseSnakeCaseNamingConvention`).
+Chaque module a son `DbContext` (`CatalogDbContext`, `PricingDbContext`, `UsersDbContext`, `AiEngineDbContext`), son schéma (`catalog`, `pricing`, `users`, `aiengine`) et sa table `__EFMigrationsHistory` dans ce schéma (`MigrationsHistoryTable(HistoryRepository.DefaultTableName, Schemas.X)`). Les noms SQL sont en snake_case (`UseSnakeCaseNamingConvention`).
 
-## Prérequis (à faire une seule fois, pas encore en place)
+## Prérequis
 
-Aucune migration n'existe encore et `dotnet ef` ne peut pas construire les contextes tant que l'un des deux points suivants n'est pas fait. Proposer le choix à l'utilisateur avant de le faire :
+L'option A du choix initial est en place (ADR-011) : `dotnet ef` construit l'hôte `Pricely.Api` (`Program.cs` + `Microsoft.EntityFrameworkCore.Design`). Il faut définir une chaîne de connexion PostgreSQL, même factice, rien ne s'y connecte pour ajouter une migration :
 
-- **Option A (recommandée)** : `Program.cs` appelle `builder.Services.AddPricelyAsync(connectionString, builder.Configuration)` et `app.MapPricelyEndpoints()`, et `Pricely.Api` référence `Microsoft.EntityFrameworkCore.Design` (`PrivateAssets="all"`, version à ajouter dans `Directory.Packages.props`, alignée sur EF Core). Attention : le `DbContext` Users est commenté dans `UsersModule` et doit être enregistré.
-- **Option B** : une `IDesignTimeDbContextFactory<XDbContext>` `internal sealed` par module dans `Infrastructure/Database/`, qui lit `ConnectionStrings:Database` (variable d'environnement).
+```bash
+export "ConnectionStrings__pricely-db=Host=localhost;Database=pricely-db;Username=postgres;Password=x"
+```
 
-Outil : `dotnet tool install --global dotnet-ef` (version alignée sur EF Core 10).
+Dans un shell qui refuse les tirets dans les noms de variables, passer par `env "ConnectionStrings__pricely-db=..." dotnet ef ...`.
+
+Outil : `dotnet tool install --global dotnet-ef --version 10.0.2` (aligné sur EF Core).
 
 ## Créer une migration
 
@@ -29,7 +32,7 @@ dotnet ef migrations add <Name> \
 - `<Name>` en PascalCase, descriptif : `Initial`, `AddOfferConfirmationMethod`.
 - Une migration = un module. Ne jamais générer une migration qui touche le schéma d'un autre module.
 - Relire le fichier généré : schéma correct, pas de clé étrangère vers un autre schéma, colonnes `ComplexProperty` aux noms attendus (`price_amount`, `evidence_observed_gtin`...), index uniques présents.
-- Les migrations générées passent par les analyseurs stricts. Si elles font échouer le build, ajouter un `.editorconfig` dans `Database/Migrations/` avec `generated_code = true` plutôt que de désactiver des règles globalement.
+- Chaque dossier `Database/Migrations/` contient un `.editorconfig` avec `generated_code = true` (sans lui, les analyseurs stricts font échouer le build). Pour un nouveau module, le créer **avant** la première migration.
 
 ## Appliquer
 
@@ -37,7 +40,7 @@ dotnet ef migrations add <Name> \
 dotnet ef database update -p src/Modules/<M>/Pricely.Modules.<M>.Infrastructure -s src/API/Pricely.Api -c <M>DbContext
 ```
 
-Localement, l'AppHost Aspire démarre SQL Server (`pricely-db`). L'application automatique au démarrage (`MigrationExtensions` dans `Pricely.Sdk`) est à vérifier avant d'être utilisée.
+Localement, l'AppHost Aspire démarre PostgreSQL (`pricely-db`) et l'API applique elle-même les migrations des quatre modules au démarrage, en Development uniquement (`MigrationExtensions.ApplyMigrationsAsync` dans `Pricely.Sdk`). Un nouveau module doit y être ajouté.
 
 ## Requêtes Dapper
 

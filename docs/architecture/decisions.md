@@ -104,10 +104,38 @@ Un seul système d'identité pour l'API, le serveur MCP et le front Blazor.
 
 À vérifier lors du branchement : le mode exact d'OAuth des connecteurs distants de Claude.ai (DCR ou client pré-enregistré) dans leur documentation à jour ; Keycloak couvre les deux.
 
+## ADR-011 — Démarrage de l'API : Keycloak dans l'AppHost, provisionnement des utilisateurs, migrations
+
+**Statut** : acceptée (2026-10-25), sur la base du plan validé pour l'étape 0. Met en œuvre l'ADR-010 ; ne la remplace pas. **Écart assumé avec l'ADR-010** : seul `/mcp` exige un scope, les endpoints existants restent « authentifié » (voir plus bas) ; à trancher avant d'exposer l'API hors du poste de développement.
+
+- **Keycloak local** : `Aspire.Hosting.Keycloak` (seulement publié en préversion, `13.6.1-preview`, aligné sur Aspire 13.6.1), port fixe 8080 pour que l'émetteur des jetons (`http://localhost:8080/realms/pricely`) soit stable, realm importé depuis `aspire/Pricely.AppHost/Realms/pricely-realm.json` (conteneur non persistant : le fichier est ré-importé à chaque lancement). L'API reçoit `Authentication__Authority` de l'AppHost ; l'audience attendue est `pricely-api`, ajoutée par un mapper d'audience sur les trois scopes `pricely.*` (sinon Keycloak émet `aud: account`). Les scopes de base (`basic` qui porte `sub`, `profile`, `email`) sont redéfinis dans le realm : un realm importé avec des `clientScopes` n'a pas les scopes par défaut.
+- **Clients** : `pricely-web` (public, PKCE S256), `pricely-mcp` (public, PKCE, pré-enregistré pour les clients MCP dont l'enregistrement dynamique échoue), `pricely-dev` (mot de passe, développement local seulement, pour obtenir un jeton en script). `pricely.read` est un scope par défaut, `pricely.write` et `pricely.review` sont optionnels.
+- **Enregistrement dynamique (DCR)** : activé en anonyme avec la politique « Trusted Hosts » limitée aux hôtes `localhost`, `127.0.0.1`, `claude.ai`, `claude.com` pour les URI de redirection, et « Consent Required » conservée. Realm de développement : en production, durcir ces politiques ou pré-enregistrer les clients.
+- **Identité et utilisateur** : `sub` reste l'identifiant Keycloak et devient `User.IdentityId` ; l'identifiant interne passe dans la claim `pricely_user_id`. Le `User` est créé (rôle `Member`) à la première requête authentifiée par `ProvisionUserCommand`, idempotente ; la course entre deux premières requêtes simultanées est absorbée par l'index unique sur `identity_id`. Le jeton doit porter l'e-mail (scope `email`), sinon `Users.MissingEmail` : l'identité authentifiée n'a alors aucune permission (journalisée, pas d'exception) et les politiques répondent 403. `RegisterUser`, `GenerateAccessToken`, `JwtTokenService`, `JwtOptions`, `Jwt:Secret` et `IIdentityProviderService` sont supprimés : l'inscription est l'affaire de Keycloak.
+- **Autorisation** : une politique par scope, nommée comme le scope (`PricelyScopes` dans `Common.Application`) : `.RequireAuthorization(PricelyScopes.Read)`. Les politiques de permission métier (`CustomClaimsTransformation`) restent. Pour l'instant seul `/mcp` exige `pricely.read` ; les endpoints existants restent « authentifié ». Conséquence : comme `pricely.read` est un scope par défaut de tous les clients, un jeton en lecture seule peut appeler les endpoints de mutation qui n'exigent aucun scope. Acceptable en développement local ; à corriger en posant `PricelyScopes.Write` / `Review` sur les endpoints de mutation avant tout déploiement. Le filtrage des tools par scope, annoncé par l'ADR-009, reste à faire avec les tools d'écriture.
+- **MCP** : le schéma d'authentification `AddMcp` de `ModelContextProtocol.AspNetCore` sert la métadonnée `/.well-known/oauth-protected-resource` (RFC 9728) et le challenge 401 ; la validation du jeton reste faite par JwtBearer. Il est schéma de challenge par défaut, donc tout 401 de l'API pointe vers cette métadonnée.
+- **Migrations** : option A du skill `add-migration`. `dotnet ef` passe par l'hôte `Pricely.Api` (`Microsoft.EntityFrameworkCore.Design`), une migration `Initial` par module, `.editorconfig` `generated_code = true` dans chaque dossier `Migrations`. En Development, l'API applique les migrations des quatre modules au démarrage (`ApplyMigrationsAsync`) ; hors Development, elles doivent être jouées par le déploiement (job ou script `dotnet ef migrations script`), jamais par l'API.
+- **Validation de l'injection de dépendances** : `ValidateScopes` et `ValidateOnBuild` activés dans tous les environnements ; `StartupCompositionTests` construit l'hôte complet sans base ni Keycloak.
+
+## ADR-012 — PostgreSQL à la place de SQL Server
+
+**Statut** : acceptée (2026-10-26), sur demande explicite du propriétaire du projet.
+
+La base est PostgreSQL (Npgsql 10 pour EF Core et Dapper, `Aspire.Hosting.PostgreSQL` dans l'AppHost, base `pricely-db`). Le reste de l'architecture est inchangé : un `DbContext` et un schéma par module, snake_case, Dapper en lecture, outbox / inbox maison. Les migrations `Initial` (non déployées) ont été régénérées, pas converties.
+
+Conséquences et choix :
+- **Casse** : PostgreSQL compare le texte en respectant la casse, SQL Server non. Les colonnes d'unicité métier (e-mail, nom d'enseigne, nom de typologie, identifiant de modèle, code de fonctionnalité) passent en `citext` pour conserver le comportement attendu ; les recherches de produits utilisent `ILIKE`.
+- **Messages outbox / inbox** : colonne `text`, pas `jsonb`. Le contenu est sérialisé par Newtonsoft avec `$type` en première propriété, que `jsonb` réordonnerait. Le lot est relu avec `FOR UPDATE SKIP LOCKED`. Cela évite qu'une même ligne soit traitée deux fois, mais ne rend pas l'API multi-instances : les traitements d'inbox de Pricing (upsert des read models, `Get` puis `Insert`) ne sont ni atomiques ni ordonnés entre lots concurrents. **Une seule instance de l'API** tant que ces upserts ne sont pas rendus atomiques (`ON CONFLICT`) et ordonnés.
+- **Extension** : `citext` est créée au niveau de la base (`CREATE EXTENSION IF NOT EXISTS`, idempotent, répétée par chaque migration de module) ; le rôle de migration doit y être autorisé sur un PostgreSQL managé. `citext` n'a pas de longueur : `HasMaxLength` n'est plus appliqué en base pour ces colonnes, seuls le domaine et les validateurs la bornent.
+- **Dates** : `timestamptz`, `Kind` UTC obligatoire à l'écriture. Dapper normalise tout paramètre `DateTime` en UTC (`UtcDateTimeTypeHandler`) et `PriceObservation.Record` normalise la date d'observation fournie par un collecteur (`AsUtc`) ; les agrégations par jour et le tarif du jour sont calculés en UTC (`AT TIME ZONE 'UTC'`) quel que soit le fuseau de session ; une colonne `date` est convertie en `timestamp` dans les requêtes Dapper dont la réponse est un `DateTime`.
+- **Requêtes** : `TOP` → `LIMIT`, `CROSS/OUTER APPLY` → `JOIN LATERAL`, booléens natifs, paramètres nullables castés explicitement.
+- Les épingles de sécurité `System.Security.Cryptography.Pkcs` (qui venaient de `Microsoft.Data.SqlClient`) sont retirées.
+- Point de vigilance hérité, non modifié : l'index unique des typologies `(parent_id, name)` n'empêche pas deux racines de même nom (valeurs nulles distinctes, comme avec le filtre SQL Server d'origine).
+
 ## Décisions ouvertes
 
-- Démarrage de l'API : câbler `AddPricelyAsync` dans `Program.cs` et réactiver le `DbContext` Users, ou isoler Users tant qu'il n'est pas nettoyé.
-- Migrations : via l'hôte ou via des `IDesignTimeDbContextFactory` par module (skill `add-migration`).
+- Application des migrations en production (job de déploiement, script SQL idempotent) : ADR-011 l'interdit à l'API, le mécanisme reste à choisir.
+- Filtrage des tools MCP par scope (annotations ou attribut dédié), avec les tools d'écriture.
 - Front Blazor : Blazor Server ou Blazor Web App en rendu interactif automatique ; projet de la solution (`src/Web/Pricely.Web`) ou application séparée.
 - API de recherche web pour l'agent de collecte (Brave, Tavily, Bing…).
 - Plusieurs conditionnements d'un même produit chez une enseigne : aujourd'hui un produit de référence par conditionnement.

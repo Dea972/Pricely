@@ -33,12 +33,13 @@ internal sealed class GetOffersPendingReviewQueryHandler(IDbConnectionFactory db
              FROM pricing.offers o
              INNER JOIN pricing.merchants m ON m.id = o.merchant_id
              INNER JOIN pricing.catalog_products p ON p.id = o.product_id
-             OUTER APPLY (
-                 SELECT TOP 1 po.price_amount, po.price_currency
+             LEFT JOIN LATERAL (
+                 SELECT po.price_amount, po.price_currency
                  FROM pricing.price_observations po
                  WHERE po.offer_id = o.id
                  ORDER BY po.observed_on_utc DESC
-             ) latest
+                 LIMIT 1
+             ) latest ON TRUE
              WHERE o.status = 'Proposed'
              ORDER BY o.proposed_on_utc
              """;

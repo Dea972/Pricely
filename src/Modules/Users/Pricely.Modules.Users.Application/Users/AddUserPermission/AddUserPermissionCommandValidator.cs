@@ -9,11 +9,6 @@ internal sealed class AddUserPermissionCommandValidator : AbstractValidator<AddU
         "users:read",
         "users:write",
         "users:delete",
-        "conversations:read",
-        "conversations:write",
-        "conversations:delete",
-        "ai:access",
-        "ai:advanced",
         "admin:access",
         "admin:settings"
     ];

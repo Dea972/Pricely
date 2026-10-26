@@ -18,15 +18,15 @@ Soit `<M>` le nom du module (PascalCase, pluriel ou nom de contexte : `Alerts`, 
    - `Pricely.Modules.<M>.IntegrationEvents` → `Common.Application` (seulement si le module publie)
    - `Pricely.Modules.<M>.Application` → Domain, IntegrationEvents (si publie), `Common.Application`
    - `Pricely.Modules.<M>.Presentation` → Application, `Common.Presentation` (+ `<Autre>.IntegrationEvents` s'il consomme)
-   - `Pricely.Modules.<M>.Infrastructure` → Application, Presentation, IntegrationEvents, `Common.Infrastructure`, package `Microsoft.EntityFrameworkCore.SqlServer`
+   - `Pricely.Modules.<M>.Infrastructure` → Application, Presentation, IntegrationEvents, `Common.Infrastructure`, package `Npgsql.EntityFrameworkCore.PostgreSQL`
 2. **Fichiers de base** :
    - `Application/AssemblyReference.cs`, `Presentation/AssemblyReference.cs`, `Presentation/Tags.cs`
    - `Application/Abstractions/Data/IUnitOfWork.cs`
    - `Infrastructure/Database/Schemas.cs` (`internal const string <M> = "<m>";` en minuscules)
    - `Infrastructure/Database/<M>DbContext.cs` : `HasDefaultSchema`, configurations outbox (`OutboxMessage`, `OutboxMessageConsumer`) et inbox (`InboxMessage`, `InboxMessageConsumer`), puis celles du module. Implémente `IUnitOfWork`.
    - `Infrastructure/Outbox/*` : copier depuis `Catalog.Infrastructure/Outbox` en remplaçant le namespace, `Schemas.Catalog` et `ModuleName`.
-   - Si le module consomme des événements : copier aussi `Pricing.Infrastructure/Inbox/*` (attention, le SQL de l'inbox Users contient `::json` PostgreSQL ; la copie Pricing est corrigée).
-   - `Infrastructure/<M>Module.cs` : modèle `CatalogModule.cs` / `PricingModule.cs` (`HandlerAssemblies`, `Add<M>Module`, `AddDbContext` SQL Server + snake_case + `InsertOutboxMessagesInterceptor` + historique de migrations dans le schéma, repositories, `AddDomainEventHandlers`, `AddIntegrationEventHandlers` si consommateur, `AddEndpoints`, options Outbox / Inbox, `ConfigureConsumers` si consommateur).
+   - Si le module consomme des événements : copier aussi `Pricing.Infrastructure/Inbox/*`.
+   - `Infrastructure/<M>Module.cs` : modèle `CatalogModule.cs` / `PricingModule.cs` (`HandlerAssemblies`, `Add<M>Module`, `AddDbContext` `UseNpgsql` + snake_case + `InsertOutboxMessagesInterceptor` + historique de migrations dans le schéma, repositories, `AddDomainEventHandlers`, `AddIntegrationEventHandlers` si consommateur, `AddEndpoints`, options Outbox / Inbox, `ConfigureConsumers` si consommateur).
 3. **Composition** :
    - `src/Adapters/Pricely.Sdk/Pricely.Sdk.csproj` : référence vers `<M>.Infrastructure`.
    - `ServiceCollectionExtensions.AddPricelyAsync` : ajouter `<M>Module.HandlerAssemblies` à `AddApplication`, `<M>Module.ConfigureConsumers` à `AddInfrastructure` si consommateur, `services.Add<M>Module(configuration, connectionString)`.

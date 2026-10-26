@@ -60,7 +60,7 @@ public sealed class User : Entity
     {
         User user = new()
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.CreateVersion7(),
             Email = email,
             FirstName = firstName,
             LastName = lastName,

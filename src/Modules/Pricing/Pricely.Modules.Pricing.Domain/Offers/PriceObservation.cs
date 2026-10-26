@@ -41,7 +41,7 @@ public sealed class PriceObservation : Entity
             OfferId = offer.Id,
             Price = price,
             Availability = availability,
-            ObservedOnUtc = observedOnUtc,
+            ObservedOnUtc = observedOnUtc.AsUtc(),
             IsFlaggedAsAnomaly = PriceAnomalyPolicy.IsAnomalous(price, referencePrices)
         };
 

@@ -95,10 +95,10 @@ public sealed class ModuleBoundaryTests
     [Fact]
     public void DomainLayers_ShouldNotDependOn_PersistenceOrMessaging()
     {
-        string[] forbidden = ["Microsoft.EntityFrameworkCore", "MassTransit", "Microsoft.AspNetCore", "Dapper"];
+        string[] forbidden = ["Microsoft.EntityFrameworkCore", "MassTransit", "Microsoft.AspNetCore", "Dapper", "Npgsql"];
 
         TestResult result = Types
-            .InAssemblies([CatalogAssemblies[0], PricingAssemblies[0], AiEngineAssemblies[0]])
+            .InAssemblies([CatalogAssemblies[0], PricingAssemblies[0], UsersAssemblies[0], AiEngineAssemblies[0]])
             .ShouldNot()
             .HaveDependencyOnAny(forbidden)
             .GetResult();

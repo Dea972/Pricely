@@ -35,17 +35,15 @@ internal sealed class IdempotentDomainEventHandler<TDomainEvent>(
         DbConnection dbConnection,
         OutboxMessageConsumer outboxMessageConsumer)
     {
-        string sql;
-        // SQL Server syntax
-        sql =
+        const string sql =
             $"""
-                SELECT CASE WHEN EXISTS (
-                    SELECT 1
-                    FROM {Schemas.Users}.outbox_message_consumers
-                    WHERE outbox_message_id = @OutboxMessageId AND
-                          name = @Name
-                ) THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END
-                """;
+            SELECT EXISTS (
+                SELECT 1
+                FROM {Schemas.Users}.outbox_message_consumers
+                WHERE outbox_message_id = @OutboxMessageId AND
+                      name = @Name
+            )
+            """;
 
         return await dbConnection.ExecuteScalarAsync<bool>(sql, outboxMessageConsumer);
     }

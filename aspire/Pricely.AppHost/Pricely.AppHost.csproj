@@ -9,17 +9,17 @@
 
 	<ItemGroup>
 		<PackageReference Include="Aspire.Hosting.AppHost" />
-		<PackageReference Include="Aspire.Hosting.SqlServer" />
+		<PackageReference Include="Aspire.Hosting.PostgreSQL" />
+		<PackageReference Include="Aspire.Hosting.Keycloak" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference
 			Include="..\..\src\API\Pricely.Api\Pricely.Api.csproj" />
 	</ItemGroup>
 
-  <!-- Security: patched versions of Aspire.Hosting dependencies (StreamJsonRpc, Microsoft.Data.SqlClient) -->
+  <!-- Security: patched version of an Aspire.Hosting dependency (StreamJsonRpc) -->
   <ItemGroup>
     <PackageReference Include="MessagePack" />
-    <PackageReference Include="System.Security.Cryptography.Pkcs" />
   </ItemGroup>
 
 </Project>

@@ -16,7 +16,8 @@ internal sealed class FeatureSettingConfiguration : IEntityTypeConfiguration<Fea
         builder.Ignore(s => s.DomainEvents);
         builder.Ignore(s => s.IsDefault);
 
-        builder.Property(s => s.FeatureCode).HasMaxLength(FeatureSetting.FeatureCodeMaxLength);
+        // citext: feature codes are compared ignoring case
+        builder.Property(s => s.FeatureCode).HasMaxLength(FeatureSetting.FeatureCodeMaxLength).HasColumnType("citext");
 
         builder.HasIndex(s => s.FeatureCode).IsUnique();
 

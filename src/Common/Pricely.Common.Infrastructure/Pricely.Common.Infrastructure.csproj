@@ -10,7 +10,7 @@
 	  <PackageReference Include="Dapper" />
 	  <PackageReference Include="EFCore.NamingConventions" />
 	  <PackageReference Include="MassTransit" />
-	  <PackageReference Include="Microsoft.Data.SqlClient" />
+	  <PackageReference Include="Npgsql" />
 	  <PackageReference Include="Microsoft.EntityFrameworkCore" />
 	  <PackageReference Include="Quartz.Extensions.Hosting" />
 	  <PackageReference Include="Quartz.Serialization.Json" />
@@ -29,10 +29,5 @@
 		<InternalsVisibleTo Include="Pricely.Sdk" />
 		<InternalsVisibleTo Include="Pricely.Common.UnitTests" />
 	</ItemGroup>
-
-  <!-- Security: patched version of a Microsoft.Data.SqlClient dependency -->
-  <ItemGroup>
-    <PackageReference Include="System.Security.Cryptography.Pkcs" />
-  </ItemGroup>
 
 </Project>

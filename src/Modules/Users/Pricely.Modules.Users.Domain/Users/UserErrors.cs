@@ -19,6 +19,10 @@ public static class UserErrors
     public static Error NotFoundByUserName(string userName) =>
         Error.NotFound("Users.NotFound", $"The user with the userName {userName} not found");
 
+    public static readonly Error MissingEmail = Error.Problem(
+        "Users.MissingEmail",
+        "The identity has no email address.");
+
     public static Error InvalidRole(string roleName) =>
         Error.Problem("Users.InvalidRole", $"The role '{roleName}' is not valid");
 

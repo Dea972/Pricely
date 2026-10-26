@@ -7,6 +7,7 @@
 		<PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
 	</ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Pricely.Common.Application\Pricely.Common.Application.csproj" />
     <ProjectReference Include="..\Pricely.Common.Domain\Pricely.Common.Domain.csproj" />
   </ItemGroup>
 

@@ -60,6 +60,16 @@ Le code utilise la colonne « Code » (anglais). L'interface et les échanges ut
 | Tool | Outil | Capacité offerte aux agents (MCP et agent interne), fine, adossée à une requête ou une commande. |
 | `ReadOnly` / `Destructive` | Lecture / action sensible | Annotations d'un tool ; un tool qui n'est pas en lecture seule exige une approbation de l'agent interne. |
 
+## Identité et accès
+
+| Code | Français | Définition |
+|---|---|---|
+| `IdentityId` | Identité | Identifiant de la personne chez Keycloak (claim `sub` du jeton). Porté par `User`. |
+| `pricely_user_id` | Identifiant interne | Claim ajoutée par Pricely : identifiant du `User`. Ne pas confondre avec `sub`. |
+| Provisionnement | | Création du `User` (rôle `Member`) à la première requête authentifiée d'une identité (`ProvisionUserCommand`, idempotente). |
+| Scope | Portée | Droit accordé au jeton par Keycloak : `pricely.read`, `pricely.write`, `pricely.review`. Une politique d'autorisation du même nom. |
+| Permission | Permission métier | Droit porté par le rôle ou l'utilisateur dans le module Users (`users:read`, `admin:access`...), ajouté au jeton par `CustomClaimsTransformation`. |
+
 ## Règles à retenir
 
 - On compare des **offres confirmées**, jamais des offres proposées.

@@ -14,7 +14,8 @@ internal sealed class MerchantConfiguration : IEntityTypeConfiguration<Merchant>
 
         builder.Ignore(m => m.DomainEvents);
 
-        builder.Property(m => m.Name).HasMaxLength(Merchant.NameMaxLength);
+        // citext: merchant names are unique ignoring case
+        builder.Property(m => m.Name).HasMaxLength(Merchant.NameMaxLength).HasColumnType("citext");
 
         builder.Property(m => m.Website).HasMaxLength(500);
 

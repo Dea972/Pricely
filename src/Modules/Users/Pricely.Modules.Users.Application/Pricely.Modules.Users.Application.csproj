@@ -7,4 +7,8 @@
     <ProjectReference Include="..\Pricely.Modules.Users.IntegrationEvents\Pricely.Modules.Users.IntegrationEvents.csproj" />
   </ItemGroup>
 	
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pricely.Modules.Users.UnitTests" />
+  </ItemGroup>
+
 </Project>

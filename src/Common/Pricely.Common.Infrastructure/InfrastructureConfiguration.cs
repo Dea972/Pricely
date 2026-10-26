@@ -1,3 +1,4 @@
+using Dapper;
 using MassTransit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -20,6 +21,8 @@ public static class InfrastructureConfiguration
         string connectionString,
         Action<IRegistrationConfigurator>[] moduleConfigureConsumers)
     {
+        SqlMapper.AddTypeHandler(new UtcDateTimeTypeHandler());
+
         services.TryAddSingleton<IDateTimeProvider, DateTimeProvider>();
 
         services.AddDistributedMemoryCache();

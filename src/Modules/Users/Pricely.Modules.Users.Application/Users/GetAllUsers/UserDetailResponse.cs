@@ -9,6 +9,4 @@ public sealed record UserDetailResponse(
     string FirstName,
     string LastName,
     string Role,
-    IEnumerable<string> Permissions,
-    DateTime CreatedAt,
-    bool IsActive);
+    IEnumerable<string> Permissions);

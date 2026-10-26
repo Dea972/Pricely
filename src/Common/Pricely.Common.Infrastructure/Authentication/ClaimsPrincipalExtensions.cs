@@ -1,5 +1,5 @@
-
 using System.Security.Claims;
+using Pricely.Common.Application.Authorization;
 using Pricely.Common.Application.Exceptions;
 
 namespace Pricely.Common.Infrastructure.Authentication;
@@ -11,7 +11,7 @@ public static class ClaimsPrincipalExtensions
 {
     public static Guid GetUserId(this ClaimsPrincipal? principal)
     {
-        string? userId = principal?.FindFirst(CustomClaims.Sub)?.Value;
+        string? userId = principal?.FindFirst(CustomClaims.UserId)?.Value;
 
         return Guid.TryParse(userId, out Guid parsedUserId) ?
             parsedUserId :
@@ -20,8 +20,18 @@ public static class ClaimsPrincipalExtensions
 
     public static string GetIdentityId(this ClaimsPrincipal? principal)
     {
-        return principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value ??
+        return principal?.FindFirst(CustomClaims.Sub)?.Value ??
                throw new PricelyException("User identity is unavailable");
+    }
+
+    public static IdentityProfile GetIdentityProfile(this ClaimsPrincipal principal)
+    {
+        return new IdentityProfile(
+            principal.GetIdentityId(),
+            principal.FindFirst(CustomClaims.Email)?.Value,
+            principal.FindFirst(CustomClaims.GivenName)?.Value,
+            principal.FindFirst(CustomClaims.FamilyName)?.Value,
+            principal.FindFirst(CustomClaims.PreferredUserName)?.Value);
     }
 
     public static HashSet<string> GetPermissions(this ClaimsPrincipal? principal)
@@ -30,5 +40,17 @@ public static class ClaimsPrincipalExtensions
                                               throw new PricelyException("Permissions are unavailable");
 
         return permissionClaims.Select(c => c.Value).ToHashSet();
+    }
+
+    /// <summary>
+    /// Scopes granted to the token (the <c>scope</c> claim is a space-separated list).
+    /// </summary>
+    public static HashSet<string> GetScopes(this ClaimsPrincipal? principal)
+    {
+        IEnumerable<Claim> scopeClaims = principal?.FindAll(CustomClaims.Scope) ?? [];
+
+        return scopeClaims
+            .SelectMany(c => c.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            .ToHashSet(StringComparer.Ordinal);
     }
 }

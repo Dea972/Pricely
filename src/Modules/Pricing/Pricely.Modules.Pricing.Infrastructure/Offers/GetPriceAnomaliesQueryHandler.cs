@@ -18,7 +18,7 @@ internal sealed class GetPriceAnomaliesQueryHandler(IDbConnectionFactory dbConne
 
         const string sql =
             $"""
-             SELECT TOP (@Limit)
+             SELECT
                  po.id AS {nameof(PriceAnomalyResponse.PriceObservationId)},
                  o.id AS {nameof(PriceAnomalyResponse.OfferId)},
                  o.product_id AS {nameof(PriceAnomalyResponse.ProductId)},
@@ -33,9 +33,10 @@ internal sealed class GetPriceAnomaliesQueryHandler(IDbConnectionFactory dbConne
              INNER JOIN pricing.offers o ON o.id = po.offer_id
              INNER JOIN pricing.merchants m ON m.id = o.merchant_id
              INNER JOIN pricing.catalog_products p ON p.id = o.product_id
-             WHERE po.is_flagged_as_anomaly = 1
-               AND (@SinceUtc IS NULL OR po.observed_on_utc >= @SinceUtc)
+             WHERE po.is_flagged_as_anomaly
+               AND (CAST(@SinceUtc AS timestamptz) IS NULL OR po.observed_on_utc >= @SinceUtc)
              ORDER BY po.observed_on_utc DESC
+             LIMIT @Limit
              """;
 
         IEnumerable<PriceAnomalyResponse> anomalies = await connection.QueryAsync<PriceAnomalyResponse>(

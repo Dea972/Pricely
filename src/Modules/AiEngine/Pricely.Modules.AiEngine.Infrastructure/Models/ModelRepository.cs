@@ -9,7 +9,7 @@ internal sealed class ModelRepository(AiEngineDbContext context) : IModelReposit
     public Task<Model?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
         context.Models.Include(m => m.Prices).FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
 
-    // SQL Server default collation is case-insensitive: the comparison ignores case.
+    // provider_model_id is citext: the comparison ignores case.
     public Task<Model?> FindAsync(Provider provider, string providerModelId, CancellationToken cancellationToken = default) =>
         context.Models
             .Include(m => m.Prices)

@@ -1,26 +1,33 @@
-﻿using Pricely.Modules.Users.Infrastructure.Database;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Pricely.Modules.AiEngine.Infrastructure.Database;
+using Pricely.Modules.Catalog.Infrastructure.Database;
+using Pricely.Modules.Pricing.Infrastructure.Database;
+using Pricely.Modules.Users.Infrastructure.Database;
 
-#pragma warning disable S1144 // Unused private types or members should be removed
 namespace Pricely.Infrastructure;
 
 public static class MigrationExtensions
 {
-    public static void ApplyMigrations(this IApplicationBuilder app)
+    /// <summary>
+    /// Applies the pending migrations of every module. Each module owns its schema and its own migrations history table,
+    /// so the order does not matter.
+    /// </summary>
+    public static async Task ApplyMigrationsAsync(this IServiceProvider services)
     {
-        using IServiceScope scope = app.ApplicationServices.CreateScope();
+        await using AsyncServiceScope scope = services.CreateAsyncScope();
 
-        ApplyMigration<UsersDbContext>(scope);
+        await MigrateAsync<CatalogDbContext>(scope);
+        await MigrateAsync<PricingDbContext>(scope);
+        await MigrateAsync<UsersDbContext>(scope);
+        await MigrateAsync<AiEngineDbContext>(scope);
     }
 
-    private static void ApplyMigration<TDbContext>(IServiceScope scope)
+    private static async Task MigrateAsync<TDbContext>(AsyncServiceScope scope)
         where TDbContext : DbContext
     {
-        using TDbContext context = scope.ServiceProvider.GetRequiredService<TDbContext>();
+        TDbContext context = scope.ServiceProvider.GetRequiredService<TDbContext>();
 
-
-        context.Database.Migrate();
+        await context.Database.MigrateAsync();
     }
 }

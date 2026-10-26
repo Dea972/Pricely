@@ -95,10 +95,11 @@ internal sealed class ProcessInboxJob(
                 SELECT
                    id AS  {nameof(InboxMessageResponse.Id)},
                    content AS {nameof(InboxMessageResponse.Content)}
-                FROM {Schemas.Users}.inbox_messages WITH (UPDLOCK, ROWLOCK)
+                FROM {Schemas.Users}.inbox_messages
                 WHERE processed_on_utc IS NULL
                 ORDER BY occurred_on_utc
-                OFFSET 0 ROWS FETCH NEXT {inboxOptions.Value.BatchSize} ROWS ONLY
+                LIMIT {inboxOptions.Value.BatchSize}
+                FOR UPDATE SKIP LOCKED
                 """;
 
 
