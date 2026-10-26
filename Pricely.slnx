@@ -1,9 +1,7 @@
 <Solution>
 	<Folder Name="/aspire/">
-		<Project
-			Path="aspire/Pricely.AppHost/Pricely.AppHost.csproj" />
-		<Project
-			Path="aspire/Pricely.ServiceDefaults/Pricely.ServiceDefaults.csproj" />
+		<Project Path="aspire/Pricely.AppHost/Pricely.AppHost.csproj" />
+		<Project Path="aspire/Pricely.ServiceDefaults/Pricely.ServiceDefaults.csproj" />
 	</Folder>
 	<Folder Name="/Solution Items/">
 		<File Path=".editorconfig" />
@@ -12,103 +10,75 @@
 	</Folder>
 	<Folder Name="/src/" />
 	<Folder Name="/src/Adapters/">
-		<Project Path="src/Adapters/Pricely.Sdk/Pricely.Sdk.csproj"
-			Id="3f30172e-3c50-471f-90a1-71291ed0214e" />
+		<Project Path="src/Adapters/Pricely.Sdk/Pricely.Sdk.csproj" Id="3f30172e-3c50-471f-90a1-71291ed0214e" />
+	</Folder>
+	<Folder Name="/src/Agents/">
+		<Project Path="src/Agents/Pricely.Agents.Assistant/Pricely.Agents.Assistant.csproj" />
 	</Folder>
 	<Folder Name="/src/API/">
 		<Project Path="src/API/Pricely.Api/Pricely.Api.csproj" />
 	</Folder>
 	<Folder Name="/src/Common/">
-		<Project
-			Path="src/Common/Pricely.Common.Application/Pricely.Common.Application.csproj"
-			Id="3f80165b-832b-43c6-aca8-bbf5cc97a6b9" />
-		<Project
-			Path="src/Common/Pricely.Common.Domain/Pricely.Common.Domain.csproj"
-			Id="e7f3bdbf-edeb-4887-9764-00446fc5f1e4" />
-		<Project
-			Path="src/Common/Pricely.Common.Infrastructure/Pricely.Common.Infrastructure.csproj"
-			Id="e33ad5c1-e0a0-4cba-bc00-e63c7c2c911f" />
-		<Project
-			Path="src/Common/Pricely.Common.Presentation/Pricely.Common.Presentation.csproj"
-			Id="10389c52-f0f3-44e1-abff-bb8c952dd334" />
+		<Project Path="src/Common/Pricely.Common.Application/Pricely.Common.Application.csproj" Id="3f80165b-832b-43c6-aca8-bbf5cc97a6b9" />
+		<Project Path="src/Common/Pricely.Common.Domain/Pricely.Common.Domain.csproj" Id="e7f3bdbf-edeb-4887-9764-00446fc5f1e4" />
+		<Project Path="src/Common/Pricely.Common.Infrastructure/Pricely.Common.Infrastructure.csproj" Id="e33ad5c1-e0a0-4cba-bc00-e63c7c2c911f" />
+		<Project Path="src/Common/Pricely.Common.Presentation/Pricely.Common.Presentation.csproj" Id="10389c52-f0f3-44e1-abff-bb8c952dd334" />
 	</Folder>
 	<Folder Name="/src/Modules/" />
+	<Folder Name="/src/Modules/Agentic/">
+		<Project Path="src/Modules/Agentic/Pricely.Modules.Agentic.Application/Pricely.Modules.Agentic.Application.csproj" />
+		<Project Path="src/Modules/Agentic/Pricely.Modules.Agentic.Domain/Pricely.Modules.Agentic.Domain.csproj" />
+		<Project Path="src/Modules/Agentic/Pricely.Modules.Agentic.Infrastructure/Pricely.Modules.Agentic.Infrastructure.csproj" />
+		<Project Path="src/Modules/Agentic/Pricely.Modules.Agentic.Presentation/Pricely.Modules.Agentic.Presentation.csproj" />
+	</Folder>
+	<Folder Name="/src/Modules/Agentic/test/">
+		<Project Path="src/Modules/Agentic/test/Pricely.Modules.Agentic.ArchitectureTests/Pricely.Modules.Agentic.ArchitectureTests.csproj" />
+		<Project Path="src/Modules/Agentic/test/Pricely.Modules.Agentic.UnitTests/Pricely.Modules.Agentic.UnitTests.csproj" />
+	</Folder>
 	<Folder Name="/src/Modules/AiEngine/">
-		<Project
-			Path="src/Modules/AiEngine/Pricely.Modules.AiEngine.Domain/Pricely.Modules.AiEngine.Domain.csproj" />
-		<Project
-			Path="src/Modules/AiEngine/Pricely.Modules.AiEngine.Application/Pricely.Modules.AiEngine.Application.csproj" />
-		<Project
-			Path="src/Modules/AiEngine/Pricely.Modules.AiEngine.Infrastructure/Pricely.Modules.AiEngine.Infrastructure.csproj" />
-		<Project
-			Path="src/Modules/AiEngine/Pricely.Modules.AiEngine.Presentation/Pricely.Modules.AiEngine.Presentation.csproj" />
+		<Project Path="src/Modules/AiEngine/Pricely.Modules.AiEngine.Domain/Pricely.Modules.AiEngine.Domain.csproj" />
+		<Project Path="src/Modules/AiEngine/Pricely.Modules.AiEngine.Application/Pricely.Modules.AiEngine.Application.csproj" />
+		<Project Path="src/Modules/AiEngine/Pricely.Modules.AiEngine.Infrastructure/Pricely.Modules.AiEngine.Infrastructure.csproj" />
+		<Project Path="src/Modules/AiEngine/Pricely.Modules.AiEngine.Presentation/Pricely.Modules.AiEngine.Presentation.csproj" />
 	</Folder>
 	<Folder Name="/src/Modules/AiEngine/test/">
-		<Project
-			Path="src/Modules/AiEngine/test/Pricely.Modules.AiEngine.ArchitectureTests/Pricely.Modules.AiEngine.ArchitectureTests.csproj" />
-		<Project
-			Path="src/Modules/AiEngine/test/Pricely.Modules.AiEngine.UnitTests/Pricely.Modules.AiEngine.UnitTests.csproj" />
+		<Project Path="src/Modules/AiEngine/test/Pricely.Modules.AiEngine.ArchitectureTests/Pricely.Modules.AiEngine.ArchitectureTests.csproj" />
+		<Project Path="src/Modules/AiEngine/test/Pricely.Modules.AiEngine.UnitTests/Pricely.Modules.AiEngine.UnitTests.csproj" />
 	</Folder>
 	<Folder Name="/src/Modules/Catalog/">
-		<Project
-			Path="src/Modules/Catalog/Pricely.Modules.Catalog.Domain/Pricely.Modules.Catalog.Domain.csproj" />
-		<Project
-			Path="src/Modules/Catalog/Pricely.Modules.Catalog.Application/Pricely.Modules.Catalog.Application.csproj" />
-		<Project
-			Path="src/Modules/Catalog/Pricely.Modules.Catalog.Infrastructure/Pricely.Modules.Catalog.Infrastructure.csproj" />
-		<Project
-			Path="src/Modules/Catalog/Pricely.Modules.Catalog.Presentation/Pricely.Modules.Catalog.Presentation.csproj" />
-		<Project
-			Path="src/Modules/Catalog/Pricely.Modules.Catalog.IntegrationEvents/Pricely.Modules.Catalog.IntegrationEvents.csproj" />
+		<Project Path="src/Modules/Catalog/Pricely.Modules.Catalog.Domain/Pricely.Modules.Catalog.Domain.csproj" />
+		<Project Path="src/Modules/Catalog/Pricely.Modules.Catalog.Application/Pricely.Modules.Catalog.Application.csproj" />
+		<Project Path="src/Modules/Catalog/Pricely.Modules.Catalog.Infrastructure/Pricely.Modules.Catalog.Infrastructure.csproj" />
+		<Project Path="src/Modules/Catalog/Pricely.Modules.Catalog.Presentation/Pricely.Modules.Catalog.Presentation.csproj" />
+		<Project Path="src/Modules/Catalog/Pricely.Modules.Catalog.IntegrationEvents/Pricely.Modules.Catalog.IntegrationEvents.csproj" />
 	</Folder>
 	<Folder Name="/src/Modules/Catalog/test/">
-		<Project
-			Path="src/Modules/Catalog/test/Pricely.Modules.Catalog.ArchitectureTests/Pricely.Modules.Catalog.ArchitectureTests.csproj" />
-		<Project
-			Path="src/Modules/Catalog/test/Pricely.Modules.Catalog.UnitTests/Pricely.Modules.Catalog.UnitTests.csproj" />
+		<Project Path="src/Modules/Catalog/test/Pricely.Modules.Catalog.ArchitectureTests/Pricely.Modules.Catalog.ArchitectureTests.csproj" />
+		<Project Path="src/Modules/Catalog/test/Pricely.Modules.Catalog.UnitTests/Pricely.Modules.Catalog.UnitTests.csproj" />
 	</Folder>
 	<Folder Name="/src/Modules/Pricing/">
-		<Project
-			Path="src/Modules/Pricing/Pricely.Modules.Pricing.Domain/Pricely.Modules.Pricing.Domain.csproj" />
-		<Project
-			Path="src/Modules/Pricing/Pricely.Modules.Pricing.Application/Pricely.Modules.Pricing.Application.csproj" />
-		<Project
-			Path="src/Modules/Pricing/Pricely.Modules.Pricing.Infrastructure/Pricely.Modules.Pricing.Infrastructure.csproj" />
-		<Project
-			Path="src/Modules/Pricing/Pricely.Modules.Pricing.Presentation/Pricely.Modules.Pricing.Presentation.csproj" />
+		<Project Path="src/Modules/Pricing/Pricely.Modules.Pricing.Domain/Pricely.Modules.Pricing.Domain.csproj" />
+		<Project Path="src/Modules/Pricing/Pricely.Modules.Pricing.Application/Pricely.Modules.Pricing.Application.csproj" />
+		<Project Path="src/Modules/Pricing/Pricely.Modules.Pricing.Infrastructure/Pricely.Modules.Pricing.Infrastructure.csproj" />
+		<Project Path="src/Modules/Pricing/Pricely.Modules.Pricing.Presentation/Pricely.Modules.Pricing.Presentation.csproj" />
 	</Folder>
 	<Folder Name="/src/Modules/Pricing/test/">
-		<Project
-			Path="src/Modules/Pricing/test/Pricely.Modules.Pricing.ArchitectureTests/Pricely.Modules.Pricing.ArchitectureTests.csproj" />
-		<Project
-			Path="src/Modules/Pricing/test/Pricely.Modules.Pricing.UnitTests/Pricely.Modules.Pricing.UnitTests.csproj" />
+		<Project Path="src/Modules/Pricing/test/Pricely.Modules.Pricing.ArchitectureTests/Pricely.Modules.Pricing.ArchitectureTests.csproj" />
+		<Project Path="src/Modules/Pricing/test/Pricely.Modules.Pricing.UnitTests/Pricely.Modules.Pricing.UnitTests.csproj" />
 	</Folder>
 	<Folder Name="/src/Modules/Users/">
-		<Project
-			Path="src/Modules/Users/Pricely.Modules.Users.Application/Pricely.Modules.Users.Application.csproj" />
-		<Project
-			Path="src/Modules/Users/Pricely.Modules.Users.Domain/Pricely.Modules.Users.Domain.csproj" />
-		<Project
-			Path="src/Modules/Users/Pricely.Modules.Users.Infrastructure/Pricely.Modules.Users.Infrastructure.csproj" />
-		<Project
-			Path="src/Modules/Users/Pricely.Modules.Users.Presentation/Pricely.Modules.Users.Presentation.csproj" />
-		<Project
-			Path="src/Modules/Users/Pricely.Modules.Users.IntegrationEvents/Pricely.Modules.Users.IntegrationEvents.csproj"
-			Id="a46c73ee-f0e4-48f1-a13e-116dce73ed6d" />
+		<Project Path="src/Modules/Users/Pricely.Modules.Users.Application/Pricely.Modules.Users.Application.csproj" />
+		<Project Path="src/Modules/Users/Pricely.Modules.Users.Domain/Pricely.Modules.Users.Domain.csproj" />
+		<Project Path="src/Modules/Users/Pricely.Modules.Users.Infrastructure/Pricely.Modules.Users.Infrastructure.csproj" />
+		<Project Path="src/Modules/Users/Pricely.Modules.Users.Presentation/Pricely.Modules.Users.Presentation.csproj" />
+		<Project Path="src/Modules/Users/Pricely.Modules.Users.IntegrationEvents/Pricely.Modules.Users.IntegrationEvents.csproj" Id="a46c73ee-f0e4-48f1-a13e-116dce73ed6d" />
 	</Folder>
 	<Folder Name="/src/Modules/Users/test/">
-		<Project
-			Path="src/Modules/Users/test/Pricely.Modules.Users.ArchitectureTests/Pricely.Modules.Users.ArchitectureTests.csproj"
-			Id="58306a48-3bae-468d-87e4-45c7a2410aa8" />
-		<Project
-			Path="src/Modules/Users/test/Pricely.Modules.Users.UnitTests/Pricely.Modules.Users.UnitTests.csproj"
-			Id="b130d505-c013-460c-93ef-d6a34c9babfc" />
+		<Project Path="src/Modules/Users/test/Pricely.Modules.Users.ArchitectureTests/Pricely.Modules.Users.ArchitectureTests.csproj" Id="58306a48-3bae-468d-87e4-45c7a2410aa8" />
+		<Project Path="src/Modules/Users/test/Pricely.Modules.Users.UnitTests/Pricely.Modules.Users.UnitTests.csproj" Id="b130d505-c013-460c-93ef-d6a34c9babfc" />
 	</Folder>
 	<Folder Name="/test/">
-		<Project
-			Path="test/Pricely.Common.UnitTests/Pricely.Common.UnitTests.csproj" />
-		<Project
-			Path="test/Pricely.ArchitectureTests/Pricely.ArchitectureTests.csproj"
-			Id="51f19f97-3b18-4457-a111-1d4698f121cc" />
+		<Project Path="test/Pricely.Common.UnitTests/Pricely.Common.UnitTests.csproj" />
+		<Project Path="test/Pricely.ArchitectureTests/Pricely.ArchitectureTests.csproj" Id="51f19f97-3b18-4457-a111-1d4698f121cc" />
 	</Folder>
 </Solution>

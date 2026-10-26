@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Pricely.Common.Application.Authorization;
 using Pricely.Common.Domain;
 using Pricely.Common.Infrastructure.Authentication;
 using Pricely.Common.Presentation.ApiResults;
@@ -24,7 +25,7 @@ internal sealed class UpdateUserProfile : IEndpoint
 
             return result.Match(Results.NoContent, ApiResults.Problem);
         })
-        .RequireAuthorization()
+        .RequireAuthorization(PricelyScopes.Write)
         .WithTags(Tags.Users);
     }
 

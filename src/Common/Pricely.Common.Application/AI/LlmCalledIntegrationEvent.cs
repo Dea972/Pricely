@@ -21,6 +21,9 @@ public sealed class LlmCalledIntegrationEvent : IntegrationEvent
 
     public string? UserId { get; init; }
 
+    /// <summary>Agent on whose behalf the call was made, if any (Agentic module).</summary>
+    public string? AgentName { get; init; }
+
     public required string ModelProvider { get; init; }
 
     public required string ModelName { get; init; }

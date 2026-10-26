@@ -13,3 +13,9 @@ public sealed record GetUsageByFeatureQuery(DateTime? FromUtc, DateTime? ToUtc) 
 
 /// <summary>Usage per UTC day in [FromUtc, ToUtc[.</summary>
 public sealed record GetDailyUsageQuery(DateTime? FromUtc, DateTime? ToUtc) : IQuery<IReadOnlyCollection<DailyUsageResponse>>;
+
+/// <summary>Model usage of the agents (calls made on behalf of an agent), by agent.</summary>
+public sealed record GetUsageByAgentQuery(DateTime? FromUtc, DateTime? ToUtc) : IQuery<IReadOnlyCollection<AgentUsageResponse>>;
+
+/// <summary>Tool calls of the agents and decisions on their proposed actions, by agent and tool.</summary>
+public sealed record GetUsageByToolQuery(DateTime? FromUtc, DateTime? ToUtc) : IQuery<IReadOnlyCollection<ToolUsageResponse>>;

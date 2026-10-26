@@ -23,10 +23,14 @@ test/                   Solution-level architecture and integration tests
 | Pricing | Merchants, collection profiles per typology, offers (product × merchant), price observations, collection |
 | AiEngine | LLM model catalog and prices, target model per AI feature, LLM call journal and costs, usage statistics |
 
+| Agentic | Generic, reusable module: runs the declared agents with the given tools, keeps their conversations, asks a person to approve every write tool |
+
+The agents of Pricely live in `src/Agents` (one project per agent, `Pricely.Agents.Assistant`) and only reference `Common`: an agent is an `AgentDefinition` registered with `AddAgent`.
+
 ### AI and MCP
 
 - Every LLM call goes through `ILlmGateway` (Common) for a declared `AiFeature`; providers are registered once (Anthropic: `dotnet user-secrets set "Ai:Anthropic:ApiKey" "<key>" --project src/API/Pricely.Api`).
-- MCP server over streamable HTTP on `/mcp` (authenticated) with read-only tools: `get_category_tree`, `search_products`, `get_product`, `list_merchants`, `compare_prices`, `get_price_history`, `list_price_anomalies`, `get_collection_plan`, `list_offers_pending_review`.
+- MCP server over streamable HTTP on `/mcp` (authenticated) with read-only tools (write tools are only given to the internal agent, behind approval): `get_category_tree`, `search_products`, `get_product`, `list_merchants`, `compare_prices`, `get_price_history`, `list_price_anomalies`, `get_collection_plan`, `list_offers_pending_review`.
 
 ### Pricing in a nutshell
 
@@ -71,6 +75,17 @@ curl -i http://localhost:5136/api/catalog/categories -H "Authorization: Bearer $
 ```
 
 `src/API/Pricely.Api/Pricely.Api.http` contains the same requests for the IDE. Tokens last 15 minutes.
+
+Scopes: reads need `pricely.read`, writes `pricely.write`, offer confirmation and rejection `pricely.review`. Ask for them in the token request, e.g. `-d "scope=openid pricely.read pricely.write pricely.review"`.
+
+### Talk to the assistant
+
+```bash
+curl -N http://localhost:5136/api/agents/assistant/messages -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" -d '{"message":"Compare les prix du ciment"}'
+```
+
+The answer is a stream of server-sent events (`conversation`, `tool_call`, `tool_result`, `action_proposed`, `text`, `done`). A write tool (for example `collect_product_offers`) is never run by the model: approve it with `POST /api/agents/actions/{id}/approve` (token with `pricely.write`) or reject it. Conversations: `GET /api/agents/conversations`. Needs the Anthropic key. Every model call, tool call and decision is journaled by AiEngine (`/api/aiengine/usage/by-agent`, `/api/aiengine/usage/by-tool`).
 
 ### Use the MCP server from Claude Code
 

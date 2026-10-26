@@ -194,6 +194,7 @@
   ],
   "users": [
     {
+      "id": "5d1c2a7e-4b8f-4e0a-9c3d-7a6b5e4f3d21",
       "username": "dev",
       "enabled": true,
       "email": "dev@pricely.local",

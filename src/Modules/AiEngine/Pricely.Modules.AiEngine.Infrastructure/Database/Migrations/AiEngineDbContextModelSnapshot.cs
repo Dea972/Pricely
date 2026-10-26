@@ -76,6 +76,100 @@ namespace Pricely.Modules.AiEngine.Infrastructure.Database.Migrations
                     b.ToTable("inbox_message_consumers", "aiengine");
                 });
 
+            modelBuilder.Entity("Pricely.Modules.AiEngine.Domain.AgentActivities.AgentActivity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ActionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("action_id");
+
+                    b.Property<string>("AgentName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("agent_name");
+
+                    b.Property<string>("Decision")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("decision");
+
+                    b.Property<long?>("DecisionDelayMs")
+                        .HasColumnType("bigint")
+                        .HasColumnName("decision_delay_ms");
+
+                    b.Property<long?>("DurationMs")
+                        .HasColumnType("bigint")
+                        .HasColumnName("duration_ms");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("error_message");
+
+                    b.Property<string>("FeatureCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("feature_code");
+
+                    b.Property<bool>("IsReadOnlyTool")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_read_only_tool");
+
+                    b.Property<bool>("IsSuccess")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_success");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<DateTime>("OccurredOnUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_on_utc");
+
+                    b.Property<string>("SessionId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("session_id");
+
+                    b.Property<string>("ToolName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("tool_name");
+
+                    b.Property<string>("UserId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("user_id");
+
+                    b.Property<bool>("WasApproved")
+                        .HasColumnType("boolean")
+                        .HasColumnName("was_approved");
+
+                    b.HasKey("Id")
+                        .HasName("pk_agent_activities");
+
+                    b.HasIndex("OccurredOnUtc")
+                        .HasDatabaseName("ix_agent_activities_occurred_on_utc");
+
+                    b.HasIndex("SessionId")
+                        .HasDatabaseName("ix_agent_activities_session_id");
+
+                    b.HasIndex("AgentName", "ToolName")
+                        .HasDatabaseName("ix_agent_activities_agent_name_tool_name");
+
+                    b.ToTable("agent_activities", "aiengine");
+                });
+
             modelBuilder.Entity("Pricely.Modules.AiEngine.Domain.Features.FeatureSetting", b =>
                 {
                     b.Property<Guid>("Id")
@@ -116,6 +210,11 @@ namespace Pricely.Modules.AiEngine.Infrastructure.Database.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<string>("AgentName")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("agent_name");
 
                     b.Property<decimal?>("CacheWriteCost")
                         .HasPrecision(18, 6)

@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Pricely.Common.Application.Authorization;
 using Pricely.Common.Domain;
 using Pricely.Common.Presentation.ApiResults;
 using Pricely.Common.Presentation.Endpoints;
@@ -20,7 +21,7 @@ internal sealed class GetMerchants : IEndpoint
 
             return result.Match(Results.Ok, ApiResults.Problem);
         })
-        .RequireAuthorization()
+        .RequireAuthorization(PricelyScopes.Read)
         .WithTags(Tags.Merchants);
     }
 }

@@ -1,5 +1,6 @@
 using FluentAssertions;
 using MediatR;
+using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using Pricely.Common.Application.Authorization;
 using Pricely.Common.Application.Exceptions;
@@ -57,7 +58,7 @@ public class PermissionServiceTests
         var sender = new FakeSender
         {
             Permissions = [NotFound, Result.Success(Known)],
-            ProvisionFailure = new PricelyException("ProvisionUserCommand", innerException: new DbUpdateException("duplicate identity_id"))
+            ProvisionFailure = new PricelyException("ProvisionUserCommand", innerException: UniqueViolation("ix_users_identity_id"))
         };
 
         Result<PermissionsResponse> result = await new PermissionService(sender).ResolveCallerAsync(Identity);
@@ -66,18 +67,21 @@ public class PermissionServiceTests
     }
 
     [Fact]
-    public async Task Resolve_ShouldRethrow_WhenTheDatabaseFailureIsNotARace()
+    public async Task Resolve_ShouldFail_WhenTheEmailBelongsToAnotherIdentity()
     {
         var sender = new FakeSender
         {
             Permissions = [NotFound, NotFound],
-            ProvisionFailure = new PricelyException("ProvisionUserCommand", innerException: new DbUpdateException("duplicate email"))
+            ProvisionFailure = new PricelyException("ProvisionUserCommand", innerException: UniqueViolation("ix_users_email"))
         };
 
-        Func<Task> act = () => new PermissionService(sender).ResolveCallerAsync(Identity);
+        Result<PermissionsResponse> result = await new PermissionService(sender).ResolveCallerAsync(Identity);
 
-        await act.Should().ThrowAsync<PricelyException>();
+        result.Error.Should().Be(UserErrors.EmailAlreadyLinked);
     }
+
+    private static DbUpdateException UniqueViolation(string constraint) =>
+        new("duplicate key", new PostgresException("duplicate key", "ERROR", "ERROR", PostgresErrorCodes.UniqueViolation, constraintName: constraint));
 
     private static Result<PermissionsResponse> NotFound => Result.Failure<PermissionsResponse>(UserErrors.NotFound("kc-sub-1"));
 

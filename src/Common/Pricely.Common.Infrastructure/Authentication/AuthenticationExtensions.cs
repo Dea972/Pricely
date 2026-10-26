@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Pricely.Common.Application.Authorization;
 
 namespace Pricely.Common.Infrastructure.Authentication;
 
@@ -22,6 +23,7 @@ internal static class AuthenticationExtensions
         services.AddSingleton<IConfigureOptions<JwtBearerOptions>, ConfigureJwtBearer>();
 
         services.AddHttpContextAccessor();
+        services.AddScoped<ICurrentUser, CurrentUser>();
 
         return services;
     }

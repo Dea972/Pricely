@@ -1,4 +1,5 @@
 using Pricely.Common.Application;
+using Pricely.Common.Application.AI.Agents;
 using Pricely.Common.Infrastructure;
 using Pricely.Common.Infrastructure.Ai;
 using Pricely.Common.Infrastructure.Authentication;
@@ -6,6 +7,8 @@ using Pricely.Common.Infrastructure.Authorization;
 using Pricely.Common.Infrastructure.Configuration;
 using Pricely.Common.Presentation.Endpoints;
 using Pricely.Common.Presentation.Mcp;
+using Pricely.Agents.Assistant;
+using Pricely.Modules.Agentic.Infrastructure;
 using Pricely.Modules.AiEngine.Infrastructure;
 using Pricely.Modules.Catalog.Infrastructure;
 using Pricely.Modules.Pricing.Infrastructure;
@@ -46,7 +49,8 @@ public static class ServiceCollectionExtensions
             .. CatalogModule.HandlerAssemblies,
             .. PricingModule.HandlerAssemblies,
             .. UsersModule.HandlerAssemblies,
-            .. AiEngineModule.HandlerAssemblies
+            .. AiEngineModule.HandlerAssemblies,
+            .. AgenticModule.HandlerAssemblies
         ]);
 
         // Register infrastructure concerns (DbContext, repositories, outbox, message bus, etc.).
@@ -74,8 +78,14 @@ public static class ServiceCollectionExtensions
         // Keep this section as the single place to aggregate module additions.
 
 
-        // MCP server over HTTP (/mcp): the tools declared by the modules (ADR-009).
-        services.AddPricelyMcpServer([CatalogModule.ToolAssembly, PricingModule.ToolAssembly]);
+        // MCP server over HTTP (/mcp): the read-only tools declared by the modules (ADR-009).
+        System.Reflection.Assembly[] toolAssemblies = [CatalogModule.ToolAssembly, PricingModule.ToolAssembly];
+        services.AddPricelyMcpServer(toolAssemblies);
+
+        // Agentic module (ADR-014): runs the declared agents with the same tools, write tools included (behind approval).
+        services.AddAgenticModule(configuration, connectionString);
+        services.AddAgentTools(McpServerExtensions.ToAgentTools(toolAssemblies));
+        services.AddAssistantAgent();
 
         // Return the modified service collection.
         return services;

@@ -37,6 +37,7 @@
         <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
         <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.4" />
         <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.4" />
+        <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.4" />
         <!-- Messaging -->
         <PackageVersion Include="MassTransit" Version="8.5.7" />
         <!-- CQRS & Validation -->
@@ -70,7 +71,8 @@
         <!-- MCP & AI -->
         <PackageVersion Include="ModelContextProtocol" Version="1.4.1" />
         <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="1.4.1" />
-        <PackageVersion Include="Microsoft.Extensions.AI" Version="10.2.0" />
+        <PackageVersion Include="Microsoft.Extensions.AI" Version="10.5.2" />
+        <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.5.2" />
         <!-- Patched versions of vulnerable transitive dependencies, referenced directly where they surface (remove once the parents ship them) -->
         <!-- GHSA-qhrr-8q5h-9q3h: via StreamJsonRpc (Aspire.Hosting) -->
         <PackageVersion Include="MessagePack" Version="2.5.307" />

@@ -3,6 +3,7 @@ using MediatR;
 using ModelContextProtocol.Server;
 using Pricely.Common.Presentation.Mcp;
 using Pricely.Modules.Pricing.Application.Merchants.GetMerchants;
+using Pricely.Modules.Pricing.Application.Offers.CollectProductOffers;
 using Pricely.Modules.Pricing.Application.Offers.GetCollectionPlan;
 using Pricely.Modules.Pricing.Application.Offers.GetOffersPendingReview;
 using Pricely.Modules.Pricing.Application.Offers.GetPriceAnomalies;
@@ -12,8 +13,8 @@ using Pricely.Modules.Pricing.Application.Offers.GetProductPriceComparison;
 namespace Pricely.Modules.Pricing.Presentation.Tools;
 
 /// <summary>
-/// Pricing tools for AI agents (MCP and internal agent). Read-only for now; write tools (offer submission, review)
-/// will require approval (ADR-008, ADR-009).
+/// Pricing tools for AI agents (MCP and internal agent). Write tools (<c>ReadOnly = false</c>) are only given to the
+/// internal agent, which turns each call into an action that a person approves before it runs (ADR-008, ADR-013).
 /// </summary>
 [McpServerToolType]
 public static class PricingTools
@@ -86,4 +87,17 @@ public static class PricingTools
         ISender sender,
         CancellationToken cancellationToken = default) =>
         (await sender.Send(new GetOffersPendingReviewQuery(), cancellationToken)).ValueOrToolError();
+
+    [McpServerTool(Name = "collect_product_offers", Title = "Collecter les offres", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = true)]
+    [Description("""
+        Lance la collecte des offres d'un produit chez les enseignes de son plan de collecte (voir get_collection_plan) :
+        crée ou met à jour les offres et enregistre de nouveaux relevés de prix. Les offres qui ne sont pas rapprochées
+        par GTIN ou marque + référence fabricant restent à valider. Action d'écriture : elle n'est exécutée qu'après
+        validation par l'utilisateur.
+        """)]
+    public static async Task<CollectProductOffersResponse> CollectProductOffers(
+        ISender sender,
+        [Description("Identifiant du produit.")] Guid productId,
+        CancellationToken cancellationToken = default) =>
+        (await sender.Send(new CollectProductOffersCommand(productId), cancellationToken)).ValueOrToolError();
 }

@@ -23,6 +23,7 @@ internal sealed class LlmCalledIntegrationEventHandler(ISender sender)
                     SessionId = integrationEvent.SessionId,
                     SourceModule = integrationEvent.SourceModule,
                     UserId = integrationEvent.UserId,
+                    AgentName = integrationEvent.AgentName,
                     CalledOnUtc = integrationEvent.OccurredOnUtc,
                     FeatureCode = integrationEvent.FeatureCode,
                     ModelProvider = integrationEvent.ModelProvider,

@@ -44,3 +44,33 @@ public sealed class DailyUsageResponse : UsageTotals
 {
     public DateTime Day { get; init; }
 }
+
+public sealed class AgentUsageResponse : UsageTotals
+{
+    public string AgentName { get; init; }
+}
+
+public sealed class ToolUsageResponse
+{
+    public string AgentName { get; init; }
+
+    public string ToolName { get; init; }
+
+    public bool IsReadOnly { get; init; }
+
+    /// <summary>Tool runs (during a turn for a read tool, after approval for a write tool).</summary>
+    public int Calls { get; init; }
+
+    public int FailedCalls { get; init; }
+
+    public double AverageDurationMs { get; init; }
+
+    /// <summary>Write tools: actions approved and run, approved but failed, rejected.</summary>
+    public int Executed { get; init; }
+
+    public int FailedAfterApproval { get; init; }
+
+    public int Rejected { get; init; }
+
+    public double AverageDecisionDelayMs { get; init; }
+}

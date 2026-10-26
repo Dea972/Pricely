@@ -19,6 +19,9 @@ public sealed class LlmCallDetails
 
     public string? UserId { get; init; }
 
+    /// <summary>Agent on whose behalf the call was made, if any.</summary>
+    public string? AgentName { get; init; }
+
     public required string ModelProvider { get; init; }
 
     public required string ModelName { get; init; }
