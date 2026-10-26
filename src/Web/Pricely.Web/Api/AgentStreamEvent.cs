@@ -9,8 +9,20 @@ public abstract record AgentStreamEvent
 {
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
 
-    /// <summary>The event, or null for an event type this front does not know (a newer API).</summary>
-    public static AgentStreamEvent? Parse(string type, string data) =>
+    /// <summary>The event, or null for an event type this front does not know (a newer API) or an unreadable one.</summary>
+    public static AgentStreamEvent? Parse(string type, string data)
+    {
+        try
+        {
+            return Read(type, data);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static AgentStreamEvent? Read(string type, string data) =>
         type switch
         {
             AgentEventTypes.Conversation => JsonSerializer.Deserialize<ConversationStarted>(data, Options),

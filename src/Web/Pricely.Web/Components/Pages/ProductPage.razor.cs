@@ -39,42 +39,60 @@ public partial class ProductPage
     [Inject]
     private TimeProvider Clock { get; set; } = default!;
 
+    /// <summary>The first offer of the API (cheapest first), unless its price is suspect.</summary>
+    private Guid? BestOfferId => _prices is [MerchantPriceDto first, ..] && !first.IsFlaggedAsAnomaly ? first.OfferId : null;
+
     private string AskAssistantAddress =>
         "/?prompt=" + Uri.EscapeDataString($"Compare les prix de « {_product?.Name} » et dis-moi s'il y a des prix suspects.");
 
     protected override async Task OnParametersSetAsync()
     {
-        if (_product?.Id == ProductId)
+        Guid productId = ProductId;
+        if (_product?.Id == productId)
         {
             return;
         }
 
         _product = null;
         _offers = null;
+        _prices = null;
         _history = null;
         _collected = null;
+        Problem = null;
 
-        _product = await CallAsync(() => Api.GetProductAsync(ProductId, CancellationToken.None));
-        if (_product is null)
+        // After each call: the user may have opened another product in the meantime (its own load runs).
+        ProductDto? product = await CallAsync(() => Api.GetProductAsync(productId, CancellationToken.None));
+        string? categoryPath = product is null ? null : await Products.CategoryPathAsync(product.ProductCategoryId);
+        if (product is null || productId != ProductId)
         {
             return;
         }
 
-        _categoryPath = await Products.CategoryPathAsync(_product.ProductCategoryId);
-        await LoadOffersAsync();
-        await LoadHistoryAsync();
+        (_product, _categoryPath) = (product, categoryPath);
 
-        IReadOnlyList<MerchantDto>? merchants = await CallAsync(() => Api.GetMerchantsAsync(CancellationToken.None));
-        _activeMerchants = merchants?.Count(m => m.IsActive);
+        if (await LoadOffersAsync(productId) && await LoadHistoryAsync(productId))
+        {
+            IReadOnlyList<MerchantDto>? merchants = await CallAsync(() => Api.GetMerchantsAsync(CancellationToken.None));
+            _activeMerchants = productId == ProductId ? merchants?.Count(m => m.IsActive) : _activeMerchants;
+        }
     }
 
-    private async Task LoadOffersAsync()
+    /// <summary>False when the page shows another product by now.</summary>
+    private async Task<bool> LoadOffersAsync(Guid productId)
     {
-        _offers = await CallAsync(() => Api.GetProductOffersAsync(ProductId, CancellationToken.None));
-        _prices = await CallAsync(() => Api.GetPriceComparisonAsync(ProductId, CancellationToken.None));
+        ProductOffersDto? offers = await CallAsync(() => Api.GetProductOffersAsync(productId, CancellationToken.None));
+        IReadOnlyList<MerchantPriceDto>? prices = await CallAsync(() => Api.GetPriceComparisonAsync(productId, CancellationToken.None));
+        if (productId != ProductId)
+        {
+            return false;
+        }
+
+        (_offers, _prices) = (offers, prices);
+
+        return true;
     }
 
-    private async Task LoadHistoryAsync()
+    private async Task<bool> LoadHistoryAsync(Guid productId)
     {
         DateTime now = Clock.GetUtcNow().UtcDateTime;
         DateTime from = _period switch
@@ -85,7 +103,15 @@ public partial class ProductPage
         };
 
         _history = null;
-        _history = await CallAsync(() => Api.GetPriceHistoryAsync(ProductId, from, CancellationToken.None)) ?? [];
+        IReadOnlyList<PriceHistoryEntryDto> history = await CallAsync(() => Api.GetPriceHistoryAsync(productId, from, CancellationToken.None)) ?? [];
+        if (productId != ProductId)
+        {
+            return false;
+        }
+
+        _history = history;
+
+        return true;
     }
 
     private async Task ChangePeriodAsync(HistoryPeriod period)
@@ -96,21 +122,29 @@ public partial class ProductPage
         }
 
         _period = period;
-        await LoadHistoryAsync();
+        Problem = null;
+        await LoadHistoryAsync(ProductId);
     }
 
     private async Task CollectAsync()
     {
+        // Not idempotent and costly: a second click that arrives before the button is disabled does nothing.
+        if (_collecting)
+        {
+            return;
+        }
+
+        Guid productId = ProductId;
         _collecting = true;
         _collected = null;
+        Problem = null;
 
         try
         {
-            _collected = await CallAsync(() => Api.CollectProductOffersAsync(ProductId, CancellationToken.None));
-            if (_collected is not null)
+            _collected = await CallAsync(() => Api.CollectProductOffersAsync(productId, CancellationToken.None));
+            if (_collected is not null && await LoadOffersAsync(productId))
             {
-                await LoadOffersAsync();
-                await LoadHistoryAsync();
+                await LoadHistoryAsync(productId);
             }
         }
         finally

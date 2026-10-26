@@ -88,8 +88,23 @@ public sealed class ComponentTests : BunitContext
         view.FindAll("tbody tr").Should().HaveCount(2);
         view.Find("tr.best").TextContent.Should().Contain("Comptoir du Bâtiment").And.Contain("Moins cher").And.Contain("9,40 €");
         view.Find("tr.flagged").TextContent.Should().Contain("Prix suspect").And.Contain("94,00 €");
-        view.Find("tr.flagged a").HasAttribute("href").Should().BeFalse("a javascript: address is never a link");
+        view.Find("tr.flagged").QuerySelector("a").Should().BeNull("a javascript: address is never a link");
         view.Find($"a[href='/products/{ProductId}']").TextContent.Should().Be("Ouvrir la fiche");
+    }
+
+    [Fact]
+    public void ASuspectPrice_ShouldNeverBeCalledTheCheapest()
+    {
+        Api(_ => new HttpResponseMessage(HttpStatusCode.NotFound));
+        var output = new ToolOutput(
+            "c1",
+            ToolCatalog.ComparePrices,
+            Json("""[{"offerId":"00000000-0000-0000-0000-000000000003","merchantName":"Lot de 10","productPage":"https://lot.test/p","amount":0.94,"currency":"EUR","availability":"InStock","observedOnUtc":"2026-10-26T08:00:00Z","isFlaggedAsAnomaly":true}]"""),
+            null);
+
+        IRenderedComponent<ToolResultView> view = Render<ToolResultView>(parameters => parameters.Add(p => p.Output, output));
+
+        view.Markup.Should().Contain("Prix suspect").And.NotContain("Moins cher");
     }
 
     [Fact]

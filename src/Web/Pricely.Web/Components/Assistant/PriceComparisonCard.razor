@@ -39,7 +39,8 @@
                         // The API lists the offers cheapest first.
                         <tr class="@RowClass(price, index)">
                             <td>
-                                @if (index == 0)
+                                @* The API lists the offers cheapest first; a suspect price is never called the cheapest. *@
+                                @if (index == 0 && !price.IsFlaggedAsAnomaly)
                                 {
                                     <strong>@price.MerchantName</strong> <span class="badge badge-accent">Moins cher</span>
                                 }
@@ -55,7 +56,7 @@
                             <td class="num">@Format.Price(price.Amount, price.Currency)</td>
                             <td>@Format.Availability(price.Availability)</td>
                             <td class="muted">@Format.Ago(price.ObservedOnUtc, Clock.GetUtcNow())</td>
-                            <td><a href="@Format.ExternalHref(price.ProductPage)" target="_blank" rel="noopener noreferrer">Voir la page</a></td>
+                            <td><ExternalLink Address="@price.ProductPage" TextOnlyWhenValid="true">Voir la page</ExternalLink></td>
                         </tr>
                     }
                 </tbody>

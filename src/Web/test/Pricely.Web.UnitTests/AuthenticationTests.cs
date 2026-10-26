@@ -47,6 +47,17 @@ public sealed class AuthenticationTests
     }
 
     [Fact]
+    public async Task KeycloakOutOfOrder_ShouldNotEndTheSession()
+    {
+        using TestSession session = new TestSession(_ => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)).SignedIn(TimeSpan.Zero);
+
+        Func<Task> act = () => session.Tokens.GetAccessTokenAsync(CancellationToken.None);
+
+        await act.Should().ThrowAsync<HttpRequestException>();
+        session.Store.Get(TestSession.SessionKey).Should().NotBeNull("the next call tries the refresh again");
+    }
+
+    [Fact]
     public async Task ASessionWithoutTokens_ShouldBeExpired()
     {
         // The server restarted: the cookie is still valid, the tokens are gone.
@@ -63,6 +74,8 @@ public sealed class AuthenticationTests
     [InlineData("https://evil.test/", "/")]
     [InlineData("//evil.test/", "/")]
     [InlineData("/\\evil.test", "/")]
+    [InlineData("/\t/evil.test", "/")]
+    [InlineData("/\r\n/evil.test", "/")]
     [InlineData(null, "/")]
     [InlineData("", "/")]
     public void SignIn_ShouldOnlyReturnToAPageOfTheSite(string? returnAddress, string expected) =>

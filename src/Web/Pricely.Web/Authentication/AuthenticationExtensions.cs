@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.Extensions.Http.Resilience;
 
 namespace Pricely.Web.Authentication;
 
@@ -27,6 +29,11 @@ internal static class AuthenticationExtensions
         services.AddScoped<AccessTokenProvider>();
         services.AddHttpClient(TokenRefresher.HttpClientName);
 
+        // A refresh token may be rotated by Keycloak: the exchange is never sent twice.
+        services.Configure<HttpStandardResilienceOptions>(
+            $"{TokenRefresher.HttpClientName}-standard",
+            options => options.Retry.DisableForUnsafeHttpMethods());
+
         services
             .AddAuthentication(options =>
             {
@@ -40,6 +47,9 @@ internal static class AuthenticationExtensions
                 options.Cookie.SameSite = SameSiteMode.Lax;
                 options.ExpireTimeSpan = ServerTokenStore.SessionLifetime;
                 options.SlidingExpiration = true;
+
+                // Behind a TLS reverse proxy, forwarded headers must be set up as well (ADR-015).
+                options.Cookie.SecurePolicy = environment.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
             })
             .AddOpenIdConnect(options =>
             {
@@ -79,9 +89,15 @@ internal static class AuthenticationExtensions
                 TypedResults.Challenge(new AuthenticationProperties { RedirectUri = LocalOrRoot(returnUrl) }))
             .AllowAnonymous();
 
-        // POST with the antiforgery token of the form: a link cannot sign the user out.
-        group.MapPost("logout", (HttpContext context, ServerTokenStore store) =>
+        // POST with the antiforgery token of the form: neither a link nor another site can sign the user out. The token is
+        // checked here: the antiforgery middleware only rejects endpoints that read a form.
+        group.MapPost("logout", async Task<Results<BadRequest, SignOutHttpResult>> (HttpContext context, IAntiforgery antiforgery, ServerTokenStore store) =>
             {
+                if (!await antiforgery.IsRequestValidAsync(context))
+                {
+                    return TypedResults.BadRequest();
+                }
+
                 if (context.User.FindFirst(PricelyClaims.Session)?.Value is string sessionKey)
                 {
                     // The id token is still needed by Keycloak's end-session endpoint: read it before removing.
@@ -93,7 +109,7 @@ internal static class AuthenticationExtensions
                     new AuthenticationProperties { RedirectUri = "/" },
                     [CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme]);
             })
-            .WithMetadata(new RequireAntiforgeryTokenAttribute());
+            .DisableAntiforgery();
 
         return app;
     }
@@ -127,12 +143,15 @@ internal static class AuthenticationExtensions
         return Task.CompletedTask;
     }
 
-    /// <summary>Only a path of this site: an absolute or protocol-relative URL would be an open redirect.</summary>
+    /// <summary>
+    /// Only a path of this site, by the rule of ASP.NET Core's <c>IsLocalUrl</c>: an absolute or protocol-relative
+    /// address would be an open redirect, and browsers drop control characters (« /\t/evil.test » is « //evil.test »).
+    /// </summary>
     internal static string LocalOrRoot(string? returnUrl) =>
         returnUrl is { Length: > 0 }
             && returnUrl[0] == '/'
-            && !returnUrl.StartsWith("//", StringComparison.Ordinal)
-            && !returnUrl.StartsWith("/\\", StringComparison.Ordinal)
+            && (returnUrl.Length == 1 || returnUrl[1] != '/' && returnUrl[1] != '\\')
+            && !returnUrl.Any(char.IsControl)
             ? returnUrl
             : "/";
 }

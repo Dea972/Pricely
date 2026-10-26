@@ -3,7 +3,7 @@
 <div class="card card-warn">
     <div class="card-header">
         <div class="eyebrow">Prix signalés</div>
-        <span class="small muted">écart &gt; 40 % de la médiane des autres offres confirmées</span>
+        <span class="small muted">relevés signalés par le garde-fou de prix</span>
     </div>
     @if (Anomalies.Count == 0)
     {
@@ -20,7 +20,7 @@
                         <a href="/products/@anomaly.ProductId">@anomaly.ProductName</a> · relevé @Format.Ago(anomaly.ObservedOnUtc, Clock.GetUtcNow())
                     </div>
                     <div style="margin-top: 8px">
-                        <a class="btn btn-secondary btn-small" href="@Format.ExternalHref(anomaly.ProductPage)" target="_blank" rel="noopener noreferrer">Voir la page</a>
+                        <ExternalLink Address="@anomaly.ProductPage" Class="btn btn-secondary btn-small" TextOnlyWhenValid="true">Voir la page</ExternalLink>
                     </div>
                 </div>
             }

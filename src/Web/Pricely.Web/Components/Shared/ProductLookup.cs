@@ -21,7 +21,7 @@ internal sealed class ProductLookup(PricelyApiClient api)
         return product;
     }
 
-    /// <summary>« Gros œuvre › Ciment », from the root to the category.</summary>
+    /// <summary>« Gros œuvre › Ciment », from the root to the category; null when it cannot be read.</summary>
     public async Task<string?> CategoryPathAsync(Guid categoryId)
     {
         if (_categories is null || _categories.IsFaulted)
@@ -29,7 +29,15 @@ internal sealed class ProductLookup(PricelyApiClient api)
             _categories = api.GetCategoriesAsync(CancellationToken.None);
         }
 
-        return CategoryPath.Build(await _categories, categoryId);
+        try
+        {
+            return CategoryPath.Build(await _categories, categoryId);
+        }
+        catch (Exception exception) when (ApiProblem.From(exception, string.Empty) is not null)
+        {
+            // A context only: the screen that needs the data reports the failure itself.
+            return null;
+        }
     }
 
     private async Task<ProductDto?> LoadAsync(Guid productId)
@@ -38,9 +46,12 @@ internal sealed class ProductLookup(PricelyApiClient api)
         {
             return await api.GetProductAsync(productId, CancellationToken.None);
         }
-        catch (PricelyApiException)
+        catch (Exception exception) when (ApiProblem.From(exception, string.Empty) is not null)
         {
-            // Unknown or removed product: the card shows the call without its name.
+            // Unknown or removed product, expired session, API out of reach: the card shows the call without its name, and
+            // the next card asks again.
+            _products.Remove(productId);
+
             return null;
         }
     }

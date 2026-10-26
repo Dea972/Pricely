@@ -17,8 +17,21 @@ internal sealed class ServerTokenStore(IMemoryCache cache)
 
     public TokenSet? Get(string sessionKey) => cache.Get<TokenSet>(Key(sessionKey));
 
-    public void Set(string sessionKey, TokenSet tokens) =>
-        cache.Set(Key(sessionKey), tokens, new MemoryCacheEntryOptions { SlidingExpiration = SessionLifetime });
+    public void Set(string sessionKey, TokenSet tokens)
+    {
+        var options = new MemoryCacheEntryOptions { SlidingExpiration = SessionLifetime };
+
+        // A session that just expires also gives back its lock.
+        options.RegisterPostEvictionCallback((_, _, reason, _) =>
+        {
+            if (reason is EvictionReason.Expired or EvictionReason.Removed or EvictionReason.Capacity)
+            {
+                _locks.TryRemove(sessionKey, out _);
+            }
+        });
+
+        cache.Set(Key(sessionKey), tokens, options);
+    }
 
     public void Remove(string sessionKey)
     {

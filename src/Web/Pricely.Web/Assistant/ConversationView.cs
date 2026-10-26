@@ -88,7 +88,8 @@ public sealed class ConversationView
     {
         if (IsRunning && _entries[^1] is AgentEntry answer)
         {
-            answer.Fail(message);
+            // An error sent by the API before it closed the stream says more than the interruption.
+            answer.Fail(answer.Error ?? message);
             answer.Complete();
         }
     }
@@ -212,7 +213,8 @@ public sealed class AgentEntry : ChatEntry
 
     internal void AppendText(string text)
     {
-        if (string.IsNullOrWhiteSpace(text))
+        // A chunk of spaces or line breaks is part of the text once the model streams token by token.
+        if (string.IsNullOrEmpty(text))
         {
             return;
         }

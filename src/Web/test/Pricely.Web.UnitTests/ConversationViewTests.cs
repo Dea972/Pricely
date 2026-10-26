@@ -66,6 +66,33 @@ public sealed class ConversationViewTests
     }
 
     [Fact]
+    public void ChunksOfSpaces_ShouldBeKept_OnceTheModelStreamsTokens()
+    {
+        var view = new ConversationView();
+        AgentEntry answer = view.Send("Bonjour");
+
+        view.Apply(new TextReceived("Bonjour"));
+        view.Apply(new TextReceived(" "));
+        view.Apply(new TextReceived("Dominique"));
+
+        answer.Text.Should().Be("Bonjour Dominique");
+    }
+
+    [Fact]
+    public void AnErrorOfTheApi_ShouldNotBeReplacedByTheInterruption()
+    {
+        // The API sends « error » then closes the stream without « done » (unknown conversation, invalid message).
+        var view = new ConversationView();
+        AgentEntry answer = view.Send("Bonjour");
+
+        view.Apply(new TurnFailed("Conversations.NotFound", "Conversation introuvable."));
+        view.Interrupt("Le tour s'est arrêté avant la fin.");
+
+        answer.Error.Should().Be("Conversation introuvable.");
+        view.IsRunning.Should().BeFalse();
+    }
+
+    [Fact]
     public void AStreamThatStops_ShouldEndTheTurnWithAMessage()
     {
         var view = new ConversationView();

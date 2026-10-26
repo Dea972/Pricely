@@ -78,7 +78,14 @@
             return;
         }
 
-        _product = ProductId is Guid id ? await Products.FindAsync(id) : null;
-        _categoryPath = _product is null ? null : await Products.CategoryPathAsync(_product.ProductCategoryId);
+        Guid? productId = ProductId;
+        ProductDto? product = productId is Guid id ? await Products.FindAsync(id) : null;
+        string? categoryPath = product is null ? null : await Products.CategoryPathAsync(product.ProductCategoryId);
+
+        // The conversation may have moved to another product in the meantime.
+        if (productId == ProductId)
+        {
+            (_product, _categoryPath) = (product, categoryPath);
+        }
     }
 }

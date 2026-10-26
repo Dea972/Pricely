@@ -37,7 +37,7 @@ internal sealed class AccessTokenProvider(
                 return tokens.AccessToken;
             }
 
-            TokenSet? refreshed = await refresher.RefreshAsync(tokens, cancellationToken);
+            TokenSet? refreshed = await refresher.RefreshAsync(tokens);
             if (refreshed is null)
             {
                 store.Remove(sessionKey);

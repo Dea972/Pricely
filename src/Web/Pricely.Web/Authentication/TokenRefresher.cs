@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Extensions.Options;
@@ -17,9 +18,15 @@ internal sealed class TokenRefresher(
 {
     public const string HttpClientName = "keycloak";
 
-    /// <summary>The new tokens, or null when Keycloak refuses (session ended, refresh token expired).</summary>
-    public async Task<TokenSet?> RefreshAsync(TokenSet tokens, CancellationToken cancellationToken)
+    /// <summary>
+    /// The new tokens, or null when Keycloak refuses them (session ended, refresh token expired). Keycloak out of order
+    /// throws <see cref="HttpRequestException"/>: the session stays, the next call tries again.
+    /// </summary>
+    public async Task<TokenSet?> RefreshAsync(TokenSet tokens)
     {
+        // Never cancelled half-way: Keycloak may already have rotated the refresh token.
+        CancellationToken cancellationToken = CancellationToken.None;
+
         if (tokens.RefreshToken is null)
         {
             return null;
@@ -37,12 +44,14 @@ internal sealed class TokenRefresher(
 
         HttpClient http = httpClientFactory.CreateClient(HttpClientName);
         using HttpResponseMessage response = await http.PostAsync(new Uri(configuration.TokenEndpoint), content, cancellationToken);
-        if (!response.IsSuccessStatusCode)
+        if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized)
         {
             logger.LogInformation("The refresh of the tokens was refused ({StatusCode}): the user has to sign in again", (int)response.StatusCode);
 
             return null;
         }
+
+        response.EnsureSuccessStatusCode();
 
         TokenResponse? refreshed = await response.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken);
 

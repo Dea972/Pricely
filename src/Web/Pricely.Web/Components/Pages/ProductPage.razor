@@ -52,7 +52,7 @@
         @if (_offers is not null)
         {
             <ProductStats Offers="_offers" Prices="_prices" ActiveMerchantCount="_activeMerchants" />
-            <OffersTable Offers="_offers" BestOfferId="_prices?.FirstOrDefault()?.OfferId" />
+            <OffersTable Offers="_offers" BestOfferId="BestOfferId" />
 
             <div class="row">
                 <section class="card grow-2" aria-labelledby="h-history">

@@ -21,6 +21,17 @@ public sealed class WebBoundaryTests
             || name == "Pricely.Sdk");
     }
 
+    /// <summary>A project reference whose types are not used yet would not appear in the compiled references.</summary>
+    [Fact]
+    public void FrontProject_ShouldOnlyReferenceTheServiceDefaults()
+    {
+        string project = File.ReadAllText(FindFile("src/Web/Pricely.Web/Pricely.Web.csproj"));
+
+        System.Text.RegularExpressions.Regex.Matches(project, "<ProjectReference Include=\"([^\"]+)\"")
+            .Select(m => Path.GetFileName(m.Groups[1].Value.Replace('\\', '/')))
+            .Should().Equal("Pricely.ServiceDefaults.csproj");
+    }
+
     [Fact]
     public void Front_ShouldNotUseEfCore_NorMediatR()
     {
@@ -30,5 +41,19 @@ public sealed class WebBoundaryTests
             name!.StartsWith("Microsoft.EntityFrameworkCore", StringComparison.Ordinal)
             || name.StartsWith("MediatR", StringComparison.Ordinal)
             || name.StartsWith("Npgsql", StringComparison.Ordinal));
+    }
+
+    private static string FindFile(string relativePath)
+    {
+        for (DirectoryInfo? directory = new(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
+        {
+            string candidate = Path.Combine(directory.FullName, relativePath);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        throw new FileNotFoundException($"'{relativePath}' was not found above the test directory.");
     }
 }

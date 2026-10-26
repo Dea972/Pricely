@@ -28,7 +28,7 @@
                     {
                         <tr class="@RowClass(offer)">
                             <td>
-                                <a href="@Format.ExternalHref(offer.ProductPage)" target="_blank" rel="noopener noreferrer">@offer.MerchantName</a>
+                                <ExternalLink Address="@offer.ProductPage">@offer.MerchantName</ExternalLink>
                                 @if (offer.OfferId == BestOfferId)
                                 {
                                     <text> </text><span class="badge badge-accent">Moins cher</span>

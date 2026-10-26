@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Components;
+using Polly;
+using Polly.Timeout;
 using Pricely.Web.Api;
 using Pricely.Web.Authentication;
 
@@ -20,10 +22,8 @@ public abstract class ApiComponentBase : ComponentBase
     {
         try
         {
-            T result = await call();
-            Problem = null;
-
-            return result;
+            // A success does not clear the message of an earlier failure: each user action clears it first.
+            return await call();
         }
         catch (Exception exception) when (ApiProblem.From(exception, LoginAddress) is ApiProblem problem)
         {
@@ -41,6 +41,8 @@ public sealed record ApiProblem(string Message, string? LoginAddress = null, Pri
 {
     public bool IsSessionExpired => LoginAddress is not null;
 
+    public bool IsTimeout { get; private init; }
+
     /// <summary>The problem of a known failure, or null for a bug (left to the error boundary).</summary>
     public static ApiProblem? From(Exception exception, string loginAddress) =>
         exception switch
@@ -48,6 +50,11 @@ public sealed record ApiProblem(string Message, string? LoginAddress = null, Pri
             SessionExpiredException => new ApiProblem("Ta session a expiré.", loginAddress),
             PricelyApiException api => new ApiProblem($"La demande a échoué : {api.Message}", Exception: api),
             HttpRequestException => new ApiProblem("L'API Pricely ne répond pas. Réessaie dans un instant."),
+
+            // Timeout of the resilience pipeline or open circuit breaker; a TaskCanceledException that nobody asked for
+            // is the timeout of the HTTP client.
+            TimeoutRejectedException or TaskCanceledException => new ApiProblem("L'API Pricely n'a pas répondu à temps.") { IsTimeout = true },
+            ExecutionRejectedException => new ApiProblem("L'API Pricely ne répond pas. Réessaie dans un instant."),
             _ => null
         };
 }

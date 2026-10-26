@@ -83,6 +83,7 @@
         <!-- Authentication & Authorization -->
         <PackageVersion Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.2" />
         <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.2" />
+        <!-- Latest patch at the time the front was added (same as Microsoft.AspNetCore.OpenApi); JwtBearer can follow -->
         <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.13" />
     </ItemGroup>
 </Project>

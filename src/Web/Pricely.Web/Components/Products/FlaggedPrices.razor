@@ -16,11 +16,11 @@
                     · médiane des offres confirmées @Format.Price(Offers.ConfirmedMedianAmount, Offers.Currency)
                 </div>
                 <div style="margin-top: 10px">
-                    <a class="btn btn-secondary btn-small" href="@Format.ExternalHref(offer.ProductPage)" target="_blank" rel="noopener noreferrer">Voir la page</a>
+                    <ExternalLink Address="@offer.ProductPage" Class="btn btn-secondary btn-small" TextOnlyWhenValid="true">Voir la page</ExternalLink>
                 </div>
             </div>
         }
-        <p class="small muted" style="margin: 0">Règle : un relevé qui s'écarte de plus de 40 % de la médiane des autres offres confirmées est signalé, jamais supprimé.</p>
+        <p class="small muted" style="margin: 0">Un relevé trop éloigné de la médiane des autres offres confirmées est signalé, jamais supprimé.</p>
     </div>
 </section>
 

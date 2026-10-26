@@ -64,8 +64,15 @@ public partial class ProposedActionCard
 
     private async Task DecideAsync(Func<Task<PendingActionDto>> decide)
     {
+        // A second click that arrives before the buttons are disabled.
+        if (_busy)
+        {
+            return;
+        }
+
         _busy = true;
         _message = null;
+        Problem = null;
 
         try
         {
@@ -79,6 +86,12 @@ public partial class ProposedActionCard
             {
                 _message = MessageFor(refused);
                 Problem = _message is null ? Problem : null;
+            }
+            else if (Problem?.IsTimeout == true)
+            {
+                // The API may still have run it: its outcome shows when the conversation is opened again.
+                _message = "La validation n'a pas répondu à temps. Rouvre la conversation pour voir si l'action a été exécutée.";
+                Problem = null;
             }
         }
         finally

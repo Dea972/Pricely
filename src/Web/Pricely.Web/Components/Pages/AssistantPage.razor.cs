@@ -64,7 +64,15 @@ public partial class AssistantPage : IDisposable
         }
 
         _loading = true;
+        Problem = null;
         ConversationDto? conversation = await CallAsync(() => Api.GetConversationAsync(conversationId, CancellationToken.None));
+
+        // The user may have opened another conversation in the meantime.
+        if (ConversationId != conversationId)
+        {
+            return;
+        }
+
         _view = conversation is null ? new ConversationView() : ConversationView.FromHistory(conversation);
         _loading = false;
     }

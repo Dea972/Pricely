@@ -7,10 +7,10 @@
         @foreach (MerchantDto merchant in Merchants)
         {
             <li>
-                <a href="@Format.ExternalHref(merchant.Website)" target="_blank" rel="noopener noreferrer">
+                <ExternalLink Address="@merchant.Website">
                     <strong>@merchant.Name</strong>
                     <span class="small muted">@(merchant.IsActive ? "Active" : "Désactivée")</span>
-                </a>
+                </ExternalLink>
             </li>
         }
     </ul>

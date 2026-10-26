@@ -9,6 +9,8 @@ internal static class ApiServiceCollectionExtensions
 
     private static readonly TimeSpan StreamHeadersTimeout = TimeSpan.FromMinutes(2);
 
+    private static readonly TimeSpan CommandTimeout = TimeSpan.FromMinutes(5);
+
     /// <summary>
     /// Clients of the API. The base address goes through Aspire service discovery (<c>https+http://pricely-api</c>);
     /// outside the AppHost, set <c>PricelyApi:BaseAddress</c> to the address of the API.
@@ -19,14 +21,25 @@ internal static class ApiServiceCollectionExtensions
             ?? throw new InvalidOperationException($"'{BaseAddressKey}' is not configured."));
 
         services
-            .AddHttpClient(nameof(PricelyApiClient), http => http.BaseAddress = baseAddress)
+            .AddHttpClient(nameof(PricelyApiClient), http =>
+            {
+                http.BaseAddress = baseAddress;
+                http.Timeout = Timeout.InfiniteTimeSpan;
+            })
             .AddTypedClient((http, sp) => new PricelyApiClient(http, sp.GetRequiredService<AccessTokenProvider>()));
 
         // The standard resilience handler of the service defaults retries transient failures: never a POST (approving
-        // an action, starting a collection).
+        // an action, starting a collection). Its 10 s / 30 s timeouts are too short for those commands, which run the
+        // tool or the collection before answering.
         services.Configure<HttpStandardResilienceOptions>(
             $"{nameof(PricelyApiClient)}-standard",
-            options => options.Retry.DisableForUnsafeHttpMethods());
+            options =>
+            {
+                options.Retry.DisableForUnsafeHttpMethods();
+                options.AttemptTimeout.Timeout = CommandTimeout;
+                options.TotalRequestTimeout.Timeout = CommandTimeout;
+                options.CircuitBreaker.SamplingDuration = CommandTimeout * 2;
+            });
 
         services
             .AddHttpClient(nameof(AgentStreamClient), http =>

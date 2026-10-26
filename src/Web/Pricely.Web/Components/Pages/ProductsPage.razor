@@ -65,6 +65,7 @@
     private async Task LoadAsync()
     {
         _searching = true;
+        Problem = null;
         _loadedQuery = _text.Trim();
         _results = await CallAsync(() => Api.SearchProductsAsync(_text.Trim(), 20, CancellationToken.None));
         _searching = false;

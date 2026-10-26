@@ -23,7 +23,7 @@
             <ConversationList Conversations="_conversations" CurrentId="_view.ConversationId" />
         }
 
-        <div class="messages">
+        <div class="messages" role="log" aria-live="polite" aria-relevant="additions">
             <ApiProblemAlert Problem="Problem" />
 
             @if (_loading)

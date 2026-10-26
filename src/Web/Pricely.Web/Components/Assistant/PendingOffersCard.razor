@@ -26,7 +26,7 @@
                     {
                         <tr>
                             <td><a href="/products/@offer.ProductId">@offer.ProductName</a></td>
-                            <td><a href="@Format.ExternalHref(offer.ProductPage)" target="_blank" rel="noopener noreferrer">@offer.MerchantName</a></td>
+                            <td><ExternalLink Address="@offer.ProductPage">@offer.MerchantName</ExternalLink></td>
                             <td class="num">@Format.Price(offer.LatestAmount, offer.LatestCurrency)</td>
                             <td class="muted">@Format.Ago(offer.ProposedOnUtc, Clock.GetUtcNow())</td>
                         </tr>
