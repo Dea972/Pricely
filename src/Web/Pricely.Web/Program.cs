@@ -1,3 +1,4 @@
+using Microsoft.IdentityModel.Logging;
 using Pricely.Web.Api;
 using Pricely.Web.Authentication;
 using Pricely.Web.Components;
@@ -6,6 +7,12 @@ using Pricely.Web.Components.Shared;
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+
+// On the developer machine only: the errors of the sign-in show the response of Keycloak instead of « PII is hidden ».
+if (builder.Environment.IsDevelopment())
+{
+    IdentityModelEventSource.ShowPII = true;
+}
 
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddPricelyAuthentication(builder.Configuration, builder.Environment);
