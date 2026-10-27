@@ -4,6 +4,7 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Pricely.Common.Application.AI;
+using Pricely.Common.Application.AI.Agents;
 using Pricely.Common.Application.Web;
 using Pricely.Common.Domain;
 using Pricely.Common.Infrastructure.Ai.Anthropic;
@@ -128,6 +129,26 @@ public sealed class WebSearchTests
         result.Error.Description.Should().NotContain("secret");
         eventBus.Published.OfType<WebSearchPerformedIntegrationEvent>().Should().ContainSingle()
             .Which.Should().BeEquivalentTo(new { Searches = 1, IsSuccess = false });
+    }
+
+    [Fact]
+    public async Task Searcher_InsideAnAgentToolCall_ShouldJournalUnderTheConversation()
+    {
+        var eventBus = new RecordingEventBus();
+        using var handler = new ScriptedHandler(EndOfTurn);
+        using HttpClient http = Http(handler);
+        using ServiceProvider services = Services(http, eventBus, new WebSearchOptions());
+
+        using (AgentToolCall.Begin(new AgentToolCall("conversation-7", "assistant", "user-1")))
+        {
+            await services.GetRequiredService<IWebSearcher>().SearchAsync(new WebSearchRequest("ciment"));
+        }
+
+        eventBus.Published.OfType<WebSearchPerformedIntegrationEvent>().Should().ContainSingle()
+            .Which.Should().BeEquivalentTo(new { SessionId = "conversation-7", UserId = "user-1" });
+        eventBus.Published.OfType<LlmCalledIntegrationEvent>().Should().ContainSingle()
+            .Which.Should().BeEquivalentTo(new { SessionId = "conversation-7", AgentName = "assistant" });
+        AgentToolCall.Current.Should().BeNull("the call ends with its scope");
     }
 
     [Fact]

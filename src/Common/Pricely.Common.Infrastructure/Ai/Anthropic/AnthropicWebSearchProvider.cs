@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
 using Pricely.Common.Application.AI;
+using Pricely.Common.Application.AI.Agents;
 using Pricely.Common.Application.Clock;
 using Pricely.Common.Application.EventBus;
 using Pricely.Common.Application.Web;
@@ -143,6 +144,7 @@ internal sealed class AnthropicWebSearchProvider(
                 FeatureCode = WebSearchFeatures.Search.Code,
                 SourceModule = WebSearchFeatures.Search.SourceModule,
                 UserId = userId,
+                AgentName = AgentToolCall.Current?.AgentName,
                 ModelProvider = AiProviderKeys.Anthropic,
                 ModelName = usage.Model ?? model,
                 InputTokens = usage.InputTokens,

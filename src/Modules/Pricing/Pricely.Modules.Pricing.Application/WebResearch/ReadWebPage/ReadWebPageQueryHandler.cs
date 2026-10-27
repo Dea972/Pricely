@@ -1,3 +1,4 @@
+using Pricely.Common.Application.Authorization;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Application.Web;
 using Pricely.Common.Domain;
@@ -5,11 +6,23 @@ using Pricely.Modules.Pricing.Application.Merchants;
 
 namespace Pricely.Modules.Pricing.Application.WebResearch.ReadWebPage;
 
-internal sealed class ReadWebPageQueryHandler(IWebPageReader webPageReader, IMerchantReadStore merchantReadStore)
+internal sealed class ReadWebPageQueryHandler(
+    IWebPageReader webPageReader,
+    IMerchantReadStore merchantReadStore,
+    ISearchedPages searchedPages,
+    ICurrentUser currentUser)
     : IQueryHandler<ReadWebPageQuery, WebPageResponse>
 {
     public async Task<Result<WebPageResponse>> Handle(ReadWebPageQuery request, CancellationToken cancellationToken)
     {
+        // Only a page a search of this research returned, or a page of a followed merchant: never an address a page
+        // made up (ADR-027).
+        KnownMerchants merchants = await KnownMerchants.LoadAsync(merchantReadStore, cancellationToken);
+        if (merchants.Find(request.Address) is null && !searchedPages.WasFound(WebResearchScope.Of(currentUser), request.Address))
+        {
+            return Result.Failure<WebPageResponse>(WebResearchErrors.NotFoundBySearch(request.Address));
+        }
+
         // Any public page may be read (the reader refuses private addresses), redirects included, but only over http(s) on its default port.
         Result<WebPage> page = await webPageReader.ReadFollowingAsync(request.Address, IsWebAddress, cancellationToken);
         if (page.IsFailure)
@@ -17,7 +30,6 @@ internal sealed class ReadWebPageQueryHandler(IWebPageReader webPageReader, IMer
             return Result.Failure<WebPageResponse>(page.Error);
         }
 
-        KnownMerchants merchants = await KnownMerchants.LoadAsync(merchantReadStore, cancellationToken);
         string text = page.Value.Text;
 
         return new WebPageResponse(

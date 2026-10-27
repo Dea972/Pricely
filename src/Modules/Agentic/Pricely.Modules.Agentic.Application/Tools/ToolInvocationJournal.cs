@@ -9,7 +9,7 @@ namespace Pricely.Modules.Agentic.Application.Tools;
 
 /// <summary>
 /// Publishes <see cref="AiToolInvokedIntegrationEvent"/> for every tool run for an agent (read tools during a turn,
-/// write tools after approval), for the AiEngine journal.
+/// write tools after approval), for the AiEngine journal, and makes the call current (<see cref="AgentToolCall"/>) while it runs.
 /// </summary>
 internal sealed class ToolInvocationJournal(IEventBus eventBus, IDateTimeProvider dateTimeProvider)
 {
@@ -21,6 +21,9 @@ internal sealed class ToolInvocationJournal(IEventBus eventBus, IDateTimeProvide
     {
         DateTime invokedOnUtc = dateTimeProvider.UtcNow;
         var stopwatch = Stopwatch.StartNew();
+
+        // What the tool uses (web search...) is tied to the conversation through the ambient call.
+        using IDisposable call = AgentToolCall.Begin(new AgentToolCall(context.SessionId, context.AgentName, context.UserId));
 
         try
         {

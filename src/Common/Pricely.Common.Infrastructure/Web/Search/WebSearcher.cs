@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Pricely.Common.Application.AI.Agents;
 using Pricely.Common.Application.Clock;
 using Pricely.Common.Application.EventBus;
 using Pricely.Common.Application.Web;
@@ -43,12 +44,15 @@ internal sealed class WebSearcher(
 
         IWebSearchProvider provider = services.GetRequiredKeyedService<IWebSearchProvider>(providerName);
 
+        // Inside an agent run, the search belongs to the conversation (its cost is the conversation's).
+        AgentToolCall? agentCall = AgentToolCall.Current;
         WebSearchRequest bounded = request with
         {
+            UserId = request.UserId ?? agentCall?.UserId,
             Query = request.Query.Trim().Length > WebSearchRequest.MaxQueryLength ? request.Query.Trim()[..WebSearchRequest.MaxQueryLength] : request.Query.Trim(),
             MaxResults = Math.Clamp(request.MaxResults, 1, 20)
         };
-        string sessionId = request.SessionId ?? $"web-search:{Guid.CreateVersion7()}";
+        string sessionId = request.SessionId ?? agentCall?.SessionId ?? $"web-search:{Guid.CreateVersion7()}";
 
         var stopwatch = Stopwatch.StartNew();
         WebSearchResults? results = null;
@@ -81,7 +85,7 @@ internal sealed class WebSearcher(
             {
                 Provider = provider.Name,
                 SessionId = sessionId,
-                UserId = request.UserId,
+                UserId = bounded.UserId,
                 Searches = billed,
                 Results = results?.Results.Count ?? 0,
                 ResponseTimeMs = stopwatch.ElapsedMilliseconds,

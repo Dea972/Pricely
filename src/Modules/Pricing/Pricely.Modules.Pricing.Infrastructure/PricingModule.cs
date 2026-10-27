@@ -18,6 +18,7 @@ using Pricely.Modules.Pricing.Application.Merchants;
 using Pricely.Modules.Pricing.Application.Offers;
 using Pricely.Modules.Pricing.Application.Offers.CollectProductOffers;
 using Pricely.Modules.Pricing.Application.Offers.SubmitCollectedOffer;
+using Pricely.Modules.Pricing.Application.WebResearch;
 using Pricely.Modules.Pricing.Application.PageSnapshots;
 using Pricely.Modules.Pricing.Domain.Catalog;
 using Pricely.Modules.Pricing.Domain.CollectionProfiles;
@@ -31,6 +32,7 @@ using Pricely.Modules.Pricing.Infrastructure.Inbox;
 using Pricely.Modules.Pricing.Infrastructure.Merchants;
 using Pricely.Modules.Pricing.Infrastructure.Offers;
 using Pricely.Modules.Pricing.Infrastructure.Outbox;
+using Pricely.Modules.Pricing.Infrastructure.WebResearch;
 using Pricely.Modules.Pricing.Infrastructure.PageSnapshots;
 
 namespace Pricely.Modules.Pricing.Infrastructure;
@@ -73,6 +75,7 @@ public static class PricingModule
         services.AddScoped<IOfferRepository, OfferRepository>();
         services.AddScoped<IPriceObservationRepository, PriceObservationRepository>();
         services.AddScoped<IMerchantReadStore, MerchantReadStore>();
+        services.AddSingleton<ISearchedPages, InMemorySearchedPages>();
         services.AddScoped<ICollectionProfileReadStore, CollectionProfileReadStore>();
         services.AddScoped<IOfferReadStore, OfferReadStore>();
 

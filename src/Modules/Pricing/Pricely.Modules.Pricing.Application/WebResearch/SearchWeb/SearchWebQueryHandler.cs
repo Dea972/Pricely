@@ -9,6 +9,7 @@ namespace Pricely.Modules.Pricing.Application.WebResearch.SearchWeb;
 internal sealed class SearchWebQueryHandler(
     IWebSearcher webSearcher,
     IMerchantReadStore merchantReadStore,
+    ISearchedPages searchedPages,
     ICurrentUser currentUser)
     : IQueryHandler<SearchWebQuery, WebSearchResponse>
 {
@@ -22,6 +23,7 @@ internal sealed class SearchWebQueryHandler(
             return Result.Failure<WebSearchResponse>(results.Error);
         }
 
+        searchedPages.Remember(WebResearchScope.Of(currentUser), results.Value.Results.Select(r => r.Address));
         KnownMerchants merchants = await KnownMerchants.LoadAsync(merchantReadStore, cancellationToken);
 
         return new WebSearchResponse(
