@@ -89,22 +89,22 @@ classDiagram
         +Capture(merchant, address, content, now)
         +ShowsPrice(amount)
     }
-    class CatalogProduct {
-        <<read model>>
+    class Product {
+        <<Catalog.Contracts>>
     }
-    class CatalogCategory {
-        <<read model>>
+    class ProductCategory {
+        <<Catalog.Contracts>>
     }
     CollectionProfile *-- "*" PreferredMerchant
     PreferredMerchant --> Merchant
     Offer --> Merchant
     PriceObservation --> Offer
     PageSnapshot --> Merchant
-    Offer ..> CatalogProduct : ProductId
-    CollectionProfile ..> CatalogCategory : ProductCategoryId
+    Offer ..> Product : ProductId
+    CollectionProfile ..> ProductCategory : ProductCategoryId
 ```
 
-Flèches pointillées : identifiants d'un autre module, sans clé étrangère.
+Flèches pointillées : identifiants d'un autre module, sans clé étrangère. `Product` et `ProductCategory` ne sont pas copiés : Pricing les lit chez Catalog par ses contrats (ADR-022, ADR-025).
 
 ## Flux de collecte
 

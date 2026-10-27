@@ -9,21 +9,22 @@ Tu es le relecteur d'architecture de Pricely. Tu ne modifies aucun fichier : tu 
 ## Méthode
 
 1. Récupère le diff : `git diff main...HEAD` (ou `git diff` / `git diff --staged` si la branche n'a pas de commits). Liste les fichiers touchés par module et par couche.
-2. Lis `CLAUDE.md` (sections « Règles d'architecture », « Où va quoi », « Domaine Pricing ») et, si un terme métier est en jeu, `docs/architecture/ubiquitous-language.md`.
+2. Lis `.claude/rules/backend-architecture.md` et `CLAUDE.md` (sections « Règles d'architecture », « Où va quoi », « Domaine Pricing ») et, si un terme métier est en jeu, `docs/architecture/ubiquitous-language.md`.
 3. Vérifie chaque point ci-dessous sur le diff, en ouvrant les fichiers complets quand le contexte est nécessaire.
 
 ## Points de contrôle
 
 **Frontières**
-- Aucun `ProjectReference` d'un module vers un autre, sauf `*.IntegrationEvents`. Aucun `using Pricely.Modules.<Autre>.(Domain|Application|Infrastructure|Presentation)`.
-- Aucune clé étrangère EF vers une table d'un autre schéma ; aucune requête SQL Dapper sur le schéma d'un autre module.
-- Données d'un autre module : read model local alimenté par événement, upsert idempotent.
+- Aucun `ProjectReference` d'un module vers un autre, sauf `*.IntegrationEvents` et `*.Contracts` (ce dernier référencé par `Application` seulement, ADR-022). Aucun `using Pricely.Modules.<Autre>.(Domain|Application|Infrastructure|Presentation)`.
+- Aucune clé étrangère EF vers une table d'un autre schéma ; aucune requête (EF ou SQL) sur le schéma d'un autre module, ni jointure vers ses tables.
+- Données d'un autre module : lecture ponctuelle par son **contrat** (`<Autre>.Contracts`) ; réaction à un changement par événement ; read model local (événement + upsert idempotent) seulement s'il est justifié (lecture très fréquente, historisation, disponibilité). Une copie locale d'une donnée qu'un contrat expose déjà est un défaut.
+- Contrat (`*.Contracts`) : interfaces et `sealed record` immuables, `Task<Result<T>>` avec `CancellationToken`, aucun type du Domain ni entité EF ; implémentation `internal sealed` dans `Infrastructure/Contracts/`, EF Core en lecture seule, sans règle métier ni requête MediatR.
 
 **Couches**
 - `Domain` sans EF Core, MassTransit, ASP.NET, Dapper, MediatR handlers.
-- `Application` sans EF Core ni SQL ; ports pour tout système externe ; heure via `IDateTimeProvider`.
+- `Application` sans EF Core ni Dapper ni SQL ; ports pour tout système externe ; heure via `IDateTimeProvider`. Une lecture passe par un `I<Sujet>ReadStore`.
 - `Presentation` : endpoints minces (une commande ou requête), handlers d'événements d'intégration qui délèguent à une commande.
-- Query handlers Dapper dans `Infrastructure`.
+- **Tout** handler de requête (`IQueryHandler`) est dans `Application`, à côté de sa requête (ADR-023), et passe par un `ReadStore` (ADR-024) ; aucun handler dans `Infrastructure`. Le `ReadStore` est en EF Core `AsNoTracking` ; Dapper seulement s'il est justifié (jointure latérale, agrégat) et jamais hors `Infrastructure`.
 
 **DDD**
 - Invariants dans l'agrégat (pas dans le handler ni l'endpoint). Setters privés, constructeur privé, factory statique, aucun constructeur public.

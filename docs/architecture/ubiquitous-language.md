@@ -42,7 +42,10 @@ Le code utilise la colonne « Code » (anglais). L'interface et les échanges ut
 | `IOfferCollector` | Collecteur | Port vers l'extérieur qui trouve les pages enseignes et lit leurs prix (agent IA, scraper, flux). |
 | `CollectedOffer` | Offre collectée | Résultat normalisé d'un collecteur pour une enseigne. |
 | `OfferCollectionPlan` | Plan de collecte | Produit, enseignes et instructions d'une collecte. |
-| `CatalogProduct`, `CatalogCategory` | Copies locales du catalogue | Read models de Pricing alimentés par les événements de Catalog. |
+| `IProductReader`, `ProductSummary` | Lecture des produits | Contrat de Catalog : Pricing lit les produits chez Catalog, sans en garder de copie. |
+| `ReadStore` | Port de lecture | `I<Sujet>ReadStore` : interface d'Application, implémentée en Infrastructure, que les handlers de requête appellent pour lire les données du module (ADR-024). |
+| `IProductCategoryReader`, `ProductCategorySummary` | Lecture des typologies | Contrat de Catalog (`Catalog.Contracts`) : Pricing lit les typologies chez Catalog, sans en garder de copie. |
+| Contrat | Surface de lecture d'un module | Projet `<Module>.Contracts` : interfaces et records en lecture seule qu'un module laisse utiliser par la couche Application des autres (ADR-022). |
 
 ## AiEngine
 

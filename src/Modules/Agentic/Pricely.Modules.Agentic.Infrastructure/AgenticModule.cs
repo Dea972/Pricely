@@ -16,6 +16,7 @@ using Pricely.Modules.Agentic.Infrastructure.Actions;
 using Pricely.Modules.Agentic.Infrastructure.Conversations;
 using Pricely.Modules.Agentic.Infrastructure.Database;
 using Pricely.Modules.Agentic.Infrastructure.Outbox;
+using Pricely.Modules.Agentic.Application.Conversations;
 
 namespace Pricely.Modules.Agentic.Infrastructure;
 
@@ -70,6 +71,7 @@ public static class AgenticModule
         services.AddScoped<ToolInvocationJournal>();
         services.AddScoped<IAgentConversationRepository, AgentConversationRepository>();
         services.AddScoped<IPendingActionRepository, PendingActionRepository>();
+        services.AddScoped<IConversationReadStore, ConversationReadStore>();
 
         return services;
     }

@@ -10,10 +10,12 @@ using Pricely.Common.Application.EventBus;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Infrastructure.Outbox;
 using Pricely.Common.Presentation.Endpoints;
-using Pricely.Modules.Catalog.IntegrationEvents;
 using Pricely.Modules.Pricing.Application;
 using Pricely.Modules.Pricing.Application.Abstractions.Collection;
 using Pricely.Modules.Pricing.Application.Abstractions.Data;
+using Pricely.Modules.Pricing.Application.CollectionProfiles;
+using Pricely.Modules.Pricing.Application.Merchants;
+using Pricely.Modules.Pricing.Application.Offers;
 using Pricely.Modules.Pricing.Application.Offers.CollectProductOffers;
 using Pricely.Modules.Pricing.Application.Offers.SubmitCollectedOffer;
 using Pricely.Modules.Pricing.Application.PageSnapshots;
@@ -22,7 +24,6 @@ using Pricely.Modules.Pricing.Domain.CollectionProfiles;
 using Pricely.Modules.Pricing.Domain.Merchants;
 using Pricely.Modules.Pricing.Domain.Offers;
 using Pricely.Modules.Pricing.Domain.PageSnapshots;
-using Pricely.Modules.Pricing.Infrastructure.Catalog;
 using Pricely.Modules.Pricing.Infrastructure.Collection;
 using Pricely.Modules.Pricing.Infrastructure.CollectionProfiles;
 using Pricely.Modules.Pricing.Infrastructure.Database;
@@ -71,8 +72,9 @@ public static class PricingModule
         services.AddScoped<ICollectionProfileRepository, CollectionProfileRepository>();
         services.AddScoped<IOfferRepository, OfferRepository>();
         services.AddScoped<IPriceObservationRepository, PriceObservationRepository>();
-        services.AddScoped<ICatalogProductRepository, CatalogProductRepository>();
-        services.AddScoped<ICatalogCategoryRepository, CatalogCategoryRepository>();
+        services.AddScoped<IMerchantReadStore, MerchantReadStore>();
+        services.AddScoped<ICollectionProfileReadStore, CollectionProfileReadStore>();
+        services.AddScoped<IOfferReadStore, OfferReadStore>();
 
         services.AddScoped<IPageSnapshotRepository, PageSnapshotRepository>();
 
@@ -109,10 +111,8 @@ public static class PricingModule
     /// </summary>
     public static void ConfigureConsumers(IRegistrationConfigurator registrationConfigurator)
     {
-        registrationConfigurator.AddConsumer<IntegrationEventConsumer<ProductRegisteredIntegrationEvent>>();
-        registrationConfigurator.AddConsumer<IntegrationEventConsumer<ProductUpdatedIntegrationEvent>>();
-        registrationConfigurator.AddConsumer<IntegrationEventConsumer<ProductCategoryCreatedIntegrationEvent>>();
-        registrationConfigurator.AddConsumer<IntegrationEventConsumer<ProductCategoryRenamedIntegrationEvent>>();
+        // No consumer for now: Pricing reads Catalog through its contracts (ADR-022). A future consumer registers
+        // IntegrationEventConsumer<TEvent> here.
     }
 
     private static void AddDomainEventHandlers(this IServiceCollection services)

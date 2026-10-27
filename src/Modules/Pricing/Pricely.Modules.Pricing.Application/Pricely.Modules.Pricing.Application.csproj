@@ -3,6 +3,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Pricely.Modules.Pricing.Domain\Pricely.Modules.Pricing.Domain.csproj" />
     <ProjectReference Include="..\..\..\Common\Pricely.Common.Application\Pricely.Common.Application.csproj" />
+    <!-- Typologies are read from Catalog, not copied (ADR-022). -->
+    <ProjectReference Include="..\..\Catalog\Pricely.Modules.Catalog.Contracts\Pricely.Modules.Catalog.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

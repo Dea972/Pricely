@@ -1,12 +1,12 @@
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Domain;
-using Pricely.Modules.Pricing.Domain.Catalog;
+using Pricely.Modules.Catalog.Contracts.Categories;
 using Pricely.Modules.Pricing.Domain.CollectionProfiles;
 
 namespace Pricely.Modules.Pricing.Application.CollectionProfiles.GetEffectiveCollectionProfile;
 
 internal sealed class GetEffectiveCollectionProfileQueryHandler(
-    ICatalogCategoryRepository catalogCategoryRepository,
+    IProductCategoryReader productCategoryReader,
     ICollectionProfileRepository collectionProfileRepository)
     : IQueryHandler<GetEffectiveCollectionProfileQuery, EffectiveCollectionProfileResponse>
 {
@@ -16,7 +16,7 @@ internal sealed class GetEffectiveCollectionProfileQueryHandler(
     {
         Result<ResolvedCollectionProfile> profile = await CollectionProfileLookup.ResolveAsync(
             request.ProductCategoryId,
-            catalogCategoryRepository,
+            productCategoryReader,
             collectionProfileRepository,
             cancellationToken);
 

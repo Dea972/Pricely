@@ -1,5 +1,6 @@
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Domain;
+using Pricely.Modules.Catalog.Contracts.Categories;
 using Pricely.Modules.Pricing.Application.Abstractions.Data;
 using Pricely.Modules.Pricing.Domain.Catalog;
 using Pricely.Modules.Pricing.Domain.CollectionProfiles;
@@ -8,7 +9,7 @@ using Pricely.Modules.Pricing.Domain.Merchants;
 namespace Pricely.Modules.Pricing.Application.CollectionProfiles.DefineCollectionProfile;
 
 internal sealed class DefineCollectionProfileCommandHandler(
-    ICatalogCategoryRepository catalogCategoryRepository,
+    IProductCategoryReader productCategoryReader,
     ICollectionProfileRepository collectionProfileRepository,
     IMerchantRepository merchantRepository,
     IUnitOfWork unitOfWork)
@@ -16,7 +17,14 @@ internal sealed class DefineCollectionProfileCommandHandler(
 {
     public async Task<Result<Guid>> Handle(DefineCollectionProfileCommand request, CancellationToken cancellationToken)
     {
-        if (await catalogCategoryRepository.GetAsync(request.ProductCategoryId, cancellationToken) is null)
+        Result<ProductCategorySummary?> category =
+            await productCategoryReader.GetAsync(request.ProductCategoryId, cancellationToken);
+        if (category.IsFailure)
+        {
+            return Result.Failure<Guid>(category.Error);
+        }
+
+        if (category.Value is null)
         {
             return Result.Failure<Guid>(CatalogErrors.CategoryNotFound(request.ProductCategoryId));
         }

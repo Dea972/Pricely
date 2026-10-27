@@ -1,6 +1,5 @@
 ﻿
 using System.Data.Common;
-using Pricely.Common.Application.Data;
 using Npgsql;
 
 namespace Pricely.Common.Infrastructure.Data;

@@ -4,7 +4,7 @@ using Pricely.Common.Application.AI;
 using Pricely.Common.Application.Messaging;
 using Pricely.Common.Application.Web;
 using Pricely.Common.Domain;
-using Pricely.Modules.Pricing.Domain.Catalog;
+using Pricely.Modules.Catalog.Contracts.Categories;
 using Pricely.Modules.Pricing.Domain.Merchants;
 
 namespace Pricely.Modules.Pricing.Application.Merchants.SuggestMerchant;
@@ -18,7 +18,7 @@ namespace Pricely.Modules.Pricing.Application.Merchants.SuggestMerchant;
 internal sealed class SuggestMerchantCommandHandler(
     IWebPageReader webPageReader,
     ILlmGateway llmGateway,
-    ICatalogCategoryRepository catalogCategoryRepository)
+    IProductCategoryReader productCategoryReader)
     : ICommandHandler<SuggestMerchantCommand, MerchantSuggestionResponse>
 {
     private const int HomePageTextLength = 15_000;
@@ -54,7 +54,13 @@ internal sealed class SuggestMerchantCommandHandler(
 
         var website = new Uri(home.Value.Address.GetLeftPart(UriPartial.Authority));
         string[] candidates = [.. home.Value.SearchTemplates.Where(t => IsOnSite(website, t))];
-        IReadOnlyCollection<CatalogCategory> categories = await catalogCategoryRepository.GetAllAsync(cancellationToken);
+        Result<IReadOnlyList<ProductCategorySummary>> categoriesRead = await productCategoryReader.GetAllAsync(cancellationToken);
+        if (categoriesRead.IsFailure)
+        {
+            return Result.Failure<MerchantSuggestionResponse>(categoriesRead.Error);
+        }
+
+        IReadOnlyList<ProductCategorySummary> categories = categoriesRead.Value;
 
         AdvisorReply? reply = await AskAsync(request, website, home.Value, candidates, categories, cancellationToken);
 
@@ -78,7 +84,7 @@ internal sealed class SuggestMerchantCommandHandler(
         Uri website,
         WebPage home,
         IReadOnlyCollection<string> candidates,
-        IReadOnlyCollection<CatalogCategory> categories,
+        IReadOnlyList<ProductCategorySummary> categories,
         CancellationToken cancellationToken)
     {
         var message = new StringBuilder();
@@ -92,7 +98,7 @@ internal sealed class SuggestMerchantCommandHandler(
         }
 
         message.AppendLine("Typologies de Pricely (identifiant : chemin) :");
-        foreach (CatalogCategory category in categories)
+        foreach (ProductCategorySummary category in categories)
         {
             message.AppendLine(CultureInfo.InvariantCulture, $"- {category.Id} : {Path(category, categories)}");
         }
@@ -134,14 +140,14 @@ internal sealed class SuggestMerchantCommandHandler(
             length);
     }
 
-    private static List<SuggestedCategoryResponse> Categories(AdvisorReply? reply, IReadOnlyCollection<CatalogCategory> categories)
+    private static List<SuggestedCategoryResponse> Categories(AdvisorReply? reply, IReadOnlyList<ProductCategorySummary> categories)
     {
         var known = categories.ToDictionary(c => c.Id);
         var suggested = new List<SuggestedCategoryResponse>();
 
         foreach (string id in reply?.CategoryIds ?? [])
         {
-            if (Guid.TryParse(id, out Guid categoryId) && known.TryGetValue(categoryId, out CatalogCategory? category)
+            if (Guid.TryParse(id, out Guid categoryId) && known.TryGetValue(categoryId, out ProductCategorySummary? category)
                 && suggested.TrueForAll(s => s.ProductCategoryId != categoryId))
             {
                 suggested.Add(new SuggestedCategoryResponse(categoryId, Path(category, categories), reply!.CategoryReasons?.GetValueOrDefault(id)));
@@ -159,10 +165,10 @@ internal sealed class SuggestMerchantCommandHandler(
     }
 
     /// <summary>« Gros œuvre › Ciment », from the root.</summary>
-    private static string Path(CatalogCategory category, IReadOnlyCollection<CatalogCategory> categories)
+    private static string Path(ProductCategorySummary category, IReadOnlyList<ProductCategorySummary> categories)
     {
         var names = new List<string> { category.Name };
-        CatalogCategory? current = category;
+        ProductCategorySummary? current = category;
 
         // Three levels in Catalog; the bound only guards against a cycle in bad data.
         while (current?.ParentId is Guid parentId && names.Count <= categories.Count)

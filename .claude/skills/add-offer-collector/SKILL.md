@@ -19,7 +19,7 @@ public interface IOfferCollector
 ## Ce que reçoit le collecteur
 
 `OfferCollectionRequest` construit par `OfferCollectionPlanner` :
-- `Product` : `ProductId`, `Name`, `Brand`, `Gtin?`, `ManufacturerReference?` (read model Catalog).
+- `Product` : `ProductId`, `Name`, `Brand`, `Gtin?`, `ManufacturerReference?` (lu chez Catalog par son contrat `IProductReader`).
 - `Merchants` : enseignes **actives** à interroger, par `Priority` (1 d'abord), avec `Website`. Résultat de l'héritage de profil (typologie la plus proche qui en définit).
 - `Instructions` : consignes de la typologie, de la plus générale à la plus précise (concaténées par `CollectionProfileResolver.InstructionsSeparator`). C'est le « prompt orienté » : l'intégrer tel quel au prompt d'un agent IA.
 
