@@ -9,7 +9,7 @@ public sealed record ProductDto(Guid Id, string Name, string Brand, string? Gtin
 
 public sealed record ProductCategoryDto(Guid Id, string Name, Guid? ParentId, int Depth);
 
-public sealed record MerchantDto(Guid Id, string Name, string Website, bool IsActive, string? SearchTemplate = null);
+public sealed record MerchantDto(Guid Id, string Name, string Website, bool IsActive, string? SearchTemplate = null, string? ProductPageTemplate = null);
 
 /// <summary>A confirmed offer and its latest price (<c>compare_prices</c>, <c>pricing/products/{id}/prices</c>).</summary>
 public sealed record MerchantPriceDto

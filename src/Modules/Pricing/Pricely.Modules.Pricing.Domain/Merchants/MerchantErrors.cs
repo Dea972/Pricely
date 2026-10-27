@@ -16,6 +16,11 @@ public static class MerchantErrors
             "Merchants.InvalidSearchTemplate",
             $"'{template}' is not a search address of the merchant's site containing {Merchant.QueryPlaceholder} (at most {Merchant.SearchTemplateMaxLength} characters)");
 
+    public static Error InvalidProductPageTemplate(string template) =>
+        Error.Problem(
+            "Merchants.InvalidProductPageTemplate",
+            $"'{template}' is not a product page address of the merchant's site containing {Merchant.Gtin13Placeholder} or {Merchant.Gtin14Placeholder} (at most {Merchant.ProductPageTemplateMaxLength} characters)");
+
     public static Error AddressOutsideMerchant(Uri address) =>
         Error.Problem("Merchants.AddressOutsideMerchant", $"The address {address} is not on the merchant's site");
 

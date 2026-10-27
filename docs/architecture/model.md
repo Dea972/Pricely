@@ -44,7 +44,10 @@ classDiagram
         Uri Website
         bool IsActive
         string? SearchTemplate
+        string? ProductPageTemplate  "{gtin13} / {gtin14}"
         +ConfigureSearch(template)
+        +ConfigureProductPage(template)
+        +ProductPageAddress(template, gtin)$
         +Owns(address)
     }
     class CollectionProfile {
@@ -86,8 +89,11 @@ classDiagram
         Uri Address
         string Content
         DateTime FetchedOnUtc
-        +Capture(merchant, address, content, now)
+        bool IsSearchPage
+        decimal[] DeclaredPrices  "JSON-LD"
+        +Capture(merchant, address, content, now, isSearchPage, declaredPrices)
         +ShowsPrice(amount)
+        +ShowsIdentifier(identifier)
     }
     class Product {
         <<Catalog.Contracts>>

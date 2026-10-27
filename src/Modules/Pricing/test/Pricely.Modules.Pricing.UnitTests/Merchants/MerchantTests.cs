@@ -65,4 +65,35 @@ public sealed class MerchantTests
     [Fact]
     public void SearchAddress_ShouldBeNull_WithoutTemplate() =>
         Comptoir.SearchAddress("ciment").Should().BeNull();
+
+    [Theory]
+    [InlineData("https://www.e.leclerc/fp/{gtin13}", "0192995410312", "https://www.e.leclerc/fp/0192995410312")]
+    [InlineData("https://www.e.leclerc/fp/{gtin13}", "192995410312", "https://www.e.leclerc/fp/0192995410312")]
+    [InlineData("https://www.e.leclerc/fp/{gtin13}", "00192995410312", "https://www.e.leclerc/fp/0192995410312")]
+    [InlineData("https://www.site.test/p?ean={gtin14}", "3596700101088", "https://www.site.test/p?ean=03596700101088")]
+    public void ProductPageAddress_ShouldWriteTheGtinTheWayTheTemplateAsks(string template, string gtin, string expected) =>
+        Merchant.ProductPageAddress(template, gtin).Should().Be(new Uri(expected));
+
+    [Theory]
+    [InlineData("https://www.e.leclerc/fp/{gtin13}", "13596700101085")]
+    [InlineData("https://www.e.leclerc/fp/{gtin13}", "pas-un-gtin")]
+    [InlineData("https://www.e.leclerc/fp/{gtin13}", null)]
+    [InlineData(null, "3596700101088")]
+    public void ProductPageAddress_ShouldBeNull_WhenTheGtinCannotBeWrittenSo(string? template, string? gtin) =>
+        Merchant.ProductPageAddress(template, gtin).Should().BeNull();
+
+    [Theory]
+    [InlineData("https://www.comptoir.test/fp/{gtin13}", true)]
+    [InlineData("https://www.comptoir.test/p?ean={gtin14}", true)]
+    [InlineData("https://www.comptoir.test/fp/{query}", false)]
+    [InlineData("https://ailleurs.test/fp/{gtin13}", false)]
+    public void ConfigureProductPage_ShouldAcceptOnlyAGtinPageOfTheSite(string template, bool accepted)
+    {
+        Merchant merchant = Merchant.Register("Comptoir", "https://www.comptoir.test").Value;
+
+        Result result = merchant.ConfigureProductPage(template);
+
+        result.IsSuccess.Should().Be(accepted);
+        merchant.ProductPageTemplate.Should().Be(accepted ? template : null);
+    }
 }

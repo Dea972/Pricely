@@ -82,7 +82,10 @@ public sealed class OfferCollectionPlanner(
                 activeMerchants[merchantId].Name,
                 activeMerchants[merchantId].Website,
                 index + 1,
-                activeMerchants[merchantId].SearchTemplate))
+                activeMerchants[merchantId].SearchTemplate)
+            {
+                ProductPageTemplate = activeMerchants[merchantId].ProductPageTemplate
+            })
             .ToList();
     }
 }

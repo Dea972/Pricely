@@ -11,8 +11,16 @@ public sealed class Merchant : Entity
 
     public const int SearchTemplateMaxLength = 500;
 
+    public const int ProductPageTemplateMaxLength = 500;
+
     /// <summary>Placeholder of the search address template, replaced by the escaped search text.</summary>
     public const string QueryPlaceholder = "{query}";
+
+    /// <summary>Placeholder of the product page template, replaced by the GTIN on 13 digits (EAN-13).</summary>
+    public const string Gtin13Placeholder = "{gtin13}";
+
+    /// <summary>Placeholder of the product page template, replaced by the GTIN on 14 digits.</summary>
+    public const string Gtin14Placeholder = "{gtin14}";
 
     private Merchant()
     {
@@ -31,6 +39,13 @@ public sealed class Merchant : Entity
     /// <c>https://www.enseigne.fr/recherche?q={query}</c>): the collection agent starts there (ADR-017).
     /// </summary>
     public string? SearchTemplate { get; private set; }
+
+    /// <summary>
+    /// Product page of the merchant's own site reached by the GTIN, with <see cref="Gtin13Placeholder"/> or
+    /// <see cref="Gtin14Placeholder"/> (e.g. <c>https://www.e.leclerc/fp/{gtin13}</c>): the collection opens it first
+    /// when the reference product has a GTIN (ADR-026).
+    /// </summary>
+    public string? ProductPageTemplate { get; private set; }
 
     public static Result<Merchant> Register(string name, string website, string? searchTemplate = null)
     {
@@ -91,6 +106,63 @@ public sealed class Merchant : Entity
         SearchTemplate = template;
 
         return Result.Success();
+    }
+
+    /// <summary>
+    /// Sets (or removes, when empty) the product page template: an http(s) address of the merchant's own site that
+    /// contains <see cref="Gtin13Placeholder"/> or <see cref="Gtin14Placeholder"/>.
+    /// </summary>
+    public Result ConfigureProductPage(string? productPageTemplate)
+    {
+        if (string.IsNullOrWhiteSpace(productPageTemplate))
+        {
+            ProductPageTemplate = null;
+
+            return Result.Success();
+        }
+
+        string template = productPageTemplate.Trim();
+        bool isValid = template.Length <= ProductPageTemplateMaxLength
+            && ProductPageAddress(template, "3456789012344") is Uri sample
+            && Owns(sample);
+
+        if (!isValid)
+        {
+            return Result.Failure(MerchantErrors.InvalidProductPageTemplate(template));
+        }
+
+        ProductPageTemplate = template;
+
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// The product page of a template for a GTIN, or null when the template has no GTIN placeholder or the GTIN cannot
+    /// be written the way the template asks (a GTIN-14 with a packaging indicator has no 13-digit form).
+    /// </summary>
+    public static Uri? ProductPageAddress(string? template, string? gtin)
+    {
+        // Digits only, as OfferMatchingPolicy compares GTINs.
+        string digits = string.Concat((gtin ?? string.Empty).Where(char.IsAsciiDigit));
+        if (template is null || digits.Length is not (8 or 12 or 13 or 14))
+        {
+            return null;
+        }
+
+        string gtin14 = digits.PadLeft(14, '0');
+        string? address = null;
+
+        if (template.Contains(Gtin13Placeholder, StringComparison.Ordinal))
+        {
+            // A GTIN-14 with a packaging indicator (other than 0) has no 13-digit form.
+            address = gtin14[0] == '0' ? template.Replace(Gtin13Placeholder, gtin14[1..], StringComparison.Ordinal) : null;
+        }
+        else if (template.Contains(Gtin14Placeholder, StringComparison.Ordinal))
+        {
+            address = template.Replace(Gtin14Placeholder, gtin14, StringComparison.Ordinal);
+        }
+
+        return address is not null && Uri.TryCreate(address, UriKind.Absolute, out Uri? page) ? page : null;
     }
 
     /// <summary>The search page for a text, or null when the merchant has no search template.</summary>

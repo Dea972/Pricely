@@ -35,6 +35,8 @@ Le code utilise la colonne « Code » (anglais). L'interface et les échanges ut
 | `Suggest…Command` | Proposition (paramétrage assisté) | Ce que l'IA propose à partir d'une page (enseigne, produit) ou d'une liste de tarifs : rien n'est enregistré avant que l'utilisateur valide (ADR-020, ADR-021). |
 | `PriceSource` | Origine d'un tarif | `Manual` (saisi), `LiteLlm` (liste publique de LiteLLM appliquée), `AiReading` (lu par l'IA sur la page du fournisseur, à vérifier). |
 | `SearchTemplate` | Page de recherche de l'enseigne | Adresse du site de l'enseigne avec `{query}`, où l'agent de collecte cherche le produit. |
+| `ProductPageTemplate` | Page produit par GTIN | Adresse du site de l'enseigne avec `{gtin13}` ou `{gtin14}` : la collecte l'ouvre d'abord quand le produit a un GTIN, et lit l'offre sans le modèle (ADR-026). |
+| `DeclaredPrices` | Prix déclarés | Prix que la page annonce dans ses données structurées (JSON-LD) ; quand il y en a, un prix collecté doit être l'un d'eux. |
 | `Money` | Prix | Montant strictement positif dans une devise ISO 4217. |
 | `Availability` | Disponibilité | `InStock`, `OutOfStock`, `Unknown`. |
 | `PriceAnomalyPolicy` | Garde-fou prix | Signale un relevé qui s'écarte de plus de 40 % de la médiane des autres offres confirmées. |

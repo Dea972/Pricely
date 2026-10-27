@@ -79,6 +79,7 @@ public static class PricingModule
         services.AddScoped<IPageSnapshotRepository, PageSnapshotRepository>();
 
         services.AddScoped<OfferCollectionPlanner>();
+        services.AddScoped<ProductPageShortcut>();
         services.AddScoped<CollectedOfferRecorder>();
         services.AddScoped<MerchantPageReader>();
         services.AddScoped<SubmittedOfferVerifier>();

@@ -17,6 +17,14 @@ public sealed partial class PageSnapshot : Entity
 
     public const int AddressMaxLength = 2000;
 
+    /// <summary>
+    /// Most prices kept from the structured data of a page: at least what the reader extracts (10 products of 20 offers),
+    /// so that the products of a carousel declared before the main one never push its price out.
+    /// </summary>
+    public const int MaxDeclaredPrices = 200;
+
+    private readonly List<decimal> _declaredPrices = [];
+
     private PageSnapshot()
     {
     }
@@ -34,7 +42,20 @@ public sealed partial class PageSnapshot : Entity
     /// <summary>The search page of the merchant (several products): an offer is never read on it.</summary>
     public bool IsSearchPage { get; private set; }
 
-    public static Result<PageSnapshot> Capture(Merchant merchant, Uri address, string content, DateTime fetchedOnUtc, bool isSearchPage = false)
+    /// <summary>
+    /// The prices the page declares in its structured data (JSON-LD offers, every product of the page). When there are
+    /// some, they are the only prices an offer may be read at: the text of a page also shows shipping costs and
+    /// eco-contributions (ADR-026). A page that declares only a range (an aggregate of sellers) accepts only its bounds.
+    /// </summary>
+    public IReadOnlyList<decimal> DeclaredPrices => _declaredPrices;
+
+    public static Result<PageSnapshot> Capture(
+        Merchant merchant,
+        Uri address,
+        string content,
+        DateTime fetchedOnUtc,
+        bool isSearchPage = false,
+        IEnumerable<decimal>? declaredPrices = null)
     {
         if (!merchant.IsActive)
         {
@@ -46,7 +67,7 @@ public sealed partial class PageSnapshot : Entity
             return Result.Failure<PageSnapshot>(MerchantErrors.AddressOutsideMerchant(address));
         }
 
-        return new PageSnapshot
+        var snapshot = new PageSnapshot
         {
             Id = Guid.CreateVersion7(),
             MerchantId = merchant.Id,
@@ -55,6 +76,11 @@ public sealed partial class PageSnapshot : Entity
             FetchedOnUtc = fetchedOnUtc,
             IsSearchPage = isSearchPage
         };
+
+        snapshot._declaredPrices.AddRange(
+            (declaredPrices ?? []).Where(price => price > 0).Select(price => decimal.Round(price, 2)).Distinct().Take(MaxDeclaredPrices));
+
+        return snapshot;
     }
 
     /// <summary>
@@ -65,7 +91,11 @@ public sealed partial class PageSnapshot : Entity
     {
         decimal expected = decimal.Round(amount, 2);
 
-        return Amounts().Matches(Content).Any(match => Parse(match.Value) == expected);
+        // The structured data of the page, when it declares prices, is the only source: the text also shows shipping
+        // costs, eco-contributions and the prices of other products.
+        return _declaredPrices.Count > 0
+            ? _declaredPrices.Contains(expected)
+            : Amounts().Matches(Content).Any(match => Parse(match.Value) == expected);
     }
 
     /// <summary>

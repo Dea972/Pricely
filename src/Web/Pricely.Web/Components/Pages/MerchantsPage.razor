@@ -36,6 +36,7 @@
                         <tr>
                             <th scope="col">Enseigne</th>
                             <th scope="col">Page de recherche</th>
+                            <th scope="col">Page produit par GTIN</th>
                             <th scope="col">État</th>
                             <th scope="col"><span class="visually-hidden">Actions</span></th>
                         </tr>
@@ -62,6 +63,22 @@
                                     {
                                         <span class="mono small">@(merchant.SearchTemplate ?? "non configurée")</span>
                                         <button type="button" class="btn btn-secondary btn-small" @onclick="() => EditSearch(merchant)">Modifier</button>
+                                    }
+                                </td>
+                                <td>
+                                    @if (_editedProductPage == merchant.Id)
+                                    {
+                                        <form class="inline-form" @onsubmit="() => SaveProductPageAsync(merchant)">
+                                            <label for="product-page-@merchant.Id" class="visually-hidden">Page produit par GTIN de @merchant.Name</label>
+                                            <input id="product-page-@merchant.Id" class="field mono" maxlength="500" placeholder="https://…/fp/{gtin13}" @bind="_productPageTemplate" />
+                                            <button type="submit" class="btn btn-primary btn-small" disabled="@_saving">Enregistrer</button>
+                                            <button type="button" class="btn btn-secondary btn-small" @onclick="() => _editedProductPage = null">Annuler</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span class="mono small">@(merchant.ProductPageTemplate ?? "non configurée")</span>
+                                        <button type="button" class="btn btn-secondary btn-small" @onclick="() => EditProductPage(merchant)">Modifier</button>
                                     }
                                 </td>
                                 <td>
@@ -108,6 +125,8 @@
     private MerchantForm _new = new();
     private Guid? _editedSearch;
     private string? _searchTemplate;
+    private Guid? _editedProductPage;
+    private string? _productPageTemplate;
     private bool _saving;
     private string? _message;
 
@@ -128,6 +147,12 @@
         _searchTemplate = merchant.SearchTemplate;
     }
 
+    private void EditProductPage(MerchantDto merchant)
+    {
+        _editedProductPage = merchant.Id;
+        _productPageTemplate = merchant.ProductPageTemplate;
+    }
+
     private Task RegisterAsync() =>
         SaveAsync(async () =>
         {
@@ -145,6 +170,19 @@
             _editedSearch = null;
 
             return $"Page de recherche de {merchant.Name} enregistrée.";
+        });
+
+    /// <summary>The page the collection opens first when the product has a GTIN ({gtin13} or {gtin14}).</summary>
+    private Task SaveProductPageAsync(MerchantDto merchant) =>
+        SaveAsync(async () =>
+        {
+            await Api.ConfigureMerchantProductPageAsync(
+                merchant.Id,
+                string.IsNullOrWhiteSpace(_productPageTemplate) ? null : _productPageTemplate.Trim(),
+                CancellationToken.None);
+            _editedProductPage = null;
+
+            return $"Page produit par GTIN de {merchant.Name} enregistrée.";
         });
 
     private Task SetActiveAsync(MerchantDto merchant, bool active) =>

@@ -40,7 +40,8 @@ public static class OfferMatchingPolicy
                 ? null
                 : string.Equals(NormalizeCode(product.ManufacturerReference), NormalizeCode(evidence.ObservedManufacturerReference), StringComparison.Ordinal));
 
-    private static bool HaveSameGtin(string? productGtin, string? observedGtin)
+    /// <summary>The same GTIN, compared on 14 digits (the rule of <see cref="Evaluate"/>).</summary>
+    public static bool HaveSameGtin(string? productGtin, string? observedGtin)
     {
         string? left = NormalizeGtin(productGtin);
         string? right = NormalizeGtin(observedGtin);

@@ -7,9 +7,11 @@ using Pricely.Common.Application.AI;
 using Pricely.Common.Domain;
 using Pricely.Modules.Pricing.Application;
 using Pricely.Modules.Pricing.Application.Abstractions.Collection;
+using Pricely.Modules.Pricing.Application.Offers.CollectProductOffers;
 using Pricely.Modules.Pricing.Application.Offers.SubmitCollectedOffer;
 using Pricely.Modules.Pricing.Application.PageSnapshots;
 using Pricely.Modules.Pricing.Application.PageSnapshots.FetchMerchantPage;
+using Pricely.Modules.Pricing.Domain.Merchants;
 using Pricely.Modules.Pricing.Domain.Offers;
 using Pricely.Modules.Pricing.Domain.PageSnapshots;
 
@@ -19,10 +21,13 @@ namespace Pricely.Modules.Pricing.Infrastructure.Collection;
 /// The collection agent of Pricely (ADR-008, ADR-017): the model of <see cref="PricingAiFeatures.OfferCollection"/>
 /// searches each merchant of the request on its own site (<c>fetch_merchant_page</c>) and gives back what it read
 /// (<c>submit_offer</c>). A submitted price must appear in a page fetched during this run, and at most one offer is kept
-/// per merchant. The agent never confirms an offer: the matching policy and the reviewers do.
+/// per merchant. The agent never confirms an offer: the matching policy and the reviewers do. A merchant whose product
+/// page is reached by the GTIN is read first without the model (<see cref="ProductPageShortcut"/>, ADR-026): the agent
+/// only searches the merchants left.
 /// </summary>
 internal sealed class AgentOfferCollector(
     ILlmGateway llmGateway,
+    ProductPageShortcut productPageShortcut,
     MerchantPageReader pageReader,
     SubmittedOfferVerifier verifier,
     ILoggerFactory loggerFactory,
@@ -49,6 +54,42 @@ internal sealed class AgentOfferCollector(
             return Result.Success<IReadOnlyCollection<CollectedOffer>>([]);
         }
 
+        List<CollectedOffer> direct = [];
+        List<MerchantToSearch> toSearch = [];
+        foreach (MerchantToSearch merchant in request.Merchants)
+        {
+            CollectedOffer? offer = await productPageShortcut.TryCollectAsync(request.Product, merchant, cancellationToken);
+            if (offer is null)
+            {
+                toSearch.Add(merchant);
+            }
+            else
+            {
+                direct.Add(offer);
+            }
+        }
+
+        if (toSearch.Count == 0)
+        {
+            return Result.Success<IReadOnlyCollection<CollectedOffer>>(direct);
+        }
+
+        Result<IReadOnlyCollection<CollectedOffer>> searched = await SearchAsync(request with { Merchants = toSearch }, cancellationToken);
+
+        // The offers read by GTIN are kept even when the agent then fails.
+        if (searched.IsFailure)
+        {
+            return direct.Count > 0 ? Result.Success<IReadOnlyCollection<CollectedOffer>>(direct) : searched;
+        }
+
+        return Result.Success<IReadOnlyCollection<CollectedOffer>>([.. direct, .. searched.Value]);
+    }
+
+    /// <summary>The agent searches the merchants of the request on their sites.</summary>
+    private async Task<Result<IReadOnlyCollection<CollectedOffer>>> SearchAsync(
+        OfferCollectionRequest request,
+        CancellationToken cancellationToken)
+    {
         var run = new CollectionRun(request, pageReader, verifier);
         LlmClient llm = await llmGateway.ForFeatureAsync(PricingAiFeatures.OfferCollection, cancellationToken);
         string sessionId = $"collection:{request.Product.ProductId}:{Guid.CreateVersion7()}";
@@ -192,6 +233,12 @@ internal sealed class AgentOfferCollector(
             {
                 string search = merchant.SearchTemplate is null ? "pas de page de recherche configurée" : "page de recherche configurée";
                 task.AppendLine(CultureInfo.InvariantCulture, $"- {merchant.Name} (merchantId {merchant.MerchantId}) : {merchant.Website} ({search})");
+
+                // The page by GTIN was read without a usable offer: the agent may still read its text.
+                if (Merchant.ProductPageAddress(merchant.ProductPageTemplate, product.Gtin) is Uri productPage)
+                {
+                    task.AppendLine(CultureInfo.InvariantCulture, $"  page produit par GTIN (sans offre lisible dans ses données structurées) : {productPage}");
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(request.Instructions))

@@ -12,10 +12,10 @@ internal sealed class MerchantReadStore(PricingDbContext context) : IMerchantRea
         var merchants = await context.Merchants
             .AsNoTracking()
             .OrderBy(m => m.Name)
-            .Select(m => new { m.Id, m.Name, m.Website, m.IsActive, m.SearchTemplate })
+            .Select(m => new { m.Id, m.Name, m.Website, m.IsActive, m.SearchTemplate, m.ProductPageTemplate })
             .ToListAsync(cancellationToken);
 
         // The address is stored as typed: the column is read back as text.
-        return [.. merchants.Select(m => new MerchantResponse(m.Id, m.Name, m.Website.OriginalString, m.IsActive, m.SearchTemplate))];
+        return [.. merchants.Select(m => new MerchantResponse(m.Id, m.Name, m.Website.OriginalString, m.IsActive, m.SearchTemplate, m.ProductPageTemplate))];
     }
 }

@@ -50,7 +50,8 @@ internal sealed class HttpWebPageReader(IHttpClientFactory httpClientFactory) : 
             return new WebPage(address, HtmlText.Extract(html), RedirectTo: null)
             {
                 Title = HtmlText.Title(html),
-                SearchTemplates = HtmlText.SearchTemplates(html, address)
+                SearchTemplates = HtmlText.SearchTemplates(html, address),
+                Products = HtmlText.Products(html)
             };
         }
         catch (HttpRequestException exception)

@@ -27,16 +27,28 @@ public sealed class MerchantPageReader(
         string? searchText,
         CancellationToken cancellationToken)
     {
+        Result<MerchantPage> page = await ReadPageAsync(merchantId, address, searchText, cancellationToken);
+
+        return page.IsSuccess ? page.Value.Snapshot : Result.Failure<PageSnapshot>(page.Error);
+    }
+
+    /// <summary>Like <see cref="ReadAsync"/>, with the products the page declares in its structured data.</summary>
+    public async Task<Result<MerchantPage>> ReadPageAsync(
+        Guid merchantId,
+        Uri? address,
+        string? searchText,
+        CancellationToken cancellationToken)
+    {
         Merchant? merchant = await merchantRepository.GetAsync(merchantId, cancellationToken);
         if (merchant is null)
         {
-            return Result.Failure<PageSnapshot>(MerchantErrors.NotFound(merchantId));
+            return Result.Failure<MerchantPage>(MerchantErrors.NotFound(merchantId));
         }
 
         Uri? target = address ?? (string.IsNullOrWhiteSpace(searchText) ? null : merchant.SearchAddress(searchText));
         if (target is null)
         {
-            return Result.Failure<PageSnapshot>(PageSnapshotErrors.NoAddress(merchantId));
+            return Result.Failure<MerchantPage>(PageSnapshotErrors.NoAddress(merchantId));
         }
 
         // A search that the site redirects to another page (an exact match) lands on that page, not on a result list.
@@ -46,18 +58,18 @@ public sealed class MerchantPageReader(
         {
             if (!merchant.IsActive)
             {
-                return Result.Failure<PageSnapshot>(MerchantErrors.Inactive(merchantId));
+                return Result.Failure<MerchantPage>(MerchantErrors.Inactive(merchantId));
             }
 
             if (!merchant.Owns(target))
             {
-                return Result.Failure<PageSnapshot>(MerchantErrors.AddressOutsideMerchant(target));
+                return Result.Failure<MerchantPage>(MerchantErrors.AddressOutsideMerchant(target));
             }
 
             Result<WebPage> page = await webPageReader.ReadAsync(target, cancellationToken);
             if (page.IsFailure)
             {
-                return Result.Failure<PageSnapshot>(page.Error);
+                return Result.Failure<MerchantPage>(page.Error);
             }
 
             if (page.Value.RedirectTo is not Uri next)
@@ -68,24 +80,33 @@ public sealed class MerchantPageReader(
             target = next;
         }
 
-        return Result.Failure<PageSnapshot>(WebErrors.TooManyRedirects(target));
+        return Result.Failure<MerchantPage>(WebErrors.TooManyRedirects(target));
     }
 
     /// <summary>
     /// Saves the snapshot alone (one aggregate per save, like <c>CollectedOfferRecorder</c>): the agent reads pages
     /// during a collection, before any offer is recorded.
     /// </summary>
-    private async Task<Result<PageSnapshot>> KeepAsync(Merchant merchant, WebPage page, bool isSearchPage, CancellationToken cancellationToken)
+    private async Task<Result<MerchantPage>> KeepAsync(Merchant merchant, WebPage page, bool isSearchPage, CancellationToken cancellationToken)
     {
-        Result<PageSnapshot> snapshot = PageSnapshot.Capture(merchant, page.Address, page.Text, dateTimeProvider.UtcNow, isSearchPage);
+        Result<PageSnapshot> snapshot = PageSnapshot.Capture(
+            merchant,
+            page.Address,
+            page.Text,
+            dateTimeProvider.UtcNow,
+            isSearchPage,
+            page.Products.SelectMany(p => p.Offers).Select(o => o.Price));
         if (snapshot.IsFailure)
         {
-            return snapshot;
+            return Result.Failure<MerchantPage>(snapshot.Error);
         }
 
         pageSnapshotRepository.Insert(snapshot.Value);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return snapshot;
+        return new MerchantPage(snapshot.Value, page.Products);
     }
 }
+
+/// <summary>A page of a merchant's site as kept (<see cref="Snapshot"/>), with the products its structured data declares.</summary>
+public sealed record MerchantPage(PageSnapshot Snapshot, IReadOnlyList<StructuredProduct> Products);

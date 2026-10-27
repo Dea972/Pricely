@@ -172,6 +172,11 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                         .HasColumnType("citext")
                         .HasColumnName("name");
 
+                    b.Property<string>("ProductPageTemplate")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("product_page_template");
+
                     b.Property<string>("SearchTemplate")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
@@ -359,6 +364,11 @@ namespace Pricely.Modules.Pricing.Infrastructure.Database.Migrations
                         .HasMaxLength(200000)
                         .HasColumnType("character varying(200000)")
                         .HasColumnName("content");
+
+                    b.PrimitiveCollection<decimal[]>("DeclaredPrices")
+                        .IsRequired()
+                        .HasColumnType("numeric(18,2)[]")
+                        .HasColumnName("declared_prices");
 
                     b.Property<DateTime>("FetchedOnUtc")
                         .HasColumnType("timestamp with time zone")

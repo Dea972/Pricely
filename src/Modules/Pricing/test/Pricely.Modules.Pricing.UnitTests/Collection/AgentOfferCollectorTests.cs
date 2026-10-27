@@ -11,6 +11,7 @@ using Pricely.Common.Application.Web;
 using Pricely.Common.Domain;
 using Pricely.Modules.Pricing.Application.Abstractions.Collection;
 using Pricely.Modules.Pricing.Application.Abstractions.Data;
+using Pricely.Modules.Pricing.Application.Offers.CollectProductOffers;
 using Pricely.Modules.Pricing.Application.Offers.SubmitCollectedOffer;
 using Pricely.Modules.Pricing.Application.PageSnapshots;
 using Pricely.Modules.Pricing.Domain.Merchants;
@@ -22,9 +23,12 @@ namespace Pricely.Modules.Pricing.UnitTests.Collection;
 public sealed class AgentOfferCollectorTests
 {
     private const string ProductPage = "https://www.comptoir.test/p/ciment-cem-ii";
+    private const string ProductPageTemplate = "https://www.comptoir.test/ean/{gtin13}";
+    private const string ProductPageByGtin = "https://www.comptoir.test/ean/3456789012344";
 
     private readonly Merchant _comptoir = Merchant.Register("Comptoir", "https://www.comptoir.test", "https://www.comptoir.test/recherche?q={query}").Value;
     private readonly Merchant _outsidePlan = Merchant.Register("Hors plan", "https://www.autre.test").Value;
+    private readonly Merchant _negoce = Merchant.Register("Négoce", "https://www.negoce.test", "https://www.negoce.test/s?q={query}").Value;
     private readonly FakeSite _site = new();
 
     [Fact]
@@ -133,26 +137,143 @@ public sealed class AgentOfferCollectorTests
         model.LastAnswer.Should().Contain("PageSnapshots.NotFound");
     }
 
-    private async Task<Result<IReadOnlyCollection<CollectedOffer>>> CollectAsync(ScriptedModel model)
+    [Fact]
+    public async Task Collect_ShouldReadTheProductPageByGtin_WithoutTheModel()
     {
-        var merchants = new InMemoryMerchants(_comptoir, _outsidePlan);
+        // The reader puts the structured data at the top of the text, as a real page.
+        _site.Text = "[données structurées] {\"@type\":\"Product\",\"gtin13\":\"3456789012344\",\"brand\":\"CR\"}\nCiment CEM II 35 kg\n9,40 € dont 0,42 € éco-contribution\nLivraison 10,86 € TTC";
+        _site.Products[ProductPageByGtin] = [Declared("3456789012344", new StructuredOffer(9.40m, "EUR", "InStock", Seller: null))];
+        using var model = new ScriptedModel();
+
+        Result<IReadOnlyCollection<CollectedOffer>> result = await CollectAsync(model, ProductPageTemplate);
+
+        CollectedOffer offer = result.Value.Should().ContainSingle().Subject;
+        offer.ProductPage.Should().Be(new Uri(ProductPageByGtin));
+        offer.PriceAmount.Should().Be(9.40m);
+        offer.Availability.Should().Be(Domain.Offers.Availability.InStock);
+        offer.Evidence.ObservedGtin.Should().Be("3456789012344", "the page declares it");
+        offer.Evidence.ObservedBrand.Should().Be("CR");
+        _site.Requested.Should().Equal([new Uri(ProductPageByGtin)], "the model is never asked: the page by GTIN is enough");
+    }
+
+    [Fact]
+    public async Task Collect_ShouldKeepTheOfferOfAMarketplaceSeller_WithItsName()
+    {
+        _site.Products[ProductPageByGtin] =
+        [
+            Declared("3456789012344", new StructuredOffer(10.20m, "EUR", "InStock", "MK DISTRIBUTION"), new StructuredOffer(12.50m, "EUR", null, null, IsAggregate: true))
+        ];
+        using var model = new ScriptedModel();
+
+        Result<IReadOnlyCollection<CollectedOffer>> result = await CollectAsync(model, ProductPageTemplate);
+
+        CollectedOffer offer = result.Value.Should().ContainSingle().Subject;
+        offer.PriceAmount.Should().Be(10.20m, "the offer the page puts forward, not a bound of several sellers");
+        offer.Evidence.AiRationale.Should().Contain("MK DISTRIBUTION");
+    }
+
+    [Fact]
+    public async Task Collect_ShouldLetTheAgentSearch_WhenThePageByGtinShowsAnotherProduct()
+    {
+        _site.Products[ProductPageByGtin] = [Declared("3017620422003", new StructuredOffer(3.10m, "EUR", "InStock", null))];
+        using var model = new ScriptedModel(
+            _ => Call("fetch_merchant_page", new() { ["merchantId"] = _comptoir.Id, ["address"] = ProductPage }),
+            history => Call("submit_offer", new() { ["offer"] = Offer(LastSnapshotId(history), 9.40m) }),
+            _ => Answer("Comptoir : 9,40 €."));
+
+        Result<IReadOnlyCollection<CollectedOffer>> result = await CollectAsync(model, ProductPageTemplate);
+
+        result.Value.Should().ContainSingle().Which.ProductPage.Should().Be(new Uri(ProductPage));
+        _site.Requested.Should().Equal(new Uri(ProductPageByGtin), new Uri(ProductPage));
+    }
+
+    [Fact]
+    public async Task Collect_ShouldLetTheAgentSearch_WhenTheProductOfThePageByGtinHasNoPrice()
+    {
+        _site.Products[ProductPageByGtin] = [Declared("3456789012344")];
+        using var model = new ScriptedModel(_ => Answer("Comptoir : produit indisponible."));
+
+        Result<IReadOnlyCollection<CollectedOffer>> result = await CollectAsync(model, ProductPageTemplate);
+
+        result.Value.Should().BeEmpty();
+        model.LastAnswer.Should().Contain("indisponible", "the agent was asked");
+    }
+
+    [Fact]
+    public async Task Collect_ShouldNotKeepAGtin_ThatThePageTextDoesNotShow()
+    {
+        // The structured product carries the GTIN, but the kept text of the page does not: the offer must not be able to
+        // confirm itself on an identifier Pricely did not read.
+        _site.Text = "Ciment CEM II 35 kg\n9,40 € TTC";
+        _site.Products[ProductPageByGtin] = [Declared("3456789012344", new StructuredOffer(9.40m, "EUR", "InStock", null))];
+        using var model = new ScriptedModel();
+
+        Result<IReadOnlyCollection<CollectedOffer>> result = await CollectAsync(model, ProductPageTemplate);
+
+        CollectedOffer offer = result.Value.Should().ContainSingle().Subject;
+        offer.Evidence.ObservedGtin.Should().BeNull();
+        offer.Evidence.AiSimilarity.Should().BeNull("no model compared the products");
+    }
+
+    [Fact]
+    public async Task Collect_ShouldKeepTheOffersReadByGtin_WhenTheAgentThenFails()
+    {
+        _site.Text = "[données structurées] {\"gtin13\":\"3456789012344\"}\n9,40 € TTC";
+        _site.Products[ProductPageByGtin] = [Declared("3456789012344", new StructuredOffer(9.40m, "EUR", "InStock", null))];
+        using var model = new ScriptedModel(_ => throw new HttpRequestException("401 Unauthorized"));
+
+        Result<IReadOnlyCollection<CollectedOffer>> result = await CollectAsync(model, ProductPageTemplate, withSecondMerchant: true);
+
+        result.Value.Should().ContainSingle().Which.PriceAmount.Should().Be(9.40m);
+    }
+
+    [Fact]
+    public async Task Collect_ShouldRefuseAPrice_ThatTheStructuredDataDoesNotDeclare()
+    {
+        _site.Text = "Ciment CEM II 35 kg\n9,40 € TTC\nLivraison 10,86 € TTC";
+        _site.Products[ProductPage] = [Declared("3456789012344", new StructuredOffer(9.40m, "EUR", "InStock", null))];
+        using var model = new ScriptedModel(
+            _ => Call("fetch_merchant_page", new() { ["merchantId"] = _comptoir.Id, ["address"] = ProductPage }),
+            history => Call("submit_offer", new() { ["offer"] = Offer(LastSnapshotId(history), 10.86m) }),
+            history => Answer(LastResult(history)));
+
+        Result<IReadOnlyCollection<CollectedOffer>> result = await CollectAsync(model);
+
+        result.Value.Should().BeEmpty("the shipping cost is in the text, not among the prices the page declares");
+        model.LastAnswer.Should().Contain("PageSnapshots.PriceNotShown");
+    }
+
+    private async Task<Result<IReadOnlyCollection<CollectedOffer>>> CollectAsync(
+        ScriptedModel model,
+        string? productPageTemplate = null,
+        bool withSecondMerchant = false)
+    {
+        var merchants = new InMemoryMerchants(_comptoir, _outsidePlan, _negoce);
         var snapshots = new InMemorySnapshots();
         var clock = new FixedClock();
         var reader = new MerchantPageReader(merchants, _site, snapshots, clock, new NoUnitOfWork());
         using ServiceProvider services = new ServiceCollection().BuildServiceProvider();
 
+        var verifier = new SubmittedOfferVerifier(snapshots);
         var collector = new AgentOfferCollector(
             new FakeGateway(new FakeLlmService(model, clock)),
+            new ProductPageShortcut(reader, verifier),
             reader,
-            new SubmittedOfferVerifier(snapshots),
+            verifier,
             NullLoggerFactory.Instance,
             services);
 
         return await collector.CollectAsync(new OfferCollectionRequest(
             new ProductToCollect(Guid.NewGuid(), "Ciment CEM II", "CR", "03456789012344", null),
-            [new MerchantToSearch(_comptoir.Id, _comptoir.Name, _comptoir.Website, 1, _comptoir.SearchTemplate)],
+            [
+                new MerchantToSearch(_comptoir.Id, _comptoir.Name, _comptoir.Website, 1, _comptoir.SearchTemplate) { ProductPageTemplate = productPageTemplate },
+                .. withSecondMerchant ? [new MerchantToSearch(_negoce.Id, _negoce.Name, _negoce.Website, 2, _negoce.SearchTemplate)] : Array.Empty<MerchantToSearch>()
+            ],
             string.Empty));
     }
+
+    private static StructuredProduct Declared(string gtin, params StructuredOffer[] offers) =>
+        new("Ciment CEM II 35 kg", gtin, "CR", "SKU-35", offers);
 
     private static JsonElement Offer(Guid snapshotId, decimal price) =>
         JsonSerializer.SerializeToElement(new
@@ -227,11 +348,17 @@ public sealed class AgentOfferCollectorTests
 
         public string Text { get; set; } = "Ciment CEM II 35 kg\n9,40 € TTC\nEn stock";
 
+        /// <summary>The products the structured data of a page declares, by address.</summary>
+        public Dictionary<string, IReadOnlyList<StructuredProduct>> Products { get; } = new(StringComparer.Ordinal);
+
         public Task<Result<WebPage>> ReadAsync(Uri address, CancellationToken cancellationToken = default)
         {
             Requested.Add(address);
 
-            return Task.FromResult(Result.Success(new WebPage(address, Text, RedirectTo)));
+            return Task.FromResult(Result.Success(new WebPage(address, Text, RedirectTo)
+            {
+                Products = Products.GetValueOrDefault(address.AbsoluteUri) ?? []
+            }));
         }
     }
 

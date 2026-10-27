@@ -140,6 +140,9 @@ internal sealed class PricelyApiClient(HttpClient http, AccessTokenProvider toke
     public Task ConfigureMerchantSearchAsync(Guid merchantId, string? searchTemplate, CancellationToken cancellationToken) =>
         SendAsync(HttpMethod.Put, $"pricing/merchants/{merchantId}/search", new { searchTemplate }, cancellationToken);
 
+    public Task ConfigureMerchantProductPageAsync(Guid merchantId, string? productPageTemplate, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Put, $"pricing/merchants/{merchantId}/product-page", new { productPageTemplate }, cancellationToken);
+
     /// <summary>Reads the site and calls a model: as long as a collection command.</summary>
     public Task<MerchantSuggestionDto> SuggestMerchantAsync(string website, string? name, CancellationToken cancellationToken) =>
         SendAsync<MerchantSuggestionDto>(HttpMethod.Post, "pricing/merchants/suggestions", new { website, name }, cancellationToken);

@@ -19,6 +19,12 @@ internal sealed class PageSnapshotConfiguration : IEntityTypeConfiguration<PageS
 
         builder.Property(s => s.Content).HasMaxLength(PageSnapshot.ContentMaxLength);
 
+        builder.PrimitiveCollection(s => s.DeclaredPrices)
+            .HasField("_declaredPrices")
+            .UsePropertyAccessMode(PropertyAccessMode.Field)
+            .ElementType()
+            .HasPrecision(18, 2);
+
         builder.HasOne<Merchant>()
             .WithMany()
             .HasForeignKey(s => s.MerchantId)

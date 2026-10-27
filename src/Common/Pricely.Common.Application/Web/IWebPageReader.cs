@@ -25,6 +25,9 @@ public sealed record WebPage(Uri Address, string Text, Uri? RedirectTo)
     /// addresses where <c>{query}</c> stands for the searched text.
     /// </summary>
     public IReadOnlyList<string> SearchTemplates { get; init; } = [];
+
+    /// <summary>The products the page declares in its structured data (JSON-LD), with their prices.</summary>
+    public IReadOnlyList<StructuredProduct> Products { get; init; } = [];
 }
 
 public static class WebErrors

@@ -21,6 +21,8 @@ internal sealed class MerchantConfiguration : IEntityTypeConfiguration<Merchant>
 
         builder.Property(m => m.SearchTemplate).HasMaxLength(Merchant.SearchTemplateMaxLength);
 
+        builder.Property(m => m.ProductPageTemplate).HasMaxLength(Merchant.ProductPageTemplateMaxLength);
+
         builder.HasIndex(m => m.Name).IsUnique();
     }
 }
