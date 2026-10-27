@@ -18,7 +18,7 @@ public interface IProductReader
 
     /// <summary>
     /// The product of this GTIN (written with 8 to 14 digits), else of this brand and manufacturer reference (case,
-    /// spaces and dashes ignored); null when Catalog knows none.
+    /// spaces and dashes ignored; when a GTIN is given, only a product without GTIN); null when Catalog knows none.
     /// </summary>
     Task<Result<ProductSummary?>> FindAsync(
         string? gtin,

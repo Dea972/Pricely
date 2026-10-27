@@ -63,8 +63,9 @@ public static class AssistantAgent
           un autre conditionnement est un autre produit. Une page d'un comparateur, d'une place de marché sans
           vendeur identifié ou d'un forum n'est pas une offre d'enseigne.
         - add_web_offer relit la page à la validation : si le prix a changé ou n'y figure plus, l'offre est refusée.
-          Une offre n'est confirmée que si la page montre le même GTIN ; sinon elle attend une validation dans les
-          offres à valider.
+          Une offre n'est confirmée que si la page déclare le même GTIN ; sinon elle attend une validation dans les
+          offres à valider. Dans add_web_offer, désigne le produit par son GTIN et aussi par sa marque et sa référence
+          quand tu les connais.
         """,
         [
             "search_products",

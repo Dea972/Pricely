@@ -27,7 +27,7 @@ internal sealed class ProductReader(CatalogDbContext context) : IProductReader
         if (!string.IsNullOrWhiteSpace(gtin) && Gtin.Create(gtin) is { IsSuccess: true } valid)
         {
             List<Gtin> forms = [.. valid.Value.EquivalentForms().Select(f => Gtin.Create(f).Value)];
-            ProductSummary? byGtin = (await Read(context.Products.Where(p => forms.Contains(p.Gtin!)), cancellationToken)).FirstOrDefault();
+            ProductSummary? byGtin = (await Read(context.Products.Where(p => forms.Contains(p.Gtin!)).OrderBy(p => p.Id), cancellationToken)).FirstOrDefault();
             if (byGtin is not null)
             {
                 return Result.Success<ProductSummary?>(byGtin);
@@ -39,9 +39,12 @@ internal sealed class ProductReader(CatalogDbContext context) : IProductReader
             return Result.Success<ProductSummary?>(null);
         }
 
+        // A product of another GTIN is another product, even with the same reference (another packaging, ADR-019).
+        bool hasGtin = !string.IsNullOrWhiteSpace(gtin);
         string pattern = LikePattern.Escape(brand.Trim());
         List<Product> sameBrand = await context.Products.AsNoTracking()
-            .Where(p => EF.Functions.ILike(p.Brand, pattern) && p.ManufacturerReference != null)
+            .Where(p => EF.Functions.ILike(p.Brand, pattern) && p.ManufacturerReference != null && (!hasGtin || p.Gtin == null))
+            .OrderBy(p => p.Id)
             .Take(500)
             .ToListAsync(cancellationToken);
         Product? byReference = sameBrand.Find(p => p.HasManufacturerReference(manufacturerReference));

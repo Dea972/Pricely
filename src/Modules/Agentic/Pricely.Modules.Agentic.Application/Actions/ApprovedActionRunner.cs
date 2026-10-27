@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Pricely.Common.Application.AI.Agents;
 using Pricely.Common.Domain;
@@ -19,7 +20,7 @@ internal sealed class ApprovedActionRunner(
     AgentCatalog catalog,
     ToolInvocationJournal journal,
     IUnitOfWork unitOfWork,
-    IServiceProvider services,
+    IServiceScopeFactory scopeFactory,
     ILogger<ApprovedActionRunner> logger)
 {
     /// <summary>The tool and the agent of the action, if the agent still declares this write tool.</summary>
@@ -40,9 +41,13 @@ internal sealed class ApprovedActionRunner(
             .ToDictionary(a => a.Key, a => (object?)a.Value, StringComparer.Ordinal);
         var context = new ToolCallContext(agent.Feature, agent.Name, action.ConversationId.ToString(), action.UserId.ToString(), WasApproved: true);
 
+        // Its own services, hence its own database contexts: what a failed action left in a context (an insert refused
+        // by a unique index) never reaches the next action of the batch.
+        await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
+
         try
         {
-            object? result = await journal.InvokeAsync(tool, new AIFunctionArguments(arguments) { Services = services }, context, CancellationToken.None);
+            object? result = await journal.InvokeAsync(tool, new AIFunctionArguments(arguments) { Services = scope.ServiceProvider }, context, CancellationToken.None);
             action.MarkExecuted(ChatMessageSerializer.SerializeValue(result));
         }
         catch (Exception exception)

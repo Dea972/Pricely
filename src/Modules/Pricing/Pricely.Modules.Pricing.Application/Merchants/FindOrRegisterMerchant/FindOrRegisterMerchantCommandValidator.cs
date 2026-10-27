@@ -10,7 +10,7 @@ internal sealed class FindOrRegisterMerchantCommandValidator : AbstractValidator
         RuleFor(c => c.Name).NotEmpty().MaximumLength(Merchant.NameMaxLength);
         RuleFor(c => c.Website)
             .NotNull()
-            .Must(w => w is { IsAbsoluteUri: true } && w.Scheme is "http" or "https")
-            .WithMessage("The website must be an absolute http or https address");
+            .Must(w => w is { IsAbsoluteUri: true, IsDefaultPort: true } && w.Scheme is "http" or "https")
+            .WithMessage("The website must be an absolute http or https address on the default port");
     }
 }

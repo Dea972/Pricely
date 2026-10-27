@@ -58,18 +58,19 @@ public static class WebResearchTools
     [Description("""
         Enregistre l'offre d'un produit lue sur la page produit d'une enseigne (trouvée par search_web, lue par
         read_web_page) : la page est relue à la validation et le prix doit y figurer, sinon rien n'est enregistré. Le
-        produit est désigné par son GTIN, ou sa marque et sa référence fabricant (il peut être ajouté dans le même lot
+        produit est désigné par son GTIN et, quand ils sont connus, sa marque et sa référence fabricant (les donner tous :
+        le produit trouvé ou ajouté peut ne pas avoir de GTIN ; il peut être ajouté dans le même lot
         par find_or_add_product), l'enseigne par la page (ajoutée dans le même lot par find_or_add_merchant si besoin) ;
         l'enseigne rejoint le profil de collecte de la typologie du produit si elle n'y est pas. L'offre est rapprochée
-        comme une offre collectée : confirmée seulement si la page montre le même GTIN, sinon à valider.
+        comme une offre collectée : confirmée seulement si la page déclare le même GTIN, sinon à valider.
         """)]
     public static async Task<AddedWebOfferResponse> AddWebOffer(
         ISender sender,
         [Description("Adresse de la page produit sur le site de l'enseigne.")] Uri pageAddress,
         [Description("Prix lu sur la page (TTC, prix du produit seul : ni livraison ni éco-contribution).")] decimal price,
         [Description("GTIN du produit de référence, s'il en a un.")] string? productGtin = null,
-        [Description("Marque du produit, si pas de GTIN.")] string? productBrand = null,
-        [Description("Référence fabricant du produit, si pas de GTIN.")] string? productReference = null,
+        [Description("Marque du produit (à donner aussi avec le GTIN quand elle est connue).")] string? productBrand = null,
+        [Description("Référence fabricant du produit (à donner aussi avec le GTIN quand elle est connue).")] string? productReference = null,
         [Description("Devise ISO 4217.")] string currency = "EUR",
         CancellationToken cancellationToken = default) =>
         (await sender.Send(new AddWebOfferCommand(productGtin, productBrand, productReference, pageAddress, price, currency), cancellationToken)).ValueOrToolError();

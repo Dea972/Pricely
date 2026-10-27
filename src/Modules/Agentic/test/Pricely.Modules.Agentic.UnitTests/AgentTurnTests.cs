@@ -151,6 +151,9 @@ public sealed class AgentTurnTests
             nameof(PendingActionStatus.Executed), nameof(PendingActionStatus.Rejected), nameof(PendingActionStatus.Rejected));
         probe.Calls.Should().BeEmpty();
         (await SendBatchAsync(services, new ApproveBatchCommand(Guid.NewGuid()))).Error.Code.Should().Be("Actions.BatchNotFound");
+
+        user.UserId = Guid.NewGuid();
+        (await SendBatchAsync(services, new ApproveBatchCommand(proposed[0].BatchId))).Error.Code.Should().Be("Actions.BatchNotFound", "a batch of another user does not exist for the caller");
     }
 
     [Fact]

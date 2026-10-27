@@ -84,6 +84,34 @@ public sealed class WebBatchTests
     }
 
     [Fact]
+    public async Task Offer_ShouldGiveTheMatchingOnlyWhatThePageDeclares_NeverTheReferenceProductIdentifiers()
+    {
+        // The reference and the brand are written on the page (a similar product), but the page declares no product.
+        _site.Pages[Page.AbsoluteUri] = new WebPage(Page, "Lot de 10 sacs Cimenterie CR-35 — 94,00 €", null);
+
+        Result<AddedWebOfferResponse> result = await Handler().Handle(
+            new AddWebOfferCommand(Product.Gtin, Product.Brand, Product.ManufacturerReference, Page, 94m, "EUR"),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        _sender.Sent.OfType<SubmitCollectedOfferCommand>().Should().ContainSingle()
+            .Which.Offer.Should().BeEquivalentTo(new { ObservedGtin = (string?)null, ObservedBrand = (string?)null, ObservedManufacturerReference = (string?)null });
+    }
+
+    [Fact]
+    public async Task Offer_ShouldChangeNothing_WhenThePriceIsNoLongerOnThePage()
+    {
+        _site.Pages[Page.AbsoluteUri] = new WebPage(Page, "Ciment CEM II 35 kg — 10,20 € TTC", null);
+
+        Result<AddedWebOfferResponse> result = await Handler().Handle(
+            new AddWebOfferCommand(Product.Gtin, null, null, Page, 9.4m, "EUR"),
+            CancellationToken.None);
+
+        result.Error.Code.Should().Be("PageSnapshots.PriceNotShown");
+        _sender.Sent.Should().BeEmpty("the merchant does not join the profile for an offer that is refused");
+    }
+
+    [Fact]
     public async Task Offer_ShouldNeedAKnownProduct_AndAFollowedMerchant_BeforeAnyRead()
     {
         Result<AddedWebOfferResponse> unknownProduct = await Handler().Handle(

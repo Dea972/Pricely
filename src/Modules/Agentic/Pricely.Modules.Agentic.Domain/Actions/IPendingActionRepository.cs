@@ -10,5 +10,8 @@ public interface IPendingActionRepository
     /// <summary>The actions of a batch, in the order they were proposed.</summary>
     Task<IReadOnlyList<PendingAction>> GetBatchAsync(Guid batchId, CancellationToken cancellationToken = default);
 
+    /// <summary>Whether an action of the batch was already approved or rejected.</summary>
+    Task<bool> IsBatchDecidedAsync(Guid batchId, CancellationToken cancellationToken = default);
+
     void Insert(PendingAction action);
 }

@@ -69,11 +69,11 @@ internal sealed class RunTurnStreamRequestHandler(
         var proposals = new Dictionary<string, PendingAction>(StringComparer.Ordinal);
 
         // Every write the model proposes in this turn joins one batch, approved or rejected at once (ADR-028).
-        var batchId = Guid.CreateVersion7();
+        var batch = new TurnBatch();
         var tools = catalog.ToolsOf(agent)
             .Select(tool => tool.IsReadOnly
                 ? journal.Wrap(tool, context)
-                : (AITool)new ProposalFunction(tool, (t, arguments, ct) => ProposeAsync(conversation, batchId, agent, t, arguments, proposals, ct)))
+                : (AITool)new ProposalFunction(tool, (t, arguments, ct) => ProposeAsync(conversation, batch, agent, t, arguments, proposals, ct)))
             .ToList();
 
         LlmClient llm = await llmGateway.ForFeatureAsync(agent.Feature, cancellationToken);
@@ -237,18 +237,24 @@ internal sealed class RunTurnStreamRequestHandler(
 
     private async Task<PendingAction> ProposeAsync(
         AgentConversation conversation,
-        Guid batchId,
+        TurnBatch batch,
         AgentDefinition agent,
         AgentTool tool,
         AIFunctionArguments arguments,
         Dictionary<string, PendingAction> proposals,
         CancellationToken cancellationToken)
     {
+        // A batch the user decided while the turn still runs is closed: what comes next is decided apart, so that a batch
+        // is never approved before its last action was proposed.
+        if (batch.Count > 0 && await pendingActions.IsBatchDecidedAsync(batch.Id, cancellationToken))
+        {
+            batch.Start();
+        }
+
         var action = PendingAction.Propose(
             conversation.Id,
-            batchId,
-            // The tools of a turn are called one after the other: the actions already proposed give the position.
-            proposals.Count,
+            batch.Id,
+            batch.Count,
             conversation.UserId,
             agent.Name,
             new ProposedCall(
@@ -258,6 +264,7 @@ internal sealed class RunTurnStreamRequestHandler(
             dateTimeProvider.UtcNow);
 
         pendingActions.Insert(action);
+        batch.Count++;
 
         // Saved now, alone (the conversation is only written at the end of the turn): the user can approve it as soon as
         // it is announced, and it is announced only once saved.
@@ -305,6 +312,21 @@ internal sealed class RunTurnStreamRequestHandler(
                 default:
                     break;
             }
+        }
+    }
+
+    /// <summary>The batch the writes of the turn join (the tools of a turn are called one after the other).</summary>
+    private sealed class TurnBatch
+    {
+        public Guid Id { get; private set; } = Guid.CreateVersion7();
+
+        /// <summary>Actions proposed in the batch so far: the position of the next one.</summary>
+        public int Count { get; set; }
+
+        public void Start()
+        {
+            Id = Guid.CreateVersion7();
+            Count = 0;
         }
     }
 }

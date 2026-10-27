@@ -8,8 +8,10 @@ using Pricely.Modules.Pricing.Application.Offers.CollectProductOffers;
 using Pricely.Modules.Pricing.Application.Offers.SubmitCollectedOffer;
 using Pricely.Modules.Pricing.Application.PageSnapshots;
 using Pricely.Modules.Pricing.Domain.Catalog;
+using Pricely.Modules.Pricing.Domain.CollectionProfiles;
 using Pricely.Modules.Pricing.Domain.Merchants;
 using Pricely.Modules.Pricing.Domain.Offers;
+using Pricely.Modules.Pricing.Domain.PageSnapshots;
 
 namespace Pricely.Modules.Pricing.Application.Offers.AddWebOffer;
 
@@ -26,6 +28,8 @@ internal sealed class AddWebOfferCommandHandler(
     ISender sender)
     : ICommandHandler<AddWebOfferCommand, AddedWebOfferResponse>
 {
+    private static readonly string NoPreferredMerchantsCode = CollectionProfileErrors.NoPreferredMerchants(Guid.Empty).Code;
+
     public const string Rationale = "Offre trouvée par une recherche web de l'assistant, page relue à la validation du lot.";
 
     public async Task<Result<AddedWebOfferResponse>> Handle(AddWebOfferCommand request, CancellationToken cancellationToken)
@@ -55,8 +59,25 @@ internal sealed class AddWebOfferCommandHandler(
             return Result.Failure<AddedWebOfferResponse>(page.Error);
         }
 
-        Result<OfferCollectionPlan> plan = await offerCollectionPlanner.PlanAsync(found.Id, cancellationToken);
-        bool addedToProfile = !plan.IsSuccess || plan.Value.Request.Merchants.All(m => m.MerchantId != merchant.Id);
+        // Nothing changes (not even the profile) for a page that no longer shows the price.
+        PageSnapshot snapshot = page.Value.Snapshot;
+        if (snapshot.IsSearchPage)
+        {
+            return Result.Failure<AddedWebOfferResponse>(PageSnapshotErrors.SearchPage(snapshot.Id));
+        }
+
+        if (!snapshot.ShowsPrice(request.Price))
+        {
+            return Result.Failure<AddedWebOfferResponse>(PageSnapshotErrors.PriceNotShown(request.Price));
+        }
+
+        Result<bool> inPlan = await IsInPlanAsync(found.Id, merchant.Id, cancellationToken);
+        if (inPlan.IsFailure)
+        {
+            return Result.Failure<AddedWebOfferResponse>(inPlan.Error);
+        }
+
+        bool addedToProfile = !inPlan.Value;
         if (addedToProfile)
         {
             Result added = await sender.Send(new AddMerchantToProfilesCommand(merchant.Id, [found.ProductCategoryId]), cancellationToken);
@@ -66,8 +87,9 @@ internal sealed class AddWebOfferCommandHandler(
             }
         }
 
+        SubmittedOffer offer = Offer(page.Value, request);
         Result<SubmittedOfferResponse> submitted = await sender.Send(
-            new SubmitCollectedOfferCommand(found.Id, Offer(page.Value, found, request)),
+            new SubmitCollectedOfferCommand(found.Id, offer),
             cancellationToken);
         if (submitted.IsFailure)
         {
@@ -80,18 +102,40 @@ internal sealed class AddWebOfferCommandHandler(
             merchant.Id,
             merchant.Name,
             page.Value.Snapshot.Address,
-            request.Price,
-            request.Currency.Trim().ToUpperInvariant(),
+            offer.Price,
+            offer.Currency.Trim().ToUpperInvariant(),
             submitted.Value.Outcome,
             submitted.Value.IsFlaggedAsAnomaly,
             addedToProfile);
     }
 
     /// <summary>
-    /// What the page states about the offer of this price, from its structured data when it declares it. The identifiers
-    /// are those of the reference product: the verifier keeps only the ones the page shows.
+    /// Whether the merchant is already searched for the product. A typology whose profile has no merchant yet is not an
+    /// error here: the merchant will be its first one.
     /// </summary>
-    private static SubmittedOffer Offer(MerchantPage page, ProductSummary product, AddWebOfferCommand request)
+    private async Task<Result<bool>> IsInPlanAsync(Guid productId, Guid merchantId, CancellationToken cancellationToken)
+    {
+        Result<OfferCollectionPlan> plan = await offerCollectionPlanner.PlanAsync(productId, cancellationToken);
+        if (plan.IsSuccess)
+        {
+            return plan.Value.Request.Merchants.Any(m => m.MerchantId == merchantId);
+        }
+
+        if (plan.Error.Code == NoPreferredMerchantsCode)
+        {
+            return Result.Success(false);
+        }
+
+        return Result.Failure<bool>(plan.Error);
+    }
+
+    /// <summary>
+    /// What the page itself declares (JSON-LD) about the offer of this price. Only those identifiers are given to the
+    /// matching, never the reference product's: an identifier written elsewhere on the page (a similar product, a lot)
+    /// must not confirm the offer (ADR-019). The manufacturer reference is never declared there (the SKU is the
+    /// merchant's own): without a declared GTIN, the offer waits for a review.
+    /// </summary>
+    private static SubmittedOffer Offer(MerchantPage page, AddWebOfferCommand request)
     {
         (StructuredProduct Product, StructuredOffer Offer)? declared = page.Products
             .SelectMany(p => p.Offers.Select(o => (Product: p, Offer: o)))
@@ -112,9 +156,8 @@ internal sealed class AddWebOfferCommandHandler(
             },
             MerchantProductReference = declared?.Product.Sku,
             ObservedTitle = declared?.Product.Name,
-            ObservedGtin = product.Gtin,
-            ObservedBrand = product.Brand,
-            ObservedManufacturerReference = product.ManufacturerReference,
+            ObservedGtin = declared?.Product.Gtin,
+            ObservedBrand = declared?.Product.Brand,
             Rationale = Rationale
         };
     }

@@ -16,15 +16,23 @@ internal sealed class ReadWebPageQueryHandler(
     public async Task<Result<WebPageResponse>> Handle(ReadWebPageQuery request, CancellationToken cancellationToken)
     {
         // Only a page a search of this research returned, or a page of a followed merchant: never an address a page
-        // made up (ADR-027).
+        // made up (ADR-027). Every redirect is held to the same rule, so that an open redirect of a site does not lead
+        // elsewhere.
         KnownMerchants merchants = await KnownMerchants.LoadAsync(merchantReadStore, cancellationToken);
-        if (merchants.Find(request.Address) is null && !searchedPages.WasFound(WebResearchScope.Of(currentUser), request.Address))
+        string research = WebResearchScope.Of(currentUser);
+        KnownMerchant? merchant = merchants.Find(request.Address);
+        if (merchant is null && !searchedPages.WasFound(research, request.Address))
         {
             return Result.Failure<WebPageResponse>(WebResearchErrors.NotFoundBySearch(request.Address));
         }
 
-        // Any public page may be read (the reader refuses private addresses), redirects included, but only over http(s) on its default port.
-        Result<WebPage> page = await webPageReader.ReadFollowingAsync(request.Address, IsWebAddress, cancellationToken);
+        bool IsAdmitted(Uri next) =>
+            IsWebAddress(next)
+            && (merchant is not null
+                ? merchants.Find(next)?.Id == merchant.Id
+                : SameHost(next, request.Address) || searchedPages.WasFound(research, next));
+
+        Result<WebPage> page = await webPageReader.ReadFollowingAsync(request.Address, IsAdmitted, cancellationToken);
         if (page.IsFailure)
         {
             return Result.Failure<WebPageResponse>(page.Error);
@@ -41,6 +49,13 @@ internal sealed class ReadWebPageQueryHandler(
             merchants.Find(page.Value.Address),
             WebPageResponse.UnverifiedNotice);
     }
+
+    /// <summary>The same host, with or without <c>www.</c> (a site redirecting to its canonical address).</summary>
+    private static bool SameHost(Uri next, Uri address) =>
+        string.Equals(WithoutWww(next.IdnHost), WithoutWww(address.IdnHost), StringComparison.OrdinalIgnoreCase);
+
+    private static string WithoutWww(string host) =>
+        host.StartsWith("www.", StringComparison.OrdinalIgnoreCase) ? host[4..] : host;
 
     /// <summary>An http(s) address on the default port (80 or 443) without credentials: never another service of a host.</summary>
     internal static bool IsWebAddress(Uri address) =>

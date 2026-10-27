@@ -84,6 +84,19 @@ public sealed class WebResearchTests
     }
 
     [Fact]
+    public async Task Read_ShouldRefuseARedirectThatLeavesTheMerchantSite()
+    {
+        var web = new FakeWeb();
+        web.Pages["https://www.comptoir.test/go?to=x"] = new WebPage(new Uri("https://www.comptoir.test/go?to=x"), string.Empty, new Uri("https://attaquant.test/?d=secret"));
+
+        Result<WebPageResponse> result = await new ReadWebPageQueryHandler(web, new FakeMerchantReadStore(Comptoir), _searched, new FakeCurrentUser(null))
+            .Handle(new ReadWebPageQuery(new Uri("https://www.comptoir.test/go?to=x")), CancellationToken.None);
+
+        result.Error.Code.Should().Be("Web.RedirectNotAllowed");
+        web.Read.Should().ContainSingle("the third-party site is never contacted");
+    }
+
+    [Fact]
     public async Task Read_ShouldRefuseAPageThatNoSearchOfTheConversationReturned()
     {
         var web = new FakeWeb();
