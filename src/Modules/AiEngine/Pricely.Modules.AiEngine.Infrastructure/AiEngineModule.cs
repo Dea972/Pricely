@@ -25,6 +25,10 @@ using Pricely.Modules.AiEngine.Infrastructure.Inbox;
 using Pricely.Modules.AiEngine.Infrastructure.AgentActivities;
 using Pricely.Modules.AiEngine.Infrastructure.LlmCalls;
 using Pricely.Modules.AiEngine.Infrastructure.Models;
+using Pricely.Common.Application.Web;
+using Pricely.Modules.AiEngine.Application.WebSearches;
+using Pricely.Modules.AiEngine.Domain.WebSearches;
+using Pricely.Modules.AiEngine.Infrastructure.WebSearches;
 
 namespace Pricely.Modules.AiEngine.Infrastructure;
 
@@ -63,6 +67,10 @@ public static class AiEngineModule
         services.AddScoped<IFeatureSettingRepository, FeatureSettingRepository>();
         services.AddScoped<ILlmCallRepository, LlmCallRepository>();
         services.AddScoped<IAgentActivityRepository, AgentActivityRepository>();
+        services.AddScoped<IWebSearchRepository, WebSearchRepository>();
+
+        // Price of a web search per provider (ADR-027), frozen in the journal.
+        services.AddSingleton(configuration.GetSection(WebSearchPriceOptions.SectionName).Get<WebSearchPriceOptions>() ?? new WebSearchPriceOptions());
         services.AddScoped<IModelReadStore, ModelReadStore>();
         services.AddScoped<IUsageReadStore, UsageReadStore>();
 
@@ -97,6 +105,7 @@ public static class AiEngineModule
         registrationConfigurator.AddConsumer<IntegrationEventConsumer<LlmCalledIntegrationEvent>>();
         registrationConfigurator.AddConsumer<IntegrationEventConsumer<AiToolInvokedIntegrationEvent>>();
         registrationConfigurator.AddConsumer<IntegrationEventConsumer<AiActionDecidedIntegrationEvent>>();
+        registrationConfigurator.AddConsumer<IntegrationEventConsumer<WebSearchPerformedIntegrationEvent>>();
     }
 
     private static void AddIntegrationEventHandlers(this IServiceCollection services)

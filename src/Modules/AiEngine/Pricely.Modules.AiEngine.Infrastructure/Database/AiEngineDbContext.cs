@@ -9,6 +9,8 @@ using Pricely.Modules.AiEngine.Infrastructure.AgentActivities;
 using Pricely.Modules.AiEngine.Infrastructure.Features;
 using Pricely.Modules.AiEngine.Infrastructure.LlmCalls;
 using Pricely.Modules.AiEngine.Infrastructure.Models;
+using Pricely.Modules.AiEngine.Domain.WebSearches;
+using Pricely.Modules.AiEngine.Infrastructure.WebSearches;
 
 namespace Pricely.Modules.AiEngine.Infrastructure.Database;
 
@@ -26,6 +28,8 @@ public sealed class AiEngineDbContext(DbContextOptions<AiEngineDbContext> option
 
     internal DbSet<AgentActivity> AgentActivities { get; set; }
 
+    internal DbSet<WebSearch> WebSearches { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema(Schemas.AiEngine);
@@ -40,5 +44,6 @@ public sealed class AiEngineDbContext(DbContextOptions<AiEngineDbContext> option
         modelBuilder.ApplyConfiguration(new FeatureSettingConfiguration());
         modelBuilder.ApplyConfiguration(new LlmCallConfiguration());
         modelBuilder.ApplyConfiguration(new AgentActivityConfiguration());
+        modelBuilder.ApplyConfiguration(new WebSearchConfiguration());
     }
 }

@@ -74,3 +74,36 @@ public sealed class ToolUsageResponse
 
     public double AverageDecisionDelayMs { get; init; }
 }
+
+/// <summary>
+/// Web searches of a provider. <see cref="SearchCost"/> is what the provider bills per search; <see cref="ModelCost"/>
+/// the tokens an LLM-driven search spent (Anthropic: calls of the <c>common.web-search</c> feature, 0 for Brave).
+/// </summary>
+public sealed class WebSearchUsageResponse
+{
+    public string Provider { get; init; } = string.Empty;
+
+    /// <summary>Search requests made by Pricely.</summary>
+    public int Requests { get; init; }
+
+    public int FailedRequests { get; init; }
+
+    /// <summary>Searches billed by the provider (an LLM-driven request may run several).</summary>
+    public long Searches { get; init; }
+
+    public double AverageResults { get; init; }
+
+    public double AverageResponseTimeMs { get; init; }
+
+    /// <summary>Requests with billed searches but no configured price (counted as 0).</summary>
+    public int UnpricedRequests { get; init; }
+
+    public decimal SearchCost { get; init; }
+
+    public decimal ModelCost { get; init; }
+
+    public decimal TotalCost { get; init; }
+
+    /// <summary>Total cost divided by the requests: what one search of the assistant costs on average.</summary>
+    public decimal CostPerRequest { get; init; }
+}

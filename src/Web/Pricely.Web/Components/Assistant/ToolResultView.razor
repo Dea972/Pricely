@@ -28,6 +28,12 @@
     case ToolCatalog.GetCategoryTree when ToolCatalog.Read<List<ProductCategoryDto>>(Output.Result) is { } categories:
         <CategoryTreeCard Categories="categories" />
         break;
+    case ToolCatalog.SearchWeb when ToolCatalog.Read<WebSearchDto>(Output.Result) is { } search:
+        <WebSearchCard Search="search" />
+        break;
+    case ToolCatalog.ReadWebPage when ToolCatalog.Read<WebPageDto>(Output.Result) is { } page:
+        <WebPageCard Page="page" />
+        break;
     default:
         @* A tool without component (or a result of another shape): its chip says it was used. *@
         break;

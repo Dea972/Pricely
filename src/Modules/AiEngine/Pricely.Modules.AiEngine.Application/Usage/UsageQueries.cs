@@ -22,3 +22,9 @@ public sealed record GetUsageByAgentQuery(DateTime? FromUtc, DateTime? ToUtc) : 
 
 /// <summary>Tool calls of the agents and decisions on their proposed actions, by agent and tool.</summary>
 public sealed record GetUsageByToolQuery(DateTime? FromUtc, DateTime? ToUtc) : IQuery<IReadOnlyCollection<ToolUsageResponse>>;
+
+/// <summary>
+/// Web searches per provider in [FromUtc, ToUtc[ (ADR-027): what they cost per search and in tokens, to compare
+/// the providers.
+/// </summary>
+public sealed record GetWebSearchUsageQuery(DateTime? FromUtc, DateTime? ToUtc) : IQuery<IReadOnlyCollection<WebSearchUsageResponse>>;

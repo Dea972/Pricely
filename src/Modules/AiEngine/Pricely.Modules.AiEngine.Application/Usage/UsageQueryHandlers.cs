@@ -53,6 +53,15 @@ internal sealed class GetUsageByAgentQueryHandler(IUsageReadStore readStore)
         Result.Success(await readStore.GetByAgentAsync(request.FromUtc, request.ToUtc, cancellationToken));
 }
 
+internal sealed class GetWebSearchUsageQueryHandler(IUsageReadStore readStore)
+    : IQueryHandler<GetWebSearchUsageQuery, IReadOnlyCollection<WebSearchUsageResponse>>
+{
+    public async Task<Result<IReadOnlyCollection<WebSearchUsageResponse>>> Handle(
+        GetWebSearchUsageQuery request,
+        CancellationToken cancellationToken) =>
+        Result.Success(await readStore.GetWebSearchAsync(request.FromUtc, request.ToUtc, cancellationToken));
+}
+
 internal sealed class GetUsageByToolQueryHandler(IUsageReadStore readStore)
     : IQueryHandler<GetUsageByToolQuery, IReadOnlyCollection<ToolUsageResponse>>
 {

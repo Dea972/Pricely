@@ -1,0 +1,39 @@
+@* Pages found on the web by search_web: sources to cite, their extracts are never verified prices. *@
+<div class="card">
+    <div class="card-header">
+        <div class="eyebrow">Recherche web</div>
+        <span class="badge badge-warn">Non vérifié</span>
+    </div>
+    @if (Search.Results.Count == 0)
+    {
+        <div class="card-body muted">Aucune page trouvée.</div>
+    }
+    else
+    {
+        <ul class="result-list">
+            @foreach (WebSearchHitDto hit in Search.Results)
+            {
+                <li>
+                    <ExternalLink Address="@hit.Address.AbsoluteUri">
+                        <strong>@hit.Title</strong>
+                        <span class="small muted">@hit.Address.Host</span>
+                    </ExternalLink>
+                    @if (hit.Merchant is { } merchant)
+                    {
+                        <span class="badge badge-accent">@merchant.Name</span>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(hit.Snippet))
+                    {
+                        <div class="small muted">@hit.Snippet</div>
+                    }
+                </li>
+            }
+        </ul>
+    }
+    <div class="card-body small muted">@Search.Notice (@Search.Provider)</div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public WebSearchDto Search { get; set; } = default!;
+}

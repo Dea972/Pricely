@@ -28,6 +28,8 @@ public sealed class McpToolTests
         ["get_collection_plan"] = PricelyScopes.Read,
         ["list_offers_pending_review"] = PricelyScopes.Read,
         ["fetch_merchant_page"] = PricelyScopes.Read,
+        ["search_web"] = PricelyScopes.Read,
+        ["read_web_page"] = PricelyScopes.Read,
         ["collect_product_offers"] = PricelyScopes.Write,
         ["submit_collected_offer"] = PricelyScopes.Write,
         ["confirm_offer"] = PricelyScopes.Review,

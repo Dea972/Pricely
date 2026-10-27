@@ -203,6 +203,52 @@ public sealed record PendingActionDto
     public string? Error { get; init; }
 }
 
+/// <summary>Web searches of a provider (<c>aiengine/usage/web-search</c>); costs in USD.</summary>
+public sealed record WebSearchUsageDto
+{
+    public string Provider { get; init; } = string.Empty;
+
+    public int Requests { get; init; }
+
+    public int FailedRequests { get; init; }
+
+    public long Searches { get; init; }
+
+    public double AverageResults { get; init; }
+
+    public double AverageResponseTimeMs { get; init; }
+
+    public int UnpricedRequests { get; init; }
+
+    public decimal SearchCost { get; init; }
+
+    public decimal ModelCost { get; init; }
+
+    public decimal TotalCost { get; init; }
+
+    public decimal CostPerRequest { get; init; }
+}
+
+/// <summary>Result of the <c>search_web</c> tool: pages found, never verified prices.</summary>
+public sealed record WebSearchDto(string Provider, IReadOnlyList<WebSearchHitDto> Results, string Notice);
+
+public sealed record WebSearchHitDto(string Title, Uri Address, string? Snippet, string? PageAge, KnownMerchantDto? Merchant);
+
+public sealed record KnownMerchantDto(Guid Id, string Name, bool IsActive);
+
+/// <summary>Result of the <c>read_web_page</c> tool: a page read without being kept, its prices not verified.</summary>
+public sealed record WebPageDto(
+    Uri Address,
+    string? Title,
+    bool IsTruncated,
+    IReadOnlyList<StructuredProductDto> Products,
+    KnownMerchantDto? Merchant,
+    string Notice);
+
+public sealed record StructuredProductDto(string? Name, string? Gtin, string? Brand, string? Sku, IReadOnlyList<StructuredOfferDto> Offers);
+
+public sealed record StructuredOfferDto(decimal Price, string? Currency, string? Availability, string? Seller, bool IsAggregate);
+
 public sealed record AgentUsageDto(string AgentName, int Calls, int FailedCalls, long TotalTokens, decimal Cost);
 
 /// <summary>Usage totals of AiEngine (summary, a session, a day, a feature); costs in USD.</summary>

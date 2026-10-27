@@ -18,6 +18,8 @@ public static class ToolCatalog
     public const string ListPriceAnomalies = "list_price_anomalies";
     public const string GetCollectionPlan = "get_collection_plan";
     public const string ListOffersPendingReview = "list_offers_pending_review";
+    public const string SearchWeb = "search_web";
+    public const string ReadWebPage = "read_web_page";
     public const string CollectProductOffers = "collect_product_offers";
     public const string ConfirmOffer = "confirm_offer";
     public const string RejectOffer = "reject_offer";

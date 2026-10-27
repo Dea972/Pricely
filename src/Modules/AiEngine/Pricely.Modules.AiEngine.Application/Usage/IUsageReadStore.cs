@@ -19,4 +19,6 @@ public interface IUsageReadStore
     Task<IReadOnlyCollection<AgentUsageResponse>> GetByAgentAsync(DateTime? fromUtc, DateTime? toUtc, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyCollection<ToolUsageResponse>> GetByToolAsync(DateTime? fromUtc, DateTime? toUtc, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyCollection<WebSearchUsageResponse>> GetWebSearchAsync(DateTime? fromUtc, DateTime? toUtc, CancellationToken cancellationToken = default);
 }

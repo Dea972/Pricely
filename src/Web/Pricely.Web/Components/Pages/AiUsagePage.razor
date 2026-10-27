@@ -95,6 +95,61 @@
     <div class="card">
         <div class="card-header">
             <div>
+                <div class="eyebrow">Recherche web</div>
+                <div class="small muted">Par fournisseur (<span class="mono">WebSearch:Provider</span>) : recherches facturées et jetons du modèle qui les lit.</div>
+            </div>
+        </div>
+        @if (_webSearch.Count == 0)
+        {
+            <div class="card-body muted">Aucune recherche web sur la période.</div>
+        }
+        else
+        {
+            <div class="table-scroll">
+                <table class="data">
+                    <thead>
+                        <tr>
+                            <th scope="col">Fournisseur</th>
+                            <th scope="col" class="num">Requêtes</th>
+                            <th scope="col" class="num">Échecs</th>
+                            <th scope="col" class="num">Recherches facturées</th>
+                            <th scope="col" class="num">Résultats moyens</th>
+                            <th scope="col" class="num">Temps moyen</th>
+                            <th scope="col" class="num">Coût recherches</th>
+                            <th scope="col" class="num">Coût modèle</th>
+                            <th scope="col" class="num">Coût par requête</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (WebSearchUsageDto usage in _webSearch)
+                        {
+                            <tr>
+                                <td>
+                                    @usage.Provider
+                                    @if (usage.UnpricedRequests > 0)
+                                    {
+                                        <div class="small muted">@Format.Count(usage.UnpricedRequests) sans tarif (AiEngine:WebSearch:PricePerSearch)</div>
+                                    }
+                                </td>
+                                <td class="num">@Format.Count(usage.Requests)</td>
+                                <td class="num">@Format.Count(usage.FailedRequests)</td>
+                                <td class="num">@Format.Count(usage.Searches)</td>
+                                <td class="num">@usage.AverageResults.ToString("0.#", Format.French)</td>
+                                <td class="num">@usage.AverageResponseTimeMs.ToString("N0", Format.French) ms</td>
+                                <td class="num">@Format.Cost(usage.SearchCost)</td>
+                                <td class="num">@Format.Cost(usage.ModelCost)</td>
+                                <td class="num">@Format.Cost(usage.CostPerRequest)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div>
                 <div class="eyebrow">Catalogue des modèles</div>
                 <div class="small muted">Tarifs en dollars par million de jetons. « Rechercher les tarifs » lit la liste publique de LiteLLM, puis, pour un modèle qu'elle ne connaît pas, la page de tarifs du fournisseur avec l'IA.</div>
             </div>

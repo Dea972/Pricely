@@ -1,5 +1,6 @@
 using System.Data.Common;
 using Dapper;
+using Pricely.Common.Application.Web;
 using Pricely.Common.Infrastructure.Data;
 using Pricely.Modules.AiEngine.Application.Usage;
 using Pricely.Modules.AiEngine.Domain.AgentActivities;
@@ -110,6 +111,49 @@ internal sealed class UsageReadStore(IDbConnectionFactory dbConnectionFactory) :
                AND (CAST(@ToUtc AS timestamptz) IS NULL OR a.occurred_on_utc < @ToUtc)
              GROUP BY a.agent_name, a.tool_name
              ORDER BY {nameof(ToolUsageResponse.Calls)} DESC, a.agent_name, a.tool_name
+             """,
+            new { FromUtc = fromUtc, ToUtc = toUtc },
+            cancellationToken);
+
+    public Task<IReadOnlyCollection<WebSearchUsageResponse>> GetWebSearchAsync(DateTime? fromUtc, DateTime? toUtc, CancellationToken cancellationToken = default) =>
+        QueryAsync<WebSearchUsageResponse>(
+            $"""
+             WITH searches AS (
+                 SELECT
+                     s.provider,
+                     COUNT(*) AS requests,
+                     COUNT(*) FILTER (WHERE NOT s.is_success) AS failed_requests,
+                     COALESCE(SUM(s.searches), 0) AS searches,
+                     COALESCE(AVG(CAST(s.results AS double precision)), 0) AS average_results,
+                     COALESCE(AVG(CAST(s.response_time_ms AS double precision)), 0) AS average_response_time_ms,
+                     COUNT(*) FILTER (WHERE s.searches > 0 AND s.cost IS NULL) AS unpriced_requests,
+                     CAST(COALESCE(SUM(s.cost), 0) AS decimal(18, 6)) AS search_cost
+                 FROM aiengine.web_searches s
+                 WHERE (CAST(@FromUtc AS timestamptz) IS NULL OR s.searched_on_utc >= @FromUtc)
+                   AND (CAST(@ToUtc AS timestamptz) IS NULL OR s.searched_on_utc < @ToUtc)
+                 GROUP BY s.provider
+             ),
+             tokens AS (
+                 SELECT LOWER(c.model_provider) AS provider, CAST(COALESCE(SUM(c.total_cost), 0) AS decimal(18, 6)) AS model_cost
+                 FROM aiengine.llm_calls c
+                 WHERE c.feature_code = '{WebSearchFeatures.Search.Code}' AND {UsageSql.PeriodFilter}
+                 GROUP BY LOWER(c.model_provider)
+             )
+             SELECT
+                 s.provider AS {nameof(WebSearchUsageResponse.Provider)},
+                 CAST(s.requests AS integer) AS {nameof(WebSearchUsageResponse.Requests)},
+                 CAST(s.failed_requests AS integer) AS {nameof(WebSearchUsageResponse.FailedRequests)},
+                 s.searches AS {nameof(WebSearchUsageResponse.Searches)},
+                 s.average_results AS {nameof(WebSearchUsageResponse.AverageResults)},
+                 s.average_response_time_ms AS {nameof(WebSearchUsageResponse.AverageResponseTimeMs)},
+                 CAST(s.unpriced_requests AS integer) AS {nameof(WebSearchUsageResponse.UnpricedRequests)},
+                 s.search_cost AS {nameof(WebSearchUsageResponse.SearchCost)},
+                 COALESCE(t.model_cost, 0) AS {nameof(WebSearchUsageResponse.ModelCost)},
+                 s.search_cost + COALESCE(t.model_cost, 0) AS {nameof(WebSearchUsageResponse.TotalCost)},
+                 CAST((s.search_cost + COALESCE(t.model_cost, 0)) / s.requests AS decimal(18, 6)) AS {nameof(WebSearchUsageResponse.CostPerRequest)}
+             FROM searches s
+             LEFT JOIN tokens t ON t.provider = LOWER(s.provider) -- AI provider keys are lower case ("anthropic")
+             ORDER BY {nameof(WebSearchUsageResponse.TotalCost)} DESC
              """,
             new { FromUtc = fromUtc, ToUtc = toUtc },
             cancellationToken);

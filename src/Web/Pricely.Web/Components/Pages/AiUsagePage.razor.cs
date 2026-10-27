@@ -24,6 +24,7 @@ public partial class AiUsagePage
     private UsageDto? _summary;
     private IReadOnlyList<DailyUsageDto>? _daily;
     private IReadOnlyList<FeatureUsageDto> _featureUsage = [];
+    private IReadOnlyList<WebSearchUsageDto> _webSearch = [];
     private IReadOnlyList<AiFeatureDto> _features = [];
     private IReadOnlyList<AiModelDto> _models = [];
     private AiModelDto? _priceModel;
@@ -83,6 +84,7 @@ public partial class AiUsagePage
         _summary = await CallAsync(() => Api.GetUsageSummaryAsync(fromUtc, CancellationToken.None));
         _daily = await CallAsync(() => Api.GetDailyUsageAsync(fromUtc, CancellationToken.None));
         _featureUsage = await CallAsync(() => Api.GetUsageByFeatureAsync(fromUtc, CancellationToken.None)) ?? [];
+        _webSearch = await CallAsync(() => Api.GetWebSearchUsageAsync(fromUtc, CancellationToken.None)) ?? [];
     }
 
     private async Task LoadCatalogAsync()

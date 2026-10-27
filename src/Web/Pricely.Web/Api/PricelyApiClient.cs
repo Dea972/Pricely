@@ -76,6 +76,9 @@ internal sealed class PricelyApiClient(HttpClient http, AccessTokenProvider toke
     public Task<IReadOnlyList<DailyUsageDto>> GetDailyUsageAsync(DateTime fromUtc, CancellationToken cancellationToken) =>
         GetAsync<IReadOnlyList<DailyUsageDto>>($"aiengine/usage/daily?fromUtc={Utc(fromUtc)}", cancellationToken);
 
+    public Task<IReadOnlyList<WebSearchUsageDto>> GetWebSearchUsageAsync(DateTime fromUtc, CancellationToken cancellationToken) =>
+        GetAsync<IReadOnlyList<WebSearchUsageDto>>($"aiengine/usage/web-search?fromUtc={Utc(fromUtc)}", cancellationToken);
+
     public Task<IReadOnlyList<FeatureUsageDto>> GetUsageByFeatureAsync(DateTime fromUtc, CancellationToken cancellationToken) =>
         GetAsync<IReadOnlyList<FeatureUsageDto>>($"aiengine/usage/by-feature?fromUtc={Utc(fromUtc)}", cancellationToken);
 

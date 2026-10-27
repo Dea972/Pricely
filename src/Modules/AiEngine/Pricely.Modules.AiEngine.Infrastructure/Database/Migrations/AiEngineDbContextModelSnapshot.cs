@@ -425,6 +425,74 @@ namespace Pricely.Modules.AiEngine.Infrastructure.Database.Migrations
                     b.ToTable("model_prices", "aiengine");
                 });
 
+            modelBuilder.Entity("Pricely.Modules.AiEngine.Domain.WebSearches.WebSearch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal?>("Cost")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)")
+                        .HasColumnName("cost");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("error_message");
+
+                    b.Property<bool>("IsSuccess")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_success");
+
+                    b.Property<decimal?>("PricePerSearch")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)")
+                        .HasColumnName("price_per_search");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("provider");
+
+                    b.Property<long>("ResponseTimeMs")
+                        .HasColumnType("bigint")
+                        .HasColumnName("response_time_ms");
+
+                    b.Property<int>("Results")
+                        .HasColumnType("integer")
+                        .HasColumnName("results");
+
+                    b.Property<DateTime>("SearchedOnUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("searched_on_utc");
+
+                    b.Property<int>("Searches")
+                        .HasColumnType("integer")
+                        .HasColumnName("searches");
+
+                    b.Property<string>("SessionId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("session_id");
+
+                    b.Property<string>("UserId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_web_searches");
+
+                    b.HasIndex("SearchedOnUtc")
+                        .HasDatabaseName("ix_web_searches_searched_on_utc");
+
+                    b.ToTable("web_searches", "aiengine");
+                });
+
             modelBuilder.Entity("Pricely.Modules.AiEngine.Domain.Features.FeatureSetting", b =>
                 {
                     b.HasOne("Pricely.Modules.AiEngine.Domain.Models.Model", null)

@@ -119,6 +119,28 @@ public sealed class ComponentTests : BunitContext
     }
 
     [Fact]
+    public void WebResults_ShouldBeMarkedUnverified_WithTheirSourceAndKnownMerchant()
+    {
+        Api(_ => new HttpResponseMessage(HttpStatusCode.NotFound));
+        var search = new ToolOutput("c1", ToolCatalog.SearchWeb, Json("""
+            {"provider":"Anthropic","notice":"Prix non vérifiés.","results":[
+             {"title":"Ciment 35 kg","address":"https://www.comptoir.test/p/1","snippet":"9,90 €","pageAge":null,
+              "merchant":{"id":"8d125e49-6386-4761-aa94-6638818018d8","name":"Comptoir du Bâtiment","isActive":true}}]}
+            """), null);
+        var page = new ToolOutput("c2", ToolCatalog.ReadWebPage, Json("""
+            {"address":"https://www.comptoir.test/p/1","title":"Ciment 35 kg","isTruncated":false,"merchant":null,"notice":"Prix non vérifiés.",
+             "products":[{"name":"Ciment 35 kg","gtin":"3760000100014","brand":"Cimenterie","sku":null,
+              "offers":[{"price":9.9,"currency":"EUR","availability":"InStock","seller":null,"isAggregate":false}]}]}
+            """), null);
+
+        IRenderedComponent<ToolResultView> searchView = Render<ToolResultView>(parameters => parameters.Add(p => p.Output, search));
+        IRenderedComponent<ToolResultView> pageView = Render<ToolResultView>(parameters => parameters.Add(p => p.Output, page));
+
+        searchView.Markup.Should().Contain("Non vérifié").And.Contain("https://www.comptoir.test/p/1").And.Contain("Comptoir du Bâtiment");
+        pageView.Markup.Should().Contain("Non vérifié").And.Contain("3760000100014").And.Contain("9,90");
+    }
+
+    [Fact]
     public void ARunningAnswer_ShouldSayThatTheAssistantWorks()
     {
         Api(_ => new HttpResponseMessage(HttpStatusCode.NotFound));

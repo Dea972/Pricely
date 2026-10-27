@@ -1,0 +1,62 @@
+@* A web page read by read_web_page: the products and prices it declares, not verified. *@
+<div class="card">
+    <div class="card-header">
+        <div>
+            <div class="eyebrow">Page web</div>
+            <ExternalLink Address="@Page.Address.AbsoluteUri">
+                <strong>@(Page.Title ?? Page.Address.Host)</strong>
+            </ExternalLink>
+        </div>
+        <span class="badge badge-warn">Non vérifié</span>
+    </div>
+    @if (Page.Merchant is { } merchant)
+    {
+        <div class="card-body small">Enseigne suivie : <span class="badge badge-accent">@merchant.Name</span></div>
+    }
+    @if (Page.Products.Count == 0)
+    {
+        <div class="card-body muted">La page ne déclare aucun produit dans ses données structurées.</div>
+    }
+    else
+    {
+        <ul class="result-list">
+            @foreach (StructuredProductDto product in Page.Products)
+            {
+                <li>
+                    <strong>@(product.Name ?? "Produit sans nom")</strong>
+                    <span class="small muted">
+                        @product.Brand
+                        @if (product.Gtin is not null)
+                        {
+                            <span class="mono"> GTIN @product.Gtin</span>
+                        }
+                    </span>
+                    @foreach (StructuredOfferDto offer in product.Offers)
+                    {
+                        <div class="small">
+                            <span class="num">@Format.Price(offer.Price, offer.Currency)</span>
+                            @if (offer.IsAggregate)
+                            {
+                                <span class="muted"> (fourchette de plusieurs vendeurs)</span>
+                            }
+                            @if (offer.Seller is not null)
+                            {
+                                <span class="muted"> · @offer.Seller</span>
+                            }
+                            @if (offer.Availability is not null)
+                            {
+                                <span class="muted"> · @Format.Availability(offer.Availability)</span>
+                            }
+                        </div>
+                    }
+                </li>
+            }
+        </ul>
+    }
+    <div class="card-body small muted">@Page.Notice</div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public WebPageDto Page { get; set; } = default!;
+}
