@@ -134,6 +134,40 @@ public sealed class ConversationViewTests
         view.ToolsUsed.Select(t => t.Name).Should().Equal("collect_product_offers");
     }
 
+    [Fact]
+    public void ABatch_ShouldBeReadFromTheStream_AndFromTheHistory()
+    {
+        var batchId = Guid.NewGuid();
+        var second = Guid.NewGuid();
+
+        var proposed = (ActionProposedEvent)AgentStreamEvent.Parse(
+            AgentEventTypes.ActionProposed,
+            $$"""{"actionId":"{{ActionId}}","callId":"c1","toolName":"find_or_add_product","arguments":{},"requiredScope":"pricely.write","batchId":"{{batchId}}"}""")!;
+        var conversation = new ConversationDto(
+            ConversationId,
+            "assistant",
+            "Lot",
+            DateTime.UtcNow,
+            [
+                Message(1, "User", "Ajoute ce ciment"),
+                Message(2, "Assistant", string.Empty, calls: [new ToolCallDto("c1", "find_or_add_product", false, Json("{}")), new ToolCallDto("c2", "add_web_offer", false, Json("{}"))]),
+                Message(3, "Tool", string.Empty, results:
+                [
+                    new ToolResultDto("c1", "find_or_add_product", Json($$"""{"status":"pending_approval","actionId":"{{ActionId}}"}"""), null),
+                    new ToolResultDto("c2", "add_web_offer", Json($$"""{"status":"pending_approval","actionId":"{{second}}"}"""), null)
+                ])
+            ],
+            [
+                new PendingActionDto { Id = ActionId, ToolName = "find_or_add_product", Status = ApiValues.Pending, Arguments = Json("{}"), RequiredScope = "pricely.write", BatchId = batchId },
+                new PendingActionDto { Id = second, ToolName = "add_web_offer", Status = ApiValues.Pending, Arguments = Json("{}"), RequiredScope = "pricely.write", BatchId = batchId }
+            ]);
+
+        var view = ConversationView.FromHistory(conversation);
+
+        proposed.BatchId.Should().Be(batchId);
+        ((AgentEntry)view.Entries[1]).Actions.Should().HaveCount(2).And.OnlyContain(a => a.BatchId == batchId);
+    }
+
     private static ConversationMessageDto Message(
         int sequence,
         string role,

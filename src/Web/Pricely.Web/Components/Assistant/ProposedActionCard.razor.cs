@@ -54,6 +54,12 @@ public partial class ProposedActionCard
                 return $"{collected.CollectedCount} offre(s) collectée(s) · {collected.ProposedCount} à valider · {collected.ObservedCount} relevé(s) · {collected.AnomalyCount} prix signalé(s)";
             }
 
+            // The web tools answer with an object (ADR-028).
+            if (ActionSummaries.Outcome(Action) is string outcome)
+            {
+                return outcome;
+            }
+
             // Other write tools answer with a sentence (« Offre confirmée. »).
             return result.ValueKind == JsonValueKind.String ? result.GetString() ?? "L'action a été exécutée." : "L'action a été exécutée.";
         }
@@ -111,7 +117,8 @@ public partial class ProposedActionCard
                 Action.Update(decided);
                 await OnDecided.InvokeAsync(Action);
 
-                if (ToolCatalog.IsOfferReview(Action.ToolName))
+                // A reviewed offer leaves the queue; a web offer may join it.
+                if (ToolCatalog.IsOfferReview(Action.ToolName) || string.Equals(Action.ToolName, ToolCatalog.AddWebOffer, StringComparison.Ordinal))
                 {
                     await Reviews.RefreshAsync();
                 }

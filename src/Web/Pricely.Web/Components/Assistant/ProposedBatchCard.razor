@@ -23,28 +23,28 @@
                 <div class="small">@ActionSummaries.Describe(action)</div>
                 @if (ActionSummaries.Outcome(action) is string outcome)
                 {
-                    <div class="small" role="status">@outcome</div>
+                    <div class="small">@outcome</div>
                 }
                 @if (action.Error is not null)
                 {
-                    <div class="small muted" role="status">@action.Error</div>
+                    <div class="small" style="color: var(--warn-text)">@action.Error</div>
                 }
-                @if (action.IsPending && Actions.Count(a => a.IsPending) > 1)
+                @if (action.IsPending && Actions.Count(a => a.IsPending) > 1 && !_stale)
                 {
-                    <button type="button" class="btn btn-secondary btn-small" disabled="@(_busy || !IsComplete)" @onclick="() => RemoveAsync(action)">Retirer du lot</button>
+                    <button type="button" class="btn btn-secondary btn-small" disabled="@(_busy || !IsComplete)" aria-label="@($"Retirer du lot : {ToolCatalog.TitleOf(action.ToolName)} · {ActionSummaries.Describe(action)}")" @onclick="() => RemoveAsync(action)">Retirer du lot</button>
                 }
             </li>
         }
     </ol>
 
-    @if (IsPending)
+    @if (IsPending && !_stale)
     {
         <div class="action-buttons">
             <button type="button" class="btn btn-primary" disabled="@(_busy || !IsComplete)" @onclick="ApproveAsync">Valider le lot (@Actions.Count(a => a.IsPending))</button>
             <button type="button" class="btn btn-secondary" disabled="@(_busy || !IsComplete)" @onclick="RejectAsync">Refuser le lot</button>
         </div>
     }
-    else
+    else if (!IsPending)
     {
         <div class="action-outcome" role="status">
             <span class="badge @(Actions.Any(a => a.Status == ApiValues.Failed) ? "badge-pending" : "badge-confirmed")">@DecidedLabel</span>

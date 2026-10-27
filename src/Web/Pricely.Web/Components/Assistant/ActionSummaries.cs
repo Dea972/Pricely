@@ -1,9 +1,10 @@
 using System.Globalization;
 using System.Text.Json;
 using Pricely.Web.Api;
+using Pricely.Web.Assistant;
 using Pricely.Web.Components.Shared;
 
-namespace Pricely.Web.Assistant;
+namespace Pricely.Web.Components.Assistant;
 
 /// <summary>
 /// One line for each action of a batch (ADR-028): what it will do, read from its arguments, then what it did, read from
@@ -44,10 +45,20 @@ public static class ActionSummaries
         {
             ToolCatalog.FindOrAddProduct when ToolCatalog.Read<FoundProductDto>(result) is { } product => ProductOutcome(product),
             ToolCatalog.FindOrAddMerchant when ToolCatalog.Read<FoundMerchantDto>(result) is { } merchant =>
-                merchant.IsNew ? "Enseigne ajoutée (page de recherche à régler)" : "Enseigne déjà suivie",
+                MerchantOutcome(merchant),
             ToolCatalog.AddWebOffer when ToolCatalog.Read<AddedWebOfferDto>(result) is { } offer => OfferOutcome(offer),
             _ => null
         };
+    }
+
+    private static string MerchantOutcome(FoundMerchantDto merchant)
+    {
+        if (merchant.IsNew)
+        {
+            return "Enseigne ajoutée (page de recherche à régler)";
+        }
+
+        return merchant.IsActive ? "Enseigne déjà suivie" : "Enseigne connue, désactivée";
     }
 
     private static string ProductOutcome(FoundProductDto product)
@@ -66,7 +77,7 @@ public static class ActionSummaries
     {
         string outcome = offer.Outcome switch
         {
-            "NewOfferConfirmed" => "Offre confirmée (même GTIN)",
+            "NewOfferConfirmed" => "Offre confirmée (rapprochement automatique)",
             "NewOfferProposed" => "Offre à valider",
             "ExistingOfferObserved" => "Nouveau relevé sur une offre existante",
             _ => "Offre enregistrée"
@@ -105,7 +116,7 @@ public static class ActionSummaries
 
         decimal? amount = price.ValueKind switch
         {
-            JsonValueKind.Number => price.GetDecimal(),
+            JsonValueKind.Number when price.TryGetDecimal(out decimal number) => number,
             JsonValueKind.String when decimal.TryParse(price.GetString(), NumberStyles.Number, CultureInfo.InvariantCulture, out decimal parsed) => parsed,
             _ => null
         };

@@ -16,6 +16,9 @@ public partial class ProposedBatchCard
     private bool _busy;
     private string? _message;
 
+    // The state shown is no longer the API's (already decided elsewhere, or no answer in time): no more buttons.
+    private bool _stale;
+
     [Parameter, EditorRequired]
     public IReadOnlyList<ProposedAction> Actions { get; set; } = [];
 
@@ -77,14 +80,14 @@ public partial class ProposedBatchCard
     private static string BadgeClass(ProposedAction action) =>
         action.Status == ApiValues.Executed ? "badge-confirmed" : "badge-pending";
 
-    private Task ApproveAsync() => DecideAsync(() => Api.ApproveBatchAsync(BatchId, CancellationToken.None));
+    private Task ApproveAsync() => DecideAsync(() => Api.ApproveBatchAsync(BatchId, CancellationToken.None), isBatch: true);
 
-    private Task RejectAsync() => DecideAsync(() => Api.RejectBatchAsync(BatchId, CancellationToken.None));
+    private Task RejectAsync() => DecideAsync(() => Api.RejectBatchAsync(BatchId, CancellationToken.None), isBatch: true);
 
     private Task RemoveAsync(ProposedAction action) =>
-        DecideAsync(async () => [await Api.RejectActionAsync(action.ActionId, CancellationToken.None)]);
+        DecideAsync(async () => [await Api.RejectActionAsync(action.ActionId, CancellationToken.None)], isBatch: false);
 
-    private async Task DecideAsync(Func<Task<IReadOnlyList<PendingActionDto>>> decide)
+    private async Task DecideAsync(Func<Task<IReadOnlyList<PendingActionDto>>> decide, bool isBatch)
     {
         // A second click that arrives before the buttons are disabled.
         if (_busy)
@@ -105,14 +108,16 @@ public partial class ProposedBatchCard
             }
             else if (Problem?.Exception is PricelyApiException refused)
             {
-                _message = MessageFor(refused);
+                _message = MessageFor(refused, isBatch);
                 Problem = _message is null ? Problem : null;
+                _stale = refused.StatusCode is HttpStatusCode.Conflict or HttpStatusCode.NotFound;
             }
             else if (Problem?.IsTimeout == true)
             {
                 // The API may still be running the batch: its outcome shows when the conversation is opened again.
                 _message = "Le lot n'a pas répondu à temps. Rouvre la conversation pour voir ce qui a été exécuté.";
                 Problem = null;
+                _stale = true;
             }
         }
         finally
@@ -140,12 +145,13 @@ public partial class ProposedBatchCard
         }
     }
 
-    private string? MessageFor(PricelyApiException refused) =>
+    private static string? MessageFor(PricelyApiException refused, bool isBatch) =>
         refused.StatusCode switch
         {
             HttpStatusCode.Forbidden => "Il te manque le droit de valider une des actions du lot : rien n'a été validé.",
-            HttpStatusCode.Conflict => "Ce lot a déjà été validé ou refusé.",
-            HttpStatusCode.NotFound => "Ce lot n'existe plus.",
+            HttpStatusCode.Conflict when isBatch => "Ce lot a déjà été validé ou refusé. Rouvre la conversation pour voir son état.",
+            HttpStatusCode.Conflict => "Cette action a déjà été validée ou refusée. Rouvre la conversation pour voir son état.",
+            HttpStatusCode.NotFound => "Ce lot ou l'un de ses outils n'est plus disponible : rien n'a été validé.",
             _ => null
         };
 }

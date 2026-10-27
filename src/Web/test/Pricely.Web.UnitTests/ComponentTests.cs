@@ -206,6 +206,43 @@ public sealed class ComponentTests : BunitContext
     }
 
     [Fact]
+    public void TheFirstActionOfABatch_ShouldNotBeDecidableAlone_WhileTheAnswerRuns()
+    {
+        Api(_ => Responses.Json("[]"));
+        var view = new ConversationView();
+        AgentEntry answer = view.Send("Ajoute ce ciment");
+        ProposedAction first = WebBatch(Guid.NewGuid())[0];
+        view.Apply(new ActionProposedEvent(first.ActionId, "c1", first.ToolName, first.Arguments, "pricely.write") { BatchId = first.BatchId });
+
+        IRenderedComponent<ChatAnswer> running = Render<ChatAnswer>(parameters => parameters.Add(p => p.Answer, answer));
+
+        running.FindAll("article[aria-label^=\"Lot d\"]").Should().ContainSingle();
+        running.FindAll("button").Should().OnlyContain(b => b.HasAttribute("disabled"));
+
+        view.Apply(new TurnDone(Guid.NewGuid()));
+        IRenderedComponent<ChatAnswer> done = Render<ChatAnswer>(parameters => parameters.Add(p => p.Answer, answer));
+
+        done.FindAll("article[aria-label^=\"Action proposée\"]").Should().ContainSingle("an action proposed alone keeps its usual card");
+    }
+
+    [Fact]
+    public void ASingleWebOffer_ShouldSayWhatHappened()
+    {
+        var offer = new ProposedAction(ActionId, ToolCatalog.AddWebOffer, Json("""{"pageAddress":"https://www.chausson.test/p/1","price":9.4}"""), "pricely.write");
+        offer.Update(new PendingActionDto
+        {
+            Id = ActionId,
+            Status = ApiValues.Executed,
+            Result = Json($$"""{"productId":"{{ProductId}}","productName":"Ciment","merchantId":"{{ActionId}}","merchantName":"Chausson","pageAddress":"https://www.chausson.test/p/1","price":9.4,"currency":"EUR","outcome":"NewOfferProposed","isFlaggedAsAnomaly":true,"addedToProfile":true}""")
+        });
+        Api(_ => Responses.Json("[]"));
+
+        IRenderedComponent<ProposedActionCard> card = Render<ProposedActionCard>(parameters => parameters.Add(p => p.Action, offer));
+
+        card.Markup.Should().Contain("Offre à valider").And.Contain("prix suspect").And.Contain("enseigne ajoutée au profil de la typologie");
+    }
+
+    [Fact]
     public void ARunningAnswer_ShouldSayThatTheAssistantWorks()
     {
         Api(_ => new HttpResponseMessage(HttpStatusCode.NotFound));
