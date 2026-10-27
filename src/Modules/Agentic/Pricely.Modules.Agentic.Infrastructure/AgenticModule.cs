@@ -8,6 +8,7 @@ using Pricely.Common.Infrastructure.Outbox;
 using Pricely.Common.Presentation.Endpoints;
 using Pricely.Modules.Agentic.Application;
 using Pricely.Modules.Agentic.Application.Abstractions.Data;
+using Pricely.Modules.Agentic.Application.Actions;
 using Pricely.Modules.Agentic.Application.Agents;
 using Pricely.Modules.Agentic.Application.Tools;
 using Pricely.Modules.Agentic.Domain.Actions;
@@ -69,6 +70,7 @@ public static class AgenticModule
         services.AddSingleton(options);
         services.AddSingleton<AgentCatalog>();
         services.AddScoped<ToolInvocationJournal>();
+        services.AddScoped<ApprovedActionRunner>();
         services.AddScoped<IAgentConversationRepository, AgentConversationRepository>();
         services.AddScoped<IPendingActionRepository, PendingActionRepository>();
         services.AddScoped<IConversationReadStore, ConversationReadStore>();

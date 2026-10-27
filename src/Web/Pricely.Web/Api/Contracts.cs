@@ -201,6 +201,9 @@ public sealed record PendingActionDto
     public JsonElement? Result { get; init; }
 
     public string? Error { get; init; }
+
+    /// <summary>The turn that proposed it: its actions can be approved or rejected at once (<c>agents/batches/{id}</c>).</summary>
+    public Guid BatchId { get; init; }
 }
 
 /// <summary>Web searches of a provider (<c>aiengine/usage/web-search</c>); costs in USD.</summary>

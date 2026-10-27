@@ -21,6 +21,9 @@ public static class ToolCatalog
     public const string SearchWeb = "search_web";
     public const string ReadWebPage = "read_web_page";
     public const string CollectProductOffers = "collect_product_offers";
+    public const string FindOrAddProduct = "find_or_add_product";
+    public const string FindOrAddMerchant = "find_or_add_merchant";
+    public const string AddWebOffer = "add_web_offer";
     public const string ConfirmOffer = "confirm_offer";
     public const string RejectOffer = "reject_offer";
 
@@ -28,6 +31,9 @@ public static class ToolCatalog
         toolName switch
         {
             CollectProductOffers => "Collecter les offres du produit",
+            FindOrAddProduct => "Trouver ou ajouter le produit",
+            FindOrAddMerchant => "Trouver ou ajouter l'enseigne",
+            AddWebOffer => "Enregistrer l'offre trouvée sur le web",
             ConfirmOffer => "Confirmer l'offre",
             RejectOffer => "Rejeter l'offre",
             _ => toolName
@@ -38,6 +44,9 @@ public static class ToolCatalog
         toolName switch
         {
             CollectProductOffers => "Nouvelles offres à valider, nouveaux relevés de prix",
+            FindOrAddProduct => "Nouveau produit au catalogue (et sa typologie) s'il n'existe pas",
+            FindOrAddMerchant => "Nouvelle enseigne suivie si son site ne l'est pas",
+            AddWebOffer => "Page relue maintenant : nouvelle offre et relevé de prix si le prix y figure ; enseigne ajoutée au profil de la typologie",
             ConfirmOffer => "Ses prix entrent dans le comparatif et le calcul de la médiane",
             RejectOffer => "L'offre n'accepte plus de relevés de prix",
             _ => null

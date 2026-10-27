@@ -14,5 +14,8 @@ internal sealed class MerchantRepository(PricingDbContext context) : IMerchantRe
         CancellationToken cancellationToken = default) =>
         await context.Merchants.Where(m => ids.Contains(m.Id)).ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyCollection<Merchant>> GetAllAsync(CancellationToken cancellationToken = default) =>
+        await context.Merchants.ToListAsync(cancellationToken);
+
     public void Insert(Merchant merchant) => context.Merchants.Add(merchant);
 }

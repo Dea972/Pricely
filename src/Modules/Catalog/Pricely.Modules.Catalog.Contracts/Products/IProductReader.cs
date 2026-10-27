@@ -16,6 +16,16 @@ public interface IProductReader
     /// <summary>The product, or null when Catalog does not know it.</summary>
     Task<Result<ProductSummary?>> GetAsync(Guid productId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// The product of this GTIN (written with 8 to 14 digits), else of this brand and manufacturer reference (case,
+    /// spaces and dashes ignored); null when Catalog knows none.
+    /// </summary>
+    Task<Result<ProductSummary?>> FindAsync(
+        string? gtin,
+        string? brand,
+        string? manufacturerReference,
+        CancellationToken cancellationToken = default);
+
     /// <summary>The known products among the requested identifiers (an unknown identifier is simply absent), by name.</summary>
     Task<Result<IReadOnlyList<ProductSummary>>> GetByIdsAsync(
         IReadOnlyCollection<Guid> productIds,

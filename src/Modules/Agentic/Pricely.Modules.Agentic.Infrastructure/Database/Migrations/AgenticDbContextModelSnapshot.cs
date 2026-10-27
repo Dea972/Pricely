@@ -93,6 +93,14 @@ namespace Pricely.Modules.Agentic.Infrastructure.Database.Migrations
                         .HasColumnType("text")
                         .HasColumnName("arguments");
 
+                    b.Property<Guid>("BatchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("batch_id");
+
+                    b.Property<int>("BatchSequence")
+                        .HasColumnType("integer")
+                        .HasColumnName("batch_sequence");
+
                     b.Property<Guid>("ConversationId")
                         .HasColumnType("uuid")
                         .HasColumnName("conversation_id");
@@ -144,6 +152,9 @@ namespace Pricely.Modules.Agentic.Infrastructure.Database.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_pending_actions");
+
+                    b.HasIndex("BatchId")
+                        .HasDatabaseName("ix_pending_actions_batch_id");
 
                     b.HasIndex("ConversationId")
                         .HasDatabaseName("ix_pending_actions_conversation_id");

@@ -21,6 +21,7 @@ internal sealed class PendingActionConfiguration : IEntityTypeConfiguration<Pend
         builder.Property(a => a.Result).HasColumnType("text");
         builder.Property(a => a.Error).HasMaxLength(PendingAction.ErrorMaxLength);
         builder.HasIndex(a => a.ConversationId);
+        builder.HasIndex(a => a.BatchId);
 
         // Optimistic concurrency on xmin: an action is approved once, the tool runs once.
         builder.Property<uint>("Version").IsRowVersion();

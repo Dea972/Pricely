@@ -67,10 +67,13 @@ internal sealed class RunTurnStreamRequestHandler(
         string userId = conversation.UserId.ToString();
         var context = new ToolCallContext(agent.Feature, agent.Name, conversation.Id.ToString(), userId, WasApproved: false);
         var proposals = new Dictionary<string, PendingAction>(StringComparer.Ordinal);
+
+        // Every write the model proposes in this turn joins one batch, approved or rejected at once (ADR-028).
+        var batchId = Guid.CreateVersion7();
         var tools = catalog.ToolsOf(agent)
             .Select(tool => tool.IsReadOnly
                 ? journal.Wrap(tool, context)
-                : (AITool)new ProposalFunction(tool, (t, arguments, ct) => ProposeAsync(conversation, agent, t, arguments, proposals, ct)))
+                : (AITool)new ProposalFunction(tool, (t, arguments, ct) => ProposeAsync(conversation, batchId, agent, t, arguments, proposals, ct)))
             .ToList();
 
         LlmClient llm = await llmGateway.ForFeatureAsync(agent.Feature, cancellationToken);
@@ -234,6 +237,7 @@ internal sealed class RunTurnStreamRequestHandler(
 
     private async Task<PendingAction> ProposeAsync(
         AgentConversation conversation,
+        Guid batchId,
         AgentDefinition agent,
         AgentTool tool,
         AIFunctionArguments arguments,
@@ -242,11 +246,15 @@ internal sealed class RunTurnStreamRequestHandler(
     {
         var action = PendingAction.Propose(
             conversation.Id,
+            batchId,
+            // The tools of a turn are called one after the other: the actions already proposed give the position.
+            proposals.Count,
             conversation.UserId,
             agent.Name,
-            tool.Name,
-            ChatMessageSerializer.SerializeValue(arguments.ToDictionary(a => a.Key, a => a.Value, StringComparer.Ordinal)),
-            catalog.ApprovalScopeOf(tool),
+            new ProposedCall(
+                tool.Name,
+                ChatMessageSerializer.SerializeValue(arguments.ToDictionary(a => a.Key, a => a.Value, StringComparer.Ordinal)),
+                catalog.ApprovalScopeOf(tool)),
             dateTimeProvider.UtcNow);
 
         pendingActions.Insert(action);
@@ -280,7 +288,10 @@ internal sealed class RunTurnStreamRequestHandler(
                 case FunctionResultContent result when proposals.TryGetValue(result.CallId, out PendingAction? action):
                     yield return new AgentEvent(
                         AgentEvent.ActionProposed,
-                        new ActionProposedEvent(action.Id, result.CallId, action.ToolName, JsonDocument.Parse(action.Arguments).RootElement.Clone(), action.RequiredScope));
+                        new ActionProposedEvent(action.Id, result.CallId, action.ToolName, JsonDocument.Parse(action.Arguments).RootElement.Clone(), action.RequiredScope)
+                        {
+                            BatchId = action.BatchId
+                        });
                     break;
                 case FunctionResultContent result:
                     yield return new AgentEvent(

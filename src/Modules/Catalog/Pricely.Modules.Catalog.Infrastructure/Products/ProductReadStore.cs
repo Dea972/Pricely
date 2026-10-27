@@ -21,7 +21,7 @@ internal sealed class ProductReadStore(CatalogDbContext context) : IProductReadS
 
         if (text is not null)
         {
-            string pattern = $"%{EscapeLikePattern(text)}%";
+            string pattern = $"%{LikePattern.Escape(text)}%";
             Gtin? gtin = Gtin.Create(text) is { IsSuccess: true } created ? created.Value : null;
 
             products = products.Where(p =>
@@ -49,9 +49,4 @@ internal sealed class ProductReadStore(CatalogDbContext context) : IProductReadS
 
         return [.. rows.Select(r => new ProductResponse(r.Id, r.Name, r.Brand, r.Gtin?.Value, r.ManufacturerReference, r.ProductCategoryId))];
     }
-
-    private static string EscapeLikePattern(string text) =>
-        text.Replace(@"\", @"\\", StringComparison.Ordinal)
-            .Replace("%", @"\%", StringComparison.Ordinal)
-            .Replace("_", @"\_", StringComparison.Ordinal);
 }

@@ -199,6 +199,9 @@ public sealed class MerchantSetupTests
         public Task<IReadOnlyCollection<Merchant>> GetManyAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyCollection<Merchant>>([.. merchants.Where(m => ids.Contains(m.Id))]);
 
+        public Task<IReadOnlyCollection<Merchant>> GetAllAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyCollection<Merchant>>(merchants);
+
         public void Insert(Merchant merchant) => throw new NotSupportedException();
     }
 

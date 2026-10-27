@@ -15,6 +15,9 @@ public sealed record PendingActionResponse(
     JsonElement? Result,
     string? Error)
 {
+    /// <summary>The batch of the turn that proposed the action (ADR-028).</summary>
+    public Guid BatchId { get; init; }
+
     public static PendingActionResponse From(PendingAction action) =>
         new(
             action.Id,
@@ -26,7 +29,10 @@ public sealed record PendingActionResponse(
             action.ProposedOnUtc,
             action.DecidedOnUtc,
             Parse(action.Result),
-            action.Error);
+            action.Error)
+        {
+            BatchId = action.BatchId
+        };
 
     public static JsonElement? Parse(string? json)
     {

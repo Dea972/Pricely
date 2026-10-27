@@ -7,6 +7,8 @@ namespace Pricely.Modules.Catalog.Domain.Products;
 /// </summary>
 public sealed record Gtin
 {
+    private static readonly int[] Lengths = [8, 12, 13, 14];
+
     private Gtin(string value)
     {
         Value = value;
@@ -29,6 +31,19 @@ public sealed record Gtin
         }
 
         return new Gtin(digits);
+    }
+
+    /// <summary>
+    /// The ways the same GTIN can be written (8, 12, 13 or 14 digits, padded with leading zeros), this one included: a
+    /// product registered with an EAN-13 is the product of the same GTIN-14.
+    /// </summary>
+    public IReadOnlyList<string> EquivalentForms()
+    {
+        string full = Value.PadLeft(14, '0');
+
+        return [.. Lengths
+            .Where(length => full[..(14 - length)].All(c => c == '0'))
+            .Select(length => full[(14 - length)..])];
     }
 
     private static bool HasValidCheckDigit(string digits)

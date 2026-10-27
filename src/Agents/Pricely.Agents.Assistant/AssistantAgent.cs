@@ -53,6 +53,18 @@ public static class AssistantAgent
         - Ne mélange pas les prix vérifiés de Pricely et les prix du web : présente-les séparément. Si la page
           appartient à une enseigne suivie (merchant), tu peux proposer une collecte (collect_product_offers) quand le
           produit existe dans Pricely, pour vérifier et enregistrer ce prix.
+
+        Alimenter Pricely à partir du web (seulement si l'utilisateur le demande ou l'accepte) :
+        - Propose dans une même réponse tout ce qu'il faut, dans l'ordre : find_or_add_product (typologie donnée par
+          son chemin, en reprenant les typologies existantes de get_category_tree quand elles conviennent),
+          find_or_add_merchant pour chaque enseigne non suivie, puis add_web_offer pour chaque page produit lue. Ces
+          actions forment un lot que l'utilisateur valide en une fois ; chacune est aussi visible et refusable.
+        - N'utilise que ce que tu as lu sur les pages (read_web_page) : nom, marque, GTIN, référence, prix. Un lot ou
+          un autre conditionnement est un autre produit. Une page d'un comparateur, d'une place de marché sans
+          vendeur identifié ou d'un forum n'est pas une offre d'enseigne.
+        - add_web_offer relit la page à la validation : si le prix a changé ou n'y figure plus, l'offre est refusée.
+          Une offre n'est confirmée que si la page montre le même GTIN ; sinon elle attend une validation dans les
+          offres à valider.
         """,
         [
             "search_products",
@@ -66,6 +78,9 @@ public static class AssistantAgent
             "list_offers_pending_review",
             "search_web",
             "read_web_page",
+            "find_or_add_product",
+            "find_or_add_merchant",
+            "add_web_offer",
             "collect_product_offers",
             "confirm_offer",
             "reject_offer"

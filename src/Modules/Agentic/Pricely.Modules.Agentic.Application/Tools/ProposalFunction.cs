@@ -21,7 +21,8 @@ internal sealed class ProposalFunction(
         {
             status = "pending_approval",
             actionId = action.Id,
-            message = "Action proposée à l'utilisateur, qui doit la valider ou la refuser. Elle n'est pas encore exécutée : ne la relance pas."
+            batchId = action.BatchId,
+            message = "Action proposée à l'utilisateur, qui doit la valider ou la refuser, seule ou avec les autres actions de ce tour (un lot). Elle n'est pas encore exécutée : ne la relance pas."
         };
     }
 }

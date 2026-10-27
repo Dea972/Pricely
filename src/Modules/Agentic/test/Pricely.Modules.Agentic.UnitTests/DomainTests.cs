@@ -27,7 +27,7 @@ public sealed class DomainTests
     public void Reject_ShouldOnlyBeAllowedToTheOwner_AndOnce()
     {
         var owner = Guid.NewGuid();
-        var action = PendingAction.Propose(Guid.NewGuid(), owner, "assistant", "collect_product_offers", "{}", "pricely.write", Now);
+        var action = PendingAction.Propose(Guid.NewGuid(), Guid.NewGuid(), 0, owner, "assistant", new ProposedCall("collect_product_offers", "{}", "pricely.write"), Now);
 
         action.Reject(Guid.NewGuid(), Now).IsFailure.Should().BeTrue();
         action.Reject(owner, Now).IsSuccess.Should().BeTrue();

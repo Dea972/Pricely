@@ -20,11 +20,16 @@ namespace Pricely.Modules.Agentic.UnitTests;
 public interface IToolProbe
 {
     List<string> Calls { get; }
+
+    /// <summary>The agent tool call current while each write tool ran (<see cref="AgentToolCall.Current"/>).</summary>
+    List<AgentToolCall?> WriteCalls { get; }
 }
 
 internal sealed class ToolProbe : IToolProbe
 {
     public List<string> Calls { get; } = [];
+
+    public List<AgentToolCall?> WriteCalls { get; } = [];
 }
 
 [McpServerToolType]
@@ -44,6 +49,7 @@ public static class TestTools
     public static WriteResult WriteThing(IToolProbe probe, [Description("Produit.")] Guid productId)
     {
         probe.Calls.Add("write:" + productId);
+        probe.WriteCalls.Add(AgentToolCall.Current);
 
         return new WriteResult(productId, 3);
     }

@@ -23,4 +23,8 @@ public sealed record ToolCallEvent(string CallId, string Name, bool IsReadOnly, 
 public sealed record ToolResultEvent(string CallId, string Name, JsonElement? Result, string? Error);
 
 /// <summary>Data of <see cref="AgentEvent.ActionProposed"/>: a write tool call waiting for approval.</summary>
-public sealed record ActionProposedEvent(Guid ActionId, string CallId, string ToolName, JsonElement Arguments, string RequiredScope);
+public sealed record ActionProposedEvent(Guid ActionId, string CallId, string ToolName, JsonElement Arguments, string RequiredScope)
+{
+    /// <summary>The batch of the turn: its actions can be approved or rejected at once (ADR-028).</summary>
+    public Guid BatchId { get; init; }
+}

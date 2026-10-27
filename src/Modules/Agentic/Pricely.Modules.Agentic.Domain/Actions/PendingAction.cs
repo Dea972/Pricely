@@ -4,7 +4,8 @@ namespace Pricely.Modules.Agentic.Domain.Actions;
 
 /// <summary>
 /// A write tool call proposed by an agent (ADR-008, ADR-014). Nothing runs before the owner of the conversation approves it;
-/// the approval runs the tool directly with the stored arguments, without going back to the model.
+/// the approval runs the tool directly with the stored arguments, without going back to the model. The actions proposed
+/// in one turn form a batch (<see cref="BatchId"/>) that the owner can approve or reject at once (ADR-028).
 /// </summary>
 public sealed class PendingAction : Entity
 {
@@ -21,6 +22,12 @@ public sealed class PendingAction : Entity
     public Guid Id { get; private set; }
 
     public Guid ConversationId { get; private set; }
+
+    /// <summary>The turn that proposed the action: its actions are decided together, run in the order proposed.</summary>
+    public Guid BatchId { get; private set; }
+
+    /// <summary>Position of the action in its batch (0 for the first one proposed): the order it runs in.</summary>
+    public int BatchSequence { get; private set; }
 
     /// <summary>User who owns the conversation and decides (plain identifier of the users of the application).</summary>
     public Guid UserId { get; private set; }
@@ -49,21 +56,23 @@ public sealed class PendingAction : Entity
 
     public static PendingAction Propose(
         Guid conversationId,
+        Guid batchId,
+        int batchSequence,
         Guid userId,
         string agentName,
-        string toolName,
-        string arguments,
-        string requiredScope,
+        ProposedCall call,
         DateTime utcNow) =>
         new()
         {
             Id = Guid.CreateVersion7(),
             ConversationId = conversationId,
+            BatchId = batchId,
+            BatchSequence = batchSequence,
             UserId = userId,
             AgentName = agentName,
-            ToolName = toolName,
-            Arguments = arguments,
-            RequiredScope = requiredScope,
+            ToolName = call.ToolName,
+            Arguments = call.Arguments,
+            RequiredScope = call.RequiredScope,
             Status = PendingActionStatus.Pending,
             ProposedOnUtc = utcNow
         };

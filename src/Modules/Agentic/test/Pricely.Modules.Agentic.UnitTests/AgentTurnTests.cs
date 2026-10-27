@@ -11,8 +11,10 @@ using Pricely.Common.Presentation.Mcp;
 using Pricely.Modules.Agentic.Application;
 using Pricely.Modules.Agentic.Application.Actions;
 using Pricely.Modules.Agentic.Application.Actions.ApproveAction;
+using Pricely.Modules.Agentic.Application.Actions.ApproveBatch;
 using Pricely.Modules.Agentic.Application.Actions.PublishActionDecided;
 using Pricely.Modules.Agentic.Application.Actions.RejectAction;
+using Pricely.Modules.Agentic.Application.Actions.RejectBatch;
 using Pricely.Modules.Agentic.Application.Agents;
 using Pricely.Modules.Agentic.Application.Conversations;
 using Pricely.Modules.Agentic.Application.Conversations.RunTurn;
@@ -106,9 +108,55 @@ public sealed class AgentTurnTests
     }
 
     [Fact]
+    public async Task ApproveBatch_ShouldApproveEveryActionOfTheTurn_ThenRunThemInOrder_WhateverFails()
+    {
+        var probe = new ToolProbe();
+        FakeCurrentUser user = Owner();
+        var second = Guid.NewGuid();
+        using var chat = new ScriptedChatClient(BatchCalls(second), Answer("Je propose le lot."));
+        await using ServiceProvider services = TestServices.Build(chat, new RecordingEventBus(), probe, user);
+        List<ActionProposedEvent> proposed = [.. (await RunAsync(services, null, "Ajoute tout")).Where(e => e.Type == AgentEvent.ActionProposed).Select(e => (ActionProposedEvent)e.Data)];
+        Guid batchId = proposed[0].BatchId;
+
+        proposed.Should().HaveCount(3).And.OnlyContain(p => p.BatchId == batchId && batchId != Guid.Empty);
+        (await SendBatchAsync(services, new ApproveBatchCommand(batchId))).Error.Code.Should().Be("Actions.MissingScope");
+        probe.Calls.Should().BeEmpty("nothing runs before the whole batch is approved");
+
+        user.Scopes = new HashSet<string> { TestServices.WriteScope };
+        Result<IReadOnlyList<PendingActionResponse>> approved = await SendBatchAsync(services, new ApproveBatchCommand(batchId));
+
+        approved.Value.Select(a => a.Status).Should().Equal(
+            nameof(PendingActionStatus.Executed), nameof(PendingActionStatus.Failed), nameof(PendingActionStatus.Executed));
+        approved.Value.Should().OnlyContain(a => a.BatchId == batchId);
+        probe.Calls.Should().Equal("write:" + ProductId, "fail:lot", "write:" + second);
+        probe.WriteCalls.Should().OnlyContain(c => c != null && c.SessionId == approved.Value[0].ConversationId.ToString() && c.AgentName == "test");
+        (await SendBatchAsync(services, new ApproveBatchCommand(batchId))).Error.Code.Should().Be("Actions.BatchAlreadyDecided");
+    }
+
+    [Fact]
+    public async Task RejectBatch_ShouldRejectWhatIsStillPending_AndRunNothing()
+    {
+        var probe = new ToolProbe();
+        FakeCurrentUser user = Owner();
+        user.Scopes = new HashSet<string> { TestServices.WriteScope };
+        using var chat = new ScriptedChatClient(BatchCalls(Guid.NewGuid()), Answer("Je propose le lot."));
+        await using ServiceProvider services = TestServices.Build(chat, new RecordingEventBus(), probe, user);
+        List<ActionProposedEvent> proposed = [.. (await RunAsync(services, null, "Ajoute tout")).Where(e => e.Type == AgentEvent.ActionProposed).Select(e => (ActionProposedEvent)e.Data)];
+        await SendAsync(services, new ApproveActionCommand(proposed[0].ActionId));
+        probe.Calls.Clear();
+
+        Result<IReadOnlyList<PendingActionResponse>> rejected = await SendBatchAsync(services, new RejectBatchCommand(proposed[0].BatchId));
+
+        rejected.Value.Select(a => a.Status).Should().Equal(
+            nameof(PendingActionStatus.Executed), nameof(PendingActionStatus.Rejected), nameof(PendingActionStatus.Rejected));
+        probe.Calls.Should().BeEmpty();
+        (await SendBatchAsync(services, new ApproveBatchCommand(Guid.NewGuid()))).Error.Code.Should().Be("Actions.BatchNotFound");
+    }
+
+    [Fact]
     public async Task Decision_ShouldBeRaisedOnTheAction_ForTheOutbox()
     {
-        var action = PendingAction.Propose(Guid.NewGuid(), UserId, "test", "write_thing", "{}", TestServices.WriteScope, DateTime.UtcNow);
+        var action = PendingAction.Propose(Guid.NewGuid(), Guid.NewGuid(), 0, UserId, "test", new ProposedCall("write_thing", "{}", TestServices.WriteScope), DateTime.UtcNow);
 
         action.Approve(UserId, new HashSet<string> { TestServices.WriteScope }, DateTime.UtcNow).IsSuccess.Should().BeTrue();
         action.MarkExecuted("{}");
@@ -307,6 +355,15 @@ public sealed class AgentTurnTests
                 new FunctionCallContent("c2", "write_thing", new Dictionary<string, object?> { ["productId"] = ProductId.ToString() })
             ]));
 
+    private static ChatResponse BatchCalls(Guid secondProductId) =>
+        new(new ChatMessage(
+            ChatRole.Assistant,
+            [
+                new FunctionCallContent("b1", "write_thing", new Dictionary<string, object?> { ["productId"] = ProductId.ToString() }),
+                new FunctionCallContent("b2", "fail_thing", new Dictionary<string, object?> { ["text"] = "lot" }),
+                new FunctionCallContent("b3", "write_thing", new Dictionary<string, object?> { ["productId"] = secondProductId.ToString() })
+            ]));
+
     private static ChatResponse Answer(string text) => new(new ChatMessage(ChatRole.Assistant, text));
 
     private static Guid ConversationId(List<AgentEvent> events) =>
@@ -333,7 +390,7 @@ public sealed class AgentTurnTests
     {
         using IServiceScope scope = services.CreateScope();
         AgenticDbContext dbContext = scope.ServiceProvider.GetRequiredService<AgenticDbContext>();
-        var action = PendingAction.Propose(Guid.NewGuid(), UserId, "test", toolName, arguments, TestServices.WriteScope, DateTime.UtcNow);
+        var action = PendingAction.Propose(Guid.NewGuid(), Guid.NewGuid(), 0, UserId, "test", new ProposedCall(toolName, arguments, TestServices.WriteScope), DateTime.UtcNow);
         dbContext.PendingActions.Add(action);
         await dbContext.SaveChangesAsync();
 
@@ -348,6 +405,15 @@ public sealed class AgentTurnTests
     }
 
     private static async Task<Result<PendingActionResponse>> SendAsync(ServiceProvider services, IRequest<Result<PendingActionResponse>> command)
+    {
+        using IServiceScope scope = services.CreateScope();
+
+        return await scope.ServiceProvider.GetRequiredService<ISender>().Send(command);
+    }
+
+    private static async Task<Result<IReadOnlyList<PendingActionResponse>>> SendBatchAsync(
+        ServiceProvider services,
+        IRequest<Result<IReadOnlyList<PendingActionResponse>>> command)
     {
         using IServiceScope scope = services.CreateScope();
 

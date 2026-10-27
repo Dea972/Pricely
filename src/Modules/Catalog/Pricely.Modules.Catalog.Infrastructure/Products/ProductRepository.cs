@@ -20,5 +20,19 @@ internal sealed class ProductRepository(CatalogDbContext context) : IProductRepo
     public Task<Product?> FindByGtinAsync(Gtin gtin, CancellationToken cancellationToken = default) =>
         context.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Gtin == gtin, cancellationToken);
 
+    public async Task<Product?> FindByEquivalentGtinAsync(Gtin gtin, CancellationToken cancellationToken = default)
+    {
+        List<Gtin> forms = [.. gtin.EquivalentForms().Select(f => Gtin.Create(f).Value)];
+
+        return await context.Products.AsNoTracking().FirstOrDefaultAsync(p => forms.Contains(p.Gtin!), cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Product>> GetByBrandAsync(string brand, CancellationToken cancellationToken = default)
+    {
+        string pattern = LikePattern.Escape(brand.Trim());
+
+        return await context.Products.AsNoTracking().Where(p => EF.Functions.ILike(p.Brand, pattern)).Take(500).ToListAsync(cancellationToken);
+    }
+
     public void Insert(Product product) => context.Products.Add(product);
 }

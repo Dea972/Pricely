@@ -15,5 +15,11 @@ internal sealed class PendingActionRepository(AgenticDbContext context) : IPendi
             .Where(a => a.ConversationId == conversationId && a.DecidedOnUtc != null && a.Status != PendingActionStatus.Approved)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<PendingAction>> GetBatchAsync(Guid batchId, CancellationToken cancellationToken = default) =>
+        await context.PendingActions
+            .Where(a => a.BatchId == batchId)
+            .OrderBy(a => a.BatchSequence)
+            .ToListAsync(cancellationToken);
+
     public void Insert(PendingAction action) => context.PendingActions.Add(action);
 }

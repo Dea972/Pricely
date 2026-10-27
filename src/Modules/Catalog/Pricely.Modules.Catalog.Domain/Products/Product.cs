@@ -66,6 +66,16 @@ public sealed class Product : Entity
         return Result.Success();
     }
 
+    /// <summary>
+    /// Whether the product has this manufacturer reference, written with or without spaces, dashes, dots or case
+    /// (« CR-35 » is « cr 35 »).
+    /// </summary>
+    public bool HasManufacturerReference(string? reference) =>
+        Code(reference).Length > 0 && string.Equals(Code(ManufacturerReference), Code(reference), StringComparison.Ordinal);
+
+    private static string Code(string? value) =>
+        value is null ? string.Empty : new string([.. value.Where(char.IsLetterOrDigit).Select(char.ToUpperInvariant)]);
+
     private void Apply(ProductDescription description)
     {
         Name = description.Name.Trim();

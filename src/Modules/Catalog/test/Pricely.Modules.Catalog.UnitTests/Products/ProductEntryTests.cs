@@ -124,6 +124,12 @@ public sealed class ProductEntryTests
         public Task<Product?> FindByGtinAsync(Gtin gtin, CancellationToken cancellationToken = default) =>
             Task.FromResult(existing?.Gtin == gtin ? existing : null);
 
+        public Task<Product?> FindByEquivalentGtinAsync(Gtin gtin, CancellationToken cancellationToken = default) =>
+            Task.FromResult<Product?>(null);
+
+        public Task<IReadOnlyList<Product>> GetByBrandAsync(string brand, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<Product>>([]);
+
         public void Insert(Product product) => throw new NotSupportedException();
     }
 

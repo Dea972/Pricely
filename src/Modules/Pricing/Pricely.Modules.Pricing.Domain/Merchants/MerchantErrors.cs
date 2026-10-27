@@ -27,6 +27,12 @@ public static class MerchantErrors
     public static Error Inactive(Guid merchantId) =>
         Error.Problem("Merchants.Inactive", $"The merchant {merchantId} is not active");
 
+    public static Error NameUsedByAnotherSite(string name, Uri website) =>
+        Error.Conflict("Merchants.NameUsedByAnotherSite", $"The merchant name '{name}' is already used by {website}");
+
+    public static Error NoMerchantForSite(Uri address) =>
+        Error.NotFound("Merchants.NoMerchantForSite", $"No merchant is followed on the site of {address}: add it first");
+
     public static Error NotFound(Guid merchantId) =>
         Error.NotFound("Merchants.NotFound", $"The merchant with the identifier {merchantId} was not found");
 }

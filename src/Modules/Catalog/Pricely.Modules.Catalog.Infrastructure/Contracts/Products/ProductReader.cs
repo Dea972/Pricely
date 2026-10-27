@@ -18,6 +18,39 @@ internal sealed class ProductReader(CatalogDbContext context) : IProductReader
         return Result.Success(product);
     }
 
+    public async Task<Result<ProductSummary?>> FindAsync(
+        string? gtin,
+        string? brand,
+        string? manufacturerReference,
+        CancellationToken cancellationToken = default)
+    {
+        if (!string.IsNullOrWhiteSpace(gtin) && Gtin.Create(gtin) is { IsSuccess: true } valid)
+        {
+            List<Gtin> forms = [.. valid.Value.EquivalentForms().Select(f => Gtin.Create(f).Value)];
+            ProductSummary? byGtin = (await Read(context.Products.Where(p => forms.Contains(p.Gtin!)), cancellationToken)).FirstOrDefault();
+            if (byGtin is not null)
+            {
+                return Result.Success<ProductSummary?>(byGtin);
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(brand) || string.IsNullOrWhiteSpace(manufacturerReference))
+        {
+            return Result.Success<ProductSummary?>(null);
+        }
+
+        string pattern = LikePattern.Escape(brand.Trim());
+        List<Product> sameBrand = await context.Products.AsNoTracking()
+            .Where(p => EF.Functions.ILike(p.Brand, pattern) && p.ManufacturerReference != null)
+            .Take(500)
+            .ToListAsync(cancellationToken);
+        Product? byReference = sameBrand.Find(p => p.HasManufacturerReference(manufacturerReference));
+
+        return Result.Success<ProductSummary?>(byReference is null
+            ? null
+            : new ProductSummary(byReference.Id, byReference.Name, byReference.Brand, byReference.Gtin?.Value, byReference.ManufacturerReference, byReference.ProductCategoryId));
+    }
+
     public async Task<Result<IReadOnlyList<ProductSummary>>> GetByIdsAsync(
         IReadOnlyCollection<Guid> productIds,
         CancellationToken cancellationToken = default)

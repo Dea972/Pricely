@@ -3,13 +3,15 @@ using MediatR;
 using ModelContextProtocol.Server;
 using Pricely.Common.Presentation.Mcp;
 using Pricely.Modules.Catalog.Application.Categories.GetProductCategories;
+using Pricely.Modules.Catalog.Application.Products.FindOrRegisterProduct;
 using Pricely.Modules.Catalog.Application.Products.GetProduct;
 using Pricely.Modules.Catalog.Application.Products.SearchProducts;
 
 namespace Pricely.Modules.Catalog.Presentation.Tools;
 
 /// <summary>
-/// Catalog tools for AI agents (MCP and internal agent). Thin: one query each, no business logic.
+/// Catalog tools for AI agents (MCP and internal agent). Thin: one query or command each, no business logic. Write tools
+/// become, for the internal agent, actions the user approves, in one batch per turn (ADR-028).
 /// </summary>
 [McpServerToolType]
 public static class CatalogTools
@@ -48,4 +50,22 @@ public static class CatalogTools
         [Description("Identifiant du produit.")] Guid productId,
         CancellationToken cancellationToken = default) =>
         (await sender.Send(new GetProductQuery(productId), cancellationToken)).ValueOrToolError();
+
+    [McpServerTool(Name = "find_or_add_product", Title = "Trouver ou ajouter un produit", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false)]
+    [Description("""
+        Trouve le produit de référence par GTIN (ou marque et référence fabricant) ; sinon l'ajoute au catalogue dans la
+        typologie donnée par son chemin (1 à 3 noms depuis la racine, les niveaux manquants sont créés). Un produit par
+        conditionnement : un lot ou un autre format est un autre produit. Utiliser les informations lues sur une page
+        (read_web_page), jamais inventées. Toutes les actions proposées dans une même réponse forment un lot que
+        l'utilisateur valide en une fois.
+        """)]
+    public static async Task<FoundProductResponse> FindOrAddProduct(
+        ISender sender,
+        [Description("Nom du produit, conditionnement compris (ex. « Ciment CEM II 35 kg »).")] string name,
+        [Description("Marque.")] string brand,
+        [Description("Chemin de la typologie depuis la racine, 1 à 3 noms (ex. [\"Gros œuvre\", \"Ciment\"]). Reprendre les typologies existantes (get_category_tree) quand elles conviennent.")] string[] categoryPath,
+        [Description("GTIN (EAN) lu sur la page, s'il y en a un.")] string? gtin = null,
+        [Description("Référence fabricant lue sur la page, s'il y en a une.")] string? manufacturerReference = null,
+        CancellationToken cancellationToken = default) =>
+        (await sender.Send(new FindOrRegisterProductCommand(name, brand, gtin, manufacturerReference, categoryPath), cancellationToken)).ValueOrToolError();
 }

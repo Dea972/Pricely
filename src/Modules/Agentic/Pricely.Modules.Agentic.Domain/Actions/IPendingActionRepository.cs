@@ -7,5 +7,8 @@ public interface IPendingActionRepository
     /// <summary>The decided actions of a conversation (their decisions are replayed to the model as notes).</summary>
     Task<IReadOnlyCollection<PendingAction>> GetDecidedAsync(Guid conversationId, CancellationToken cancellationToken = default);
 
+    /// <summary>The actions of a batch, in the order they were proposed.</summary>
+    Task<IReadOnlyList<PendingAction>> GetBatchAsync(Guid batchId, CancellationToken cancellationToken = default);
+
     void Insert(PendingAction action);
 }

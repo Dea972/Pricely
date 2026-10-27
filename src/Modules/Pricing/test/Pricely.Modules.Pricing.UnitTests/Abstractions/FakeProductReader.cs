@@ -16,6 +16,20 @@ internal sealed class FakeProductReader(params ProductSummary[] products) : IPro
             ? Result.Failure<ProductSummary?>(failure)
             : Result.Success(Array.Find(products, p => p.Id == productId)));
 
+    /// <summary>Exact GTIN, else brand and reference (case ignored): enough for the tests.</summary>
+    public Task<Result<ProductSummary?>> FindAsync(
+        string? gtin,
+        string? brand,
+        string? manufacturerReference,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult(Failure is { } failure
+            ? Result.Failure<ProductSummary?>(failure)
+            : Result.Success(Array.Find(products, p =>
+                gtin is not null && p.Gtin == gtin
+                || brand is not null && manufacturerReference is not null
+                    && string.Equals(p.Brand, brand, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(p.ManufacturerReference, manufacturerReference, StringComparison.OrdinalIgnoreCase))));
+
     public Task<Result<IReadOnlyList<ProductSummary>>> GetByIdsAsync(
         IReadOnlyCollection<Guid> productIds,
         CancellationToken cancellationToken = default) =>

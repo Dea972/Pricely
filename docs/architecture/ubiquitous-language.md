@@ -73,6 +73,7 @@ Le code utilise la colonne « Code » (anglais). L'interface et les échanges ut
 | `AgentActionDecision` | Décision | Issue d'une action proposée, journalisée par AiEngine : `Executed` (validée et exécutée), `Failed` (validée, mais le tool a échoué), `Rejected` (refusée). |
 | `AgentConversation` | Conversation | Échanges d'un utilisateur avec un agent, rejouables ; visibles par leur seul propriétaire. |
 | `PendingAction` | Action proposée | Appel d'un tool d'écriture par un agent, en attente de la décision de l'utilisateur ; exécutée seulement après « Valider ». |
+| `BatchId` | Lot | Les actions proposées pendant un même tour de l'agent : validées ou refusées en une fois, exécutées dans l'ordre proposé (ADR-028). |
 | `ReadOnly` / `Destructive` | Lecture / action sensible | Annotations d'un tool ; un tool qui n'est pas en lecture seule exige une approbation de l'agent interne. |
 
 ## Identité et accès
