@@ -134,10 +134,10 @@ internal sealed class UsageReadStore(IDbConnectionFactory dbConnectionFactory) :
                  GROUP BY s.provider
              ),
              tokens AS (
-                 SELECT LOWER(c.model_provider) AS provider, CAST(COALESCE(SUM(c.total_cost), 0) AS decimal(18, 6)) AS model_cost
+                 -- Only the Anthropic search runs a model (feature common.web-search); Brave has no tokens.
+                 SELECT CAST(COALESCE(SUM(c.total_cost), 0) AS decimal(18, 6)) AS model_cost
                  FROM aiengine.llm_calls c
                  WHERE c.feature_code = '{WebSearchFeatures.Search.Code}' AND {UsageSql.PeriodFilter}
-                 GROUP BY LOWER(c.model_provider)
              )
              SELECT
                  s.provider AS {nameof(WebSearchUsageResponse.Provider)},
@@ -152,7 +152,7 @@ internal sealed class UsageReadStore(IDbConnectionFactory dbConnectionFactory) :
                  s.search_cost + COALESCE(t.model_cost, 0) AS {nameof(WebSearchUsageResponse.TotalCost)},
                  CAST((s.search_cost + COALESCE(t.model_cost, 0)) / s.requests AS decimal(18, 6)) AS {nameof(WebSearchUsageResponse.CostPerRequest)}
              FROM searches s
-             LEFT JOIN tokens t ON t.provider = LOWER(s.provider) -- AI provider keys are lower case ("anthropic")
+             LEFT JOIN tokens t ON s.provider = '{WebSearchProviders.Anthropic}'
              ORDER BY {nameof(WebSearchUsageResponse.TotalCost)} DESC
              """,
             new { FromUtc = fromUtc, ToUtc = toUtc },

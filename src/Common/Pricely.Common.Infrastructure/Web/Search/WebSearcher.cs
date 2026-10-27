@@ -28,14 +28,19 @@ internal sealed class WebSearcher(
         }
 
         WebSearchOptions settings = options.CurrentValue;
-        if (!quota.HasRoom(dateTimeProvider.UtcNow, settings.MaxSearchesPerDay))
+        string providerName = string.Equals(settings.Provider, WebSearchProviders.Brave, StringComparison.OrdinalIgnoreCase)
+            ? WebSearchProviders.Brave
+            : WebSearchProviders.Anthropic;
+
+        // Brave bills one search per request; the model behind Anthropic may run up to MaxSearchesPerRequest.
+        int wanted = providerName == WebSearchProviders.Brave ? 1 : Math.Max(1, settings.MaxSearchesPerRequest);
+        DateTime searchedOnUtc = dateTimeProvider.UtcNow;
+        int reserved = quota.Reserve(searchedOnUtc, settings.MaxSearchesPerDay, wanted);
+        if (reserved == 0)
         {
             return Result.Failure<WebSearchResults>(WebSearchErrors.DailyLimitReached(settings.MaxSearchesPerDay));
         }
 
-        string providerName = string.Equals(settings.Provider, WebSearchProviders.Brave, StringComparison.OrdinalIgnoreCase)
-            ? WebSearchProviders.Brave
-            : WebSearchProviders.Anthropic;
         IWebSearchProvider provider = services.GetRequiredKeyedService<IWebSearchProvider>(providerName);
 
         WebSearchRequest bounded = request with
@@ -45,22 +50,31 @@ internal sealed class WebSearcher(
         };
         string sessionId = request.SessionId ?? $"web-search:{Guid.CreateVersion7()}";
 
-        DateTime searchedOnUtc = dateTimeProvider.UtcNow;
         var stopwatch = Stopwatch.StartNew();
         WebSearchResults? results = null;
         string? errorMessage = null;
+        int billed = 0;
 
         try
         {
             results = await provider.SearchAsync(bounded, sessionId, cancellationToken);
+            billed = results.Searches;
+        }
+        catch (WebSearchFailedException exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            // Searches run before the failure are billed all the same.
+            errorMessage = exception.Message;
+            billed = exception.BilledSearches;
         }
         catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
         {
             errorMessage = exception.Message;
         }
-
-        stopwatch.Stop();
-        quota.Count(searchedOnUtc, results?.Searches ?? 0);
+        finally
+        {
+            stopwatch.Stop();
+            quota.Settle(searchedOnUtc, reserved, billed);
+        }
 
         await eventBus.PublishAsync(
             new WebSearchPerformedIntegrationEvent(Guid.CreateVersion7(), searchedOnUtc)
@@ -68,7 +82,7 @@ internal sealed class WebSearcher(
                 Provider = provider.Name,
                 SessionId = sessionId,
                 UserId = request.UserId,
-                Searches = results?.Searches ?? 0,
+                Searches = billed,
                 Results = results?.Results.Count ?? 0,
                 ResponseTimeMs = stopwatch.ElapsedMilliseconds,
                 IsSuccess = errorMessage is null,
@@ -76,8 +90,9 @@ internal sealed class WebSearcher(
             },
             cancellationToken);
 
+        // The detail of a failure (a provider's error body) stays in the journal, never in the answer.
         return results is null
-            ? Result.Failure<WebSearchResults>(WebSearchErrors.Failed(provider.Name, errorMessage ?? "no result"))
+            ? Result.Failure<WebSearchResults>(WebSearchErrors.Failed(provider.Name))
             : results;
     }
 }

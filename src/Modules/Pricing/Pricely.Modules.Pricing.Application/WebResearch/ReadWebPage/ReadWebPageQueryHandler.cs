@@ -10,7 +10,7 @@ internal sealed class ReadWebPageQueryHandler(IWebPageReader webPageReader, IMer
 {
     public async Task<Result<WebPageResponse>> Handle(ReadWebPageQuery request, CancellationToken cancellationToken)
     {
-        // Any public page may be read (the reader refuses private addresses), redirects included, but only over http(s).
+        // Any public page may be read (the reader refuses private addresses), redirects included, but only over http(s) on its default port.
         Result<WebPage> page = await webPageReader.ReadFollowingAsync(request.Address, IsWebAddress, cancellationToken);
         if (page.IsFailure)
         {
@@ -30,6 +30,10 @@ internal sealed class ReadWebPageQueryHandler(IWebPageReader webPageReader, IMer
             WebPageResponse.UnverifiedNotice);
     }
 
+    /// <summary>An http(s) address on the default port (80 or 443) without credentials: never another service of a host.</summary>
     internal static bool IsWebAddress(Uri address) =>
-        address.IsAbsoluteUri && address.Scheme is "http" or "https" && string.IsNullOrEmpty(address.UserInfo);
+        address.IsAbsoluteUri
+        && address.Scheme is "http" or "https"
+        && address.IsDefaultPort
+        && string.IsNullOrEmpty(address.UserInfo);
 }

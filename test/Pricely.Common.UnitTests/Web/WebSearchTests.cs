@@ -74,7 +74,7 @@ public sealed class WebSearchTests
         using HttpClient http = Http(handler);
         Func<Task> search = () => Anthropic(http, new RecordingEventBus()).SearchAsync(new WebSearchRequest("ciment"), "s", CancellationToken.None);
 
-        (await search.Should().ThrowAsync<InvalidOperationException>()).Which.Message.Should().Contain("too_many_requests");
+        (await search.Should().ThrowAsync<WebSearchFailedException>()).Which.Message.Should().Contain("too_many_requests");
     }
 
     [Fact]
@@ -112,6 +112,37 @@ public sealed class WebSearchTests
         WebSearchPerformedIntegrationEvent journal = eventBus.Published.OfType<WebSearchPerformedIntegrationEvent>().Should().ContainSingle().Subject;
         journal.Should().BeEquivalentTo(new { Provider = "Anthropic", SessionId = "conversation-1", Searches = 1, Results = 1, IsSuccess = true });
         second.Error.Code.Should().Be("WebSearch.DailyLimitReached");
+    }
+
+    [Fact]
+    public async Task Searcher_ShouldJournalTheBilledSearches_OfAFailedRequest_WithoutGivingTheProviderErrorBack()
+    {
+        var eventBus = new RecordingEventBus();
+        using var handler = new ScriptedHandler(PausedTurn, "!secret detail of the provider");
+        using HttpClient http = Http(handler);
+        using ServiceProvider services = Services(http, eventBus, new WebSearchOptions());
+
+        Result<WebSearchResults> result = await services.GetRequiredService<IWebSearcher>().SearchAsync(new WebSearchRequest("ciment"));
+
+        result.Error.Code.Should().Be("WebSearch.Failed");
+        result.Error.Description.Should().NotContain("secret");
+        eventBus.Published.OfType<WebSearchPerformedIntegrationEvent>().Should().ContainSingle()
+            .Which.Should().BeEquivalentTo(new { Searches = 1, IsSuccess = false });
+    }
+
+    [Fact]
+    public void Quota_ShouldReserveWithinTheDay_GiveBackWhatWasNotBilled_AndRollOverAtMidnightUtc()
+    {
+        var quota = new WebSearchQuota();
+        var morning = new DateTime(2026, 10, 27, 8, 0, 0, DateTimeKind.Utc);
+
+        quota.Reserve(morning, 3, 2).Should().Be(2);
+        quota.Reserve(morning, 3, 2).Should().Be(1, "only one search is left");
+        quota.Reserve(morning, 3, 2).Should().Be(0);
+        quota.Settle(morning, 2, 0);
+        quota.Reserve(morning, 3, 2).Should().Be(2, "the unbilled reservation came back");
+        quota.Reserve(morning.AddDays(1), 3, 2).Should().Be(2, "a new day starts from zero");
+        quota.Reserve(morning, 0, 1).Should().Be(0);
     }
 
     private static AnthropicWebSearchProvider Anthropic(HttpClient http, RecordingEventBus eventBus) =>
@@ -167,7 +198,12 @@ public sealed class WebSearchTests
                 Bodies.Add(await request.Content.ReadAsStringAsync(cancellationToken));
             }
 
-            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(_bodies.Dequeue(), Encoding.UTF8, "application/json") };
+            string body = _bodies.Dequeue();
+
+            // A body starting with « ! » is an error of the provider.
+            return body.StartsWith('!')
+                ? new HttpResponseMessage(HttpStatusCode.InternalServerError) { Content = new StringContent(body[1..]) }
+                : new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
         }
     }
 }

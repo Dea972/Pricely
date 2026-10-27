@@ -69,6 +69,6 @@ public static class WebSearchErrors
     public static Error NotConfigured(string provider) =>
         Error.Problem("WebSearch.NotConfigured", $"The web search provider {provider} is not configured (API key)");
 
-    public static Error Failed(string provider, string reason) =>
-        Error.Problem("WebSearch.Failed", $"The web search through {provider} failed: {reason}");
+    public static Error Failed(string provider) =>
+        Error.Problem("WebSearch.Failed", $"The web search through {provider} failed; the details are in the journal of AiEngine");
 }

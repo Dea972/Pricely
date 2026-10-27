@@ -1,8 +1,8 @@
 namespace Pricely.Common.Infrastructure.Web.Search;
 
 /// <summary>
-/// Billed searches of the day (UTC), in memory: one API instance (ADR-012). Checked before a search, counted after,
-/// with the number of searches the provider actually billed.
+/// Billed searches of the day (UTC), in memory: one API instance (ADR-012). A request reserves the searches it may run
+/// before it starts, so that concurrent requests cannot go over the limit, and gives back what was not billed.
 /// </summary>
 internal sealed class WebSearchQuota
 {
@@ -10,22 +10,36 @@ internal sealed class WebSearchQuota
     private DateOnly _day;
     private int _used;
 
-    public bool HasRoom(DateTime utcNow, int limit)
+    /// <summary>
+    /// Reserves up to <paramref name="searches"/> searches within what is left of the day: the number reserved, 0 when
+    /// the day is used up.
+    /// </summary>
+    public int Reserve(DateTime utcNow, int limit, int searches)
     {
         lock (_lock)
         {
             Roll(utcNow);
+            int reserved = Math.Min(searches, limit - _used);
+            if (reserved <= 0)
+            {
+                return 0;
+            }
 
-            return _used < limit;
+            _used += reserved;
+
+            return reserved;
         }
     }
 
-    public void Count(DateTime utcNow, int searches)
+    /// <summary>Replaces a reservation made on <paramref name="reservedOnUtc"/> by the searches actually billed.</summary>
+    public void Settle(DateTime reservedOnUtc, int reserved, int billed)
     {
         lock (_lock)
         {
-            Roll(utcNow);
-            _used += searches;
+            if (DateOnly.FromDateTime(reservedOnUtc) == _day)
+            {
+                _used = Math.Max(0, _used - reserved + billed);
+            }
         }
     }
 

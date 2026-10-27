@@ -76,6 +76,20 @@ public sealed class WebResearchTests
         result.Error.Code.Should().Be("Web.RedirectNotAllowed");
     }
 
+    [Theory]
+    [InlineData("ftp://site.test/fichier")]
+    [InlineData("https://user:secret@site.test/")]
+    [InlineData("https://site.test:6379/")]
+    [InlineData("http://site.test:8080/page")]
+    public void Read_ShouldRefuseAnAddressThatIsNotAPublicWebPage(string address) =>
+        new ReadWebPageQueryValidator().Validate(new ReadWebPageQuery(new Uri(address))).IsValid.Should().BeFalse();
+
+    [Theory]
+    [InlineData("https://site.test/p/1")]
+    [InlineData("http://site.test:80/p/1")]
+    public void Read_ShouldAcceptAWebPageOnItsDefaultPort(string address) =>
+        new ReadWebPageQueryValidator().Validate(new ReadWebPageQuery(new Uri(address))).IsValid.Should().BeTrue();
+
     private sealed class FakeSearcher(WebSearchResults? results) : IWebSearcher
     {
         public WebSearchRequest? LastRequest { get; private set; }

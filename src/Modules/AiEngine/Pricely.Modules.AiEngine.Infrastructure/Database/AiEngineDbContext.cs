@@ -5,11 +5,11 @@ using Pricely.Modules.AiEngine.Domain.AgentActivities;
 using Pricely.Modules.AiEngine.Domain.Features;
 using Pricely.Modules.AiEngine.Domain.LlmCalls;
 using Pricely.Modules.AiEngine.Domain.Models;
+using Pricely.Modules.AiEngine.Domain.WebSearches;
 using Pricely.Modules.AiEngine.Infrastructure.AgentActivities;
 using Pricely.Modules.AiEngine.Infrastructure.Features;
 using Pricely.Modules.AiEngine.Infrastructure.LlmCalls;
 using Pricely.Modules.AiEngine.Infrastructure.Models;
-using Pricely.Modules.AiEngine.Domain.WebSearches;
 using Pricely.Modules.AiEngine.Infrastructure.WebSearches;
 
 namespace Pricely.Modules.AiEngine.Infrastructure.Database;

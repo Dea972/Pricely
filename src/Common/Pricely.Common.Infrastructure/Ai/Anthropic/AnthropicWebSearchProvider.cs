@@ -74,7 +74,9 @@ internal sealed class AnthropicWebSearchProvider(
         catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
         {
             errorMessage = exception.Message;
-            throw;
+
+            // A turn that fails after another one searched: those searches are billed.
+            throw new WebSearchFailedException(exception.Message, usage.Searches, exception);
         }
         finally
         {
@@ -84,7 +86,7 @@ internal sealed class AnthropicWebSearchProvider(
 
         if (collected.Results.Count == 0 && collected.Errors.Count > 0)
         {
-            throw new InvalidOperationException($"web_search: {string.Join(", ", collected.Errors)}");
+            throw new WebSearchFailedException($"web_search: {string.Join(", ", collected.Errors)}", usage.Searches);
         }
 
         return new WebSearchResults(Name, [.. collected.Results.Take(request.MaxResults)], usage.Searches);
