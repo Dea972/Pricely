@@ -141,6 +141,71 @@ public sealed class ComponentTests : BunitContext
     }
 
     [Fact]
+    public void Batch_ShouldDescribeEachAction_ApproveAllAtOnce_AndKeepEachOutcome()
+    {
+        var batchId = Guid.NewGuid();
+        List<ProposedAction> actions = WebBatch(batchId);
+        FakeServer api = Api(request => request.RequestUri!.AbsolutePath == $"/api/agents/batches/{batchId}/approve"
+            ? Responses.Json($"[{BatchDto(actions[0], "Executed", ProductResult)},{BatchDto(actions[1], "Executed", MerchantResult)},{BatchDto(actions[2], "Failed", "null", "The price 9.4 does not appear on the page")}]")
+            : Responses.Json("[]"));
+
+        IRenderedComponent<ProposedBatchCard> card = Render<ProposedBatchCard>(parameters => parameters.Add(p => p.Actions, actions));
+
+        card.Markup.Should().Contain("Lot proposé").And.Contain("3 action(s)")
+            .And.Contain("Ciment 35 kg · Vicat · GTIN 3760000100014 · Gros œuvre › Ciment")
+            .And.Contain("Chausson · www.chausson.test")
+            .And.Contain("9,40").And.Contain("www.chausson.test");
+        api.Requests.Should().NotContain(r => r.Method == HttpMethod.Post, "nothing runs before « Valider le lot »");
+
+        card.Find("button.btn-primary").Click();
+
+        card.WaitForAssertion(() => card.Markup.Should()
+            .Contain("Ajouté au catalogue (typologie créée : Ciment)")
+            .And.Contain("Enseigne déjà suivie")
+            .And.Contain("The price 9.4 does not appear on the page")
+            .And.Contain("2 exécutée(s) · 1 en échec"));
+        api.Requests.Should().ContainSingle(r => r.Method == HttpMethod.Post);
+        card.FindAll("button").Should().BeEmpty("a decided batch keeps its trace, without buttons");
+    }
+
+    [Fact]
+    public void Batch_ShouldLetTheUserRemoveOneAction_BeforeDecidingTheRest()
+    {
+        List<ProposedAction> actions = WebBatch(Guid.NewGuid());
+        FakeServer api = Api(request => request.RequestUri!.AbsolutePath.EndsWith("/reject", StringComparison.Ordinal)
+            ? Responses.Json(BatchDto(actions[1], "Rejected", "null"))
+            : Responses.Json("[]"));
+
+        IRenderedComponent<ProposedBatchCard> card = Render<ProposedBatchCard>(parameters => parameters.Add(p => p.Actions, actions));
+        card.FindAll("button").Where(b => b.TextContent.Contains("Retirer", StringComparison.Ordinal)).ElementAt(1).Click();
+
+        card.WaitForAssertion(() => actions[1].Status.Should().Be("Rejected"));
+        api.Requests.Should().ContainSingle(r => r.Method == HttpMethod.Post)
+            .Which.RequestUri!.AbsolutePath.Should().Be($"/api/agents/actions/{actions[1].ActionId}/reject");
+        card.Markup.Should().Contain("Valider le lot (2)");
+    }
+
+    [Fact]
+    public void Answer_ShouldShowTheActionsOfABatchTogether_AndWaitForItsEndToDecide()
+    {
+        Api(_ => Responses.Json("[]"));
+        var view = new ConversationView();
+        AgentEntry answer = view.Send("Ajoute ce ciment");
+        var batchId = Guid.NewGuid();
+        foreach (ProposedAction action in WebBatch(batchId).Take(2))
+        {
+            view.Apply(new ActionProposedEvent(action.ActionId, "c-" + action.ActionId, action.ToolName, action.Arguments, "pricely.write") { BatchId = batchId });
+        }
+
+        IRenderedComponent<ChatAnswer> running = Render<ChatAnswer>(parameters => parameters.Add(p => p.Answer, answer));
+
+        running.FindAll("article[aria-label^=\"Lot d\"]").Should().ContainSingle();
+        running.FindAll("article[aria-label^=\"Action proposée\"]").Should().BeEmpty();
+        running.Markup.Should().Contain("L'assistant prépare encore le lot");
+        running.Find("button.btn-primary").HasAttribute("disabled").Should().BeTrue();
+    }
+
+    [Fact]
     public void ARunningAnswer_ShouldSayThatTheAssistantWorks()
     {
         Api(_ => new HttpResponseMessage(HttpStatusCode.NotFound));
@@ -185,6 +250,21 @@ public sealed class ComponentTests : BunitContext
 
     private static ProposedAction PendingCollection() =>
         new(ActionId, ToolCatalog.CollectProductOffers, Json($$"""{"productId":"{{ProductId}}"}"""), "pricely.write");
+
+    private const string ProductResult = """{"productId":"01a176e6-c58f-73c5-a435-1690cab6721c","name":"Ciment 35 kg","brand":"Vicat","gtin":"3760000100014","productCategoryId":"8d125e49-6386-4761-aa94-6638818018d8","isNew":true,"createdCategories":["Ciment"]}""";
+
+    private const string MerchantResult = """{"merchantId":"8d125e49-6386-4761-aa94-6638818018d8","name":"Chausson","website":"https://www.chausson.test/","isActive":true,"isNew":false}""";
+
+    /// <summary>A batch built from a web research: a product, its merchant, then the offer.</summary>
+    private static List<ProposedAction> WebBatch(Guid batchId) =>
+    [
+        new(Guid.NewGuid(), ToolCatalog.FindOrAddProduct, Json("""{"name":"Ciment 35 kg","brand":"Vicat","gtin":"3760000100014","categoryPath":["Gros œuvre","Ciment"]}"""), "pricely.write") { BatchId = batchId },
+        new(Guid.NewGuid(), ToolCatalog.FindOrAddMerchant, Json("""{"name":"Chausson","website":"https://www.chausson.test/p/ciment"}"""), "pricely.write") { BatchId = batchId },
+        new(Guid.NewGuid(), ToolCatalog.AddWebOffer, Json("""{"pageAddress":"https://www.chausson.test/p/ciment","price":9.4,"productGtin":"3760000100014"}"""), "pricely.write") { BatchId = batchId }
+    ];
+
+    private static string BatchDto(ProposedAction action, string status, string result, string? error = null) =>
+        $$"""{"id":"{{action.ActionId}}","conversationId":"{{Guid.NewGuid()}}","toolName":"{{action.ToolName}}","arguments":{},"requiredScope":"pricely.write","status":"{{status}}","proposedOnUtc":"2026-10-27T08:00:00Z","decidedOnUtc":"2026-10-27T08:01:00Z","result":{{result}},"error":{{(error is null ? "null" : $"\"{error}\"")}},"batchId":"{{action.BatchId}}"}""";
 
     private static string DecidedAction(string status, string result) =>
         $$"""{"id":"{{ActionId}}","conversationId":"{{Guid.NewGuid()}}","toolName":"collect_product_offers","arguments":{},"requiredScope":"pricely.write","status":"{{status}}","proposedOnUtc":"2026-10-26T08:00:00Z","decidedOnUtc":"2026-10-26T08:01:00Z","result":{{result}},"error":null}""";

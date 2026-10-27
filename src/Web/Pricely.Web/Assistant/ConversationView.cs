@@ -65,7 +65,7 @@ public sealed class ConversationView
                 answer.CompleteTool(result.CallId, result.Name, result.Result, result.Error);
                 break;
             case ActionProposedEvent proposed:
-                answer.Propose(new ProposedAction(proposed.ActionId, proposed.ToolName, proposed.Arguments, proposed.RequiredScope));
+                answer.Propose(new ProposedAction(proposed.ActionId, proposed.ToolName, proposed.Arguments, proposed.RequiredScope) { BatchId = proposed.BatchId });
                 answer.MarkAwaitingApproval(proposed.CallId);
                 break;
             case TextReceived text:
@@ -269,6 +269,9 @@ public sealed class ProposedAction(Guid actionId, string toolName, JsonElement a
 
     public string RequiredScope { get; } = requiredScope;
 
+    /// <summary>The batch of the turn that proposed it (an action proposed alone is a batch of one).</summary>
+    public Guid BatchId { get; init; }
+
     public string Status { get; private set; } = ApiValues.Pending;
 
     public JsonElement? Result { get; private set; }
@@ -279,7 +282,7 @@ public sealed class ProposedAction(Guid actionId, string toolName, JsonElement a
 
     public static ProposedAction From(PendingActionDto action)
     {
-        var proposed = new ProposedAction(action.Id, action.ToolName, action.Arguments, action.RequiredScope);
+        var proposed = new ProposedAction(action.Id, action.ToolName, action.Arguments, action.RequiredScope) { BatchId = action.BatchId };
         proposed.Update(action);
 
         return proposed;

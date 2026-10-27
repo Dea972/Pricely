@@ -1,0 +1,69 @@
+@inherits ApiComponentBase
+
+<article class="action-card @(IsPending ? null : "decided")" aria-label="Lot d'actions proposé par l'assistant">
+    <div class="action-head">
+        <span class="action-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>
+        </span>
+        <div style="flex: 1; min-width: 0">
+            <div class="eyebrow" style="color: var(--warn)">Lot proposé</div>
+            <div><strong>@Actions.Count action(s) à décider en une fois</strong></div>
+            <div class="small muted">Exécutées dans cet ordre ; chaque page d'offre est relue au moment de la validation.</div>
+        </div>
+    </div>
+
+    <ol class="batch-list">
+        @foreach (ProposedAction action in Actions)
+        {
+            <li @key="action.ActionId" class="batch-item">
+                <div class="batch-item-head">
+                    <strong>@ToolCatalog.TitleOf(action.ToolName)</strong>
+                    <span class="badge @BadgeClass(action)">@StatusLabel(action)</span>
+                </div>
+                <div class="small">@ActionSummaries.Describe(action)</div>
+                @if (ActionSummaries.Outcome(action) is string outcome)
+                {
+                    <div class="small" role="status">@outcome</div>
+                }
+                @if (action.Error is not null)
+                {
+                    <div class="small muted" role="status">@action.Error</div>
+                }
+                @if (action.IsPending && Actions.Count(a => a.IsPending) > 1)
+                {
+                    <button type="button" class="btn btn-secondary btn-small" disabled="@(_busy || !IsComplete)" @onclick="() => RemoveAsync(action)">Retirer du lot</button>
+                }
+            </li>
+        }
+    </ol>
+
+    @if (IsPending)
+    {
+        <div class="action-buttons">
+            <button type="button" class="btn btn-primary" disabled="@(_busy || !IsComplete)" @onclick="ApproveAsync">Valider le lot (@Actions.Count(a => a.IsPending))</button>
+            <button type="button" class="btn btn-secondary" disabled="@(_busy || !IsComplete)" @onclick="RejectAsync">Refuser le lot</button>
+        </div>
+    }
+    else
+    {
+        <div class="action-outcome" role="status">
+            <span class="badge @(Actions.Any(a => a.Status == ApiValues.Failed) ? "badge-pending" : "badge-confirmed")">@DecidedLabel</span>
+        </div>
+    }
+
+    @if (IsPending && !IsComplete)
+    {
+        <p class="small muted" role="status">L'assistant prépare encore le lot…</p>
+    }
+
+    @if (_busy)
+    {
+        <p class="small muted" role="status">Exécution du lot…</p>
+    }
+
+    @if (_message is not null)
+    {
+        <div class="alert alert-warn" role="alert">@_message</div>
+    }
+    <ApiProblemAlert Problem="Problem" />
+</article>

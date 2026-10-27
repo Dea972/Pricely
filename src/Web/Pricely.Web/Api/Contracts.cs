@@ -252,6 +252,25 @@ public sealed record StructuredProductDto(string? Name, string? Gtin, string? Br
 
 public sealed record StructuredOfferDto(decimal Price, string? Currency, string? Availability, string? Seller, bool IsAggregate);
 
+/// <summary>Result of <c>find_or_add_product</c>.</summary>
+public sealed record FoundProductDto(Guid ProductId, string Name, string Brand, string? Gtin, Guid ProductCategoryId, bool IsNew, IReadOnlyList<string> CreatedCategories);
+
+/// <summary>Result of <c>find_or_add_merchant</c>.</summary>
+public sealed record FoundMerchantDto(Guid MerchantId, string Name, Uri Website, bool IsActive, bool IsNew);
+
+/// <summary>Result of <c>add_web_offer</c>.</summary>
+public sealed record AddedWebOfferDto(
+    Guid ProductId,
+    string ProductName,
+    Guid MerchantId,
+    string MerchantName,
+    Uri PageAddress,
+    decimal Price,
+    string Currency,
+    string Outcome,
+    bool IsFlaggedAsAnomaly,
+    bool AddedToProfile);
+
 public sealed record AgentUsageDto(string AgentName, int Calls, int FailedCalls, long TotalTokens, decimal Cost);
 
 /// <summary>Usage totals of AiEngine (summary, a session, a day, a feature); costs in USD.</summary>

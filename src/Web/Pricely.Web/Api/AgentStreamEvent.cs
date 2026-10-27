@@ -42,7 +42,11 @@ public sealed record ToolCalled(string CallId, string Name, bool IsReadOnly, Jso
 
 public sealed record ToolResulted(string CallId, string Name, JsonElement? Result, string? Error) : AgentStreamEvent;
 
-public sealed record ActionProposedEvent(Guid ActionId, string CallId, string ToolName, JsonElement Arguments, string RequiredScope) : AgentStreamEvent;
+public sealed record ActionProposedEvent(Guid ActionId, string CallId, string ToolName, JsonElement Arguments, string RequiredScope) : AgentStreamEvent
+{
+    /// <summary>The batch of the turn: the actions proposed together, decided at once (<c>agents/batches/{id}</c>).</summary>
+    public Guid BatchId { get; init; }
+}
 
 public sealed record TextReceived(string Text) : AgentStreamEvent;
 

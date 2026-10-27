@@ -11,9 +11,20 @@
         <ToolResultView @key="output.CallId" Output="output" />
     }
 
-    @foreach (ProposedAction action in Answer.Actions)
+    @* The actions proposed together form a batch (ADR-028): one card for the batch, the usual card for an action alone. *@
+    @foreach (IGrouping<Guid, ProposedAction> batch in Answer.Actions.GroupBy(a => a.BatchId))
     {
-        <ProposedActionCard @key="action.ActionId" Action="action" OnDecided="OnActionDecided" />
+        if (batch.Count() > 1 && batch.Key != Guid.Empty)
+        {
+            <ProposedBatchCard @key="batch.Key" Actions="batch.ToList()" IsComplete="Answer.IsComplete" OnDecided="OnActionDecided" />
+        }
+        else
+        {
+            @foreach (ProposedAction action in batch)
+            {
+                <ProposedActionCard @key="action.ActionId" Action="action" OnDecided="OnActionDecided" />
+            }
+        }
     }
 
     @if (Answer.Error is not null)

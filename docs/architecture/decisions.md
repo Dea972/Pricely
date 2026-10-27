@@ -331,6 +331,7 @@ Conséquences et choix :
 - **Lot clos dès qu'il est décidé** : chaque action est annoncée dès qu'elle est proposée ; si l'utilisateur décide le lot pendant que le tour continue, les actions suivantes forment un nouveau lot (jamais un lot validé avant sa dernière action). Chaque action s'exécute dans sa propre portée de services (ses propres `DbContext`) : ce qu'une action en échec a laissé ne passe pas à la suivante.
 - **Ordre des actions** : l'assistant propose dans la même réponse produit(s), enseigne(s), puis offre(s) ; l'exécution dans l'ordre fait que l'offre trouve le produit et l'enseigne créés juste avant.
 - **Scopes** : les trois tools sont des écritures (`pricely.write`) ; sur `/mcp`, un client MCP les appelle directement (sans lot), avec les mêmes règles.
+- **Écran** (étape C) : dans l'assistant, les actions d'un même lot s'affichent en une carte « Lot proposé » (`ProposedBatchCard`, une ligne par action, `ActionSummaries`) avec « Valider le lot », « Refuser le lot » et « Retirer du lot » ; boutons inactifs tant que la réponse n'est pas finie. Voir `docs/design/README.md`.
 
 ## Compléments du 2026-10-26 (étapes 5b et 6)
 

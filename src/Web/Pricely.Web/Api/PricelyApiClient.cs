@@ -61,6 +61,13 @@ internal sealed class PricelyApiClient(HttpClient http, AccessTokenProvider toke
     public Task<PendingActionDto> RejectActionAsync(Guid actionId, CancellationToken cancellationToken) =>
         SendAsync<PendingActionDto>(HttpMethod.Post, $"agents/actions/{actionId}/reject", cancellationToken);
 
+    /// <summary>Approves the actions of a batch still pending (all or none), then runs them in order (ADR-028).</summary>
+    public Task<IReadOnlyList<PendingActionDto>> ApproveBatchAsync(Guid batchId, CancellationToken cancellationToken) =>
+        SendAsync<IReadOnlyList<PendingActionDto>>(HttpMethod.Post, $"agents/batches/{batchId}/approve", cancellationToken);
+
+    public Task<IReadOnlyList<PendingActionDto>> RejectBatchAsync(Guid batchId, CancellationToken cancellationToken) =>
+        SendAsync<IReadOnlyList<PendingActionDto>>(HttpMethod.Post, $"agents/batches/{batchId}/reject", cancellationToken);
+
     public Task<IReadOnlyList<AgentUsageDto>> GetUsageByAgentAsync(DateTime fromUtc, CancellationToken cancellationToken) =>
         GetAsync<IReadOnlyList<AgentUsageDto>>(
             $"aiengine/usage/by-agent?fromUtc={Uri.EscapeDataString(fromUtc.ToString("O", CultureInfo.InvariantCulture))}",
